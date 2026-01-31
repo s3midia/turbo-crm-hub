@@ -181,43 +181,72 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
 
   // Fetch chats
   const fetchChats = useCallback(async () => {
-    if (!isConnected || !currentInstance) return [];
+    if (!isConnected || !currentInstance) {
+      console.log('fetchChats: Not connected or no instance', { isConnected, currentInstance: currentInstance?.name });
+      return [];
+    }
     
     try {
+      console.log('Fetching chats for instance:', currentInstance.name);
       const response = await callEvolutionAPI('getChats', currentInstance.name);
+      
+      console.log('getChats raw response:', response);
       
       if (response?.error) {
         console.error('Error fetching chats:', response.message);
         return [];
       }
       
-      let chatList = [];
+      let chatList: any[] = [];
+      
+      // Handle different response formats from Evolution API
       if (Array.isArray(response)) {
         chatList = response;
-      } else if (response?.data) {
+      } else if (response?.data && Array.isArray(response.data)) {
         chatList = response.data;
-      } else {
-        // Response might be an object with numeric keys
+      } else if (typeof response === 'object') {
+        // Response is an object with numeric keys (0, 1, 2, etc.)
         for (const key in response) {
-          if (key !== 'success' && response[key]?.remoteJid) {
-            chatList.push(response[key]);
+          if (key !== 'success' && response[key]) {
+            const item = response[key];
+            // Check if it has lastMessage (chat format from Evolution API)
+            if (item.lastMessage?.key?.remoteJid) {
+              chatList.push({
+                remoteJid: item.lastMessage.key.remoteJid,
+                name: item.lastMessage.pushName || item.lastMessage.key.remoteJid?.split('@')[0],
+                lastMessage: item.lastMessage,
+                unreadCount: item.unreadCount || 0,
+              });
+            } else if (item.remoteJid) {
+              chatList.push(item);
+            }
           }
         }
       }
       
-      const formattedChats: EvolutionChat[] = chatList.map((chat: any) => ({
-        id: chat.id || chat.remoteJid,
-        remoteJid: chat.remoteJid || chat.id,
-        name: chat.name || chat.pushName || chat.remoteJid?.split('@')[0],
-        profilePicUrl: chat.profilePicUrl,
-        lastMessage: chat.lastMessage?.message?.conversation || 
-                     chat.lastMessage?.message?.extendedTextMessage?.text ||
-                     chat.lastMsgContent,
-        unreadCount: chat.unreadCount || 0,
-      }));
+      console.log('Parsed chat list:', chatList.length, 'chats');
       
-      // Sort by name
-      formattedChats.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      const formattedChats: EvolutionChat[] = chatList.map((chat: any) => {
+        const remoteJid = chat.remoteJid || chat.lastMessage?.key?.remoteJid || chat.id;
+        const pushName = chat.name || chat.pushName || chat.lastMessage?.pushName;
+        const lastMsgContent = chat.lastMessage?.message?.conversation || 
+                               chat.lastMessage?.message?.extendedTextMessage?.text ||
+                               chat.lastMessage?.message?.imageMessage?.caption ||
+                               (chat.lastMessage?.message?.audioMessage ? '[Áudio]' : null) ||
+                               chat.lastMsgContent;
+        
+        return {
+          id: chat.id || remoteJid,
+          remoteJid: remoteJid,
+          name: pushName || remoteJid?.split('@')[0]?.replace(/[^0-9]/g, ''),
+          profilePicUrl: chat.profilePicUrl,
+          lastMessage: lastMsgContent || '[Mídia]',
+          unreadCount: chat.unreadCount || 0,
+        };
+      }).filter(chat => chat.remoteJid); // Filter out any without remoteJid
+      
+      // Sort by most recent (based on order from API, which is already sorted)
+      console.log('Formatted chats:', formattedChats.length);
       
       setChats(formattedChats);
       return formattedChats;
@@ -326,9 +355,10 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   // Fetch chats when connected
   useEffect(() => {
     if (isConnected && currentInstance) {
+      console.log('Auto-fetching chats - connected to:', currentInstance.name);
       fetchChats();
     }
-  }, [isConnected, currentInstance]);
+  }, [isConnected, currentInstance, fetchChats]);
 
   return {
     isConnected,
