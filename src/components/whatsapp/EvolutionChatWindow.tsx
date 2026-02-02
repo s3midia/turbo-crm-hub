@@ -22,6 +22,14 @@ export const EvolutionChatWindow = ({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current && messages.length > 0) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (chat) {
@@ -205,6 +213,8 @@ export const EvolutionChatWindow = ({
                 </div>
               </div>
             ))}
+            {/* Invisible element to scroll to */}
+            <div ref={messagesEndRef} />
           </div>
         ) : (
           <div className="flex items-center justify-center h-32 text-wa-text-muted">
