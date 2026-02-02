@@ -165,39 +165,46 @@ export const EvolutionChatWindow = ({
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-wa-bg-subtle">
+    <div className="flex flex-col h-full bg-wa-bg-subtle">
       {/* Chat Header */}
-      <div className="px-4 py-3 border-b border-wa-border bg-wa-bg-main shrink-0 flex items-center justify-between shadow-sm">
+      <div className="px-4 py-2.5 border-b border-wa-border bg-wa-bg-main flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
             {chat.profilePicUrl && (
               <AvatarImage src={chat.profilePicUrl} alt={chat.name} />
             )}
-            <AvatarFallback className="bg-wa-primary text-wa-primary-foreground font-semibold">
+            <AvatarFallback className="bg-wa-surface text-wa-text-main font-semibold">
               {chat.name?.[0]?.toUpperCase() || '?'}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h2 className="font-semibold text-wa-text-main text-sm">
-              {chat.name || chat.remoteJid.split('@')[0]}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-wa-text-main text-sm">
+                {chat.name || chat.remoteJid.split('@')[0]}
+              </h2>
+              <ExternalLink className="h-3.5 w-3.5 text-wa-text-muted" />
+            </div>
             <p className="text-xs text-wa-text-muted">
               {chat.remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '')}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface">
-            <ExternalLink className="h-4 w-4" />
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-8 text-xs border-wa-border text-wa-text-main hover:bg-wa-surface"
+          >
+            Funil de vendas
           </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface">
             <MoreVertical className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 overscroll-contain">
+      <div className="flex-1 overflow-y-auto p-4">
         {loading ? (
           <div className="flex items-center justify-center h-32">
             <Loader2 className="h-6 w-6 animate-spin text-wa-primary" />
@@ -249,14 +256,14 @@ export const EvolutionChatWindow = ({
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="p-3 border-t border-wa-border shrink-0 bg-wa-bg-main">
-        <div className="flex items-end gap-2">
+      {/* Input Area - Always Visible */}
+      <div className="p-3 border-t border-wa-border bg-wa-bg-main">
+        <div className="flex items-center gap-2">
           {/* Attachment button */}
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10 shrink-0 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface"
+            className="h-9 w-9 shrink-0 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface"
           >
             <Paperclip className="h-5 w-5" />
           </Button>
@@ -265,13 +272,13 @@ export const EvolutionChatWindow = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10 shrink-0 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface"
+            className="h-9 w-9 shrink-0 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface"
           >
             <Smile className="h-5 w-5" />
           </Button>
 
           {/* Message input */}
-          <div className="flex-1 relative">
+          <div className="flex-1">
             <textarea
               ref={textareaRef}
               placeholder="Digite uma mensagem"
@@ -280,8 +287,8 @@ export const EvolutionChatWindow = ({
               onKeyDown={handleKeyDown}
               disabled={sending}
               rows={1}
-              className="w-full px-4 py-2.5 bg-wa-surface border border-wa-border rounded-lg text-sm text-wa-text-main placeholder:text-wa-text-muted resize-none focus:outline-none focus:ring-2 focus:ring-wa-info focus:border-transparent"
-              style={{ minHeight: '42px', maxHeight: '120px' }}
+              className="w-full px-4 py-2 bg-wa-surface border border-wa-border rounded-full text-sm text-wa-text-main placeholder:text-wa-text-muted resize-none focus:outline-none focus:ring-1 focus:ring-wa-info"
+              style={{ minHeight: '38px', maxHeight: '100px' }}
             />
           </div>
 
@@ -290,19 +297,20 @@ export const EvolutionChatWindow = ({
             <Button 
               onClick={handleSend}
               disabled={sending}
-              className="h-10 w-10 shrink-0 rounded-full bg-wa-primary hover:bg-wa-primary/90"
+              size="icon"
+              className="h-9 w-9 shrink-0 rounded-full bg-wa-info hover:bg-wa-info/90"
             >
               {sending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
               )}
             </Button>
           ) : (
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0 text-wa-danger hover:text-wa-danger hover:bg-wa-danger/10"
+              className="h-9 w-9 shrink-0 text-wa-danger hover:text-wa-danger hover:bg-wa-danger/10"
             >
               <Mic className="h-5 w-5" />
             </Button>

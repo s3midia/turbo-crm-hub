@@ -41,11 +41,9 @@ export const EvolutionChatList = ({
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-wa-surface">
-      {/* Header with search - fixed */}
-      <div className="p-4 border-b border-wa-border space-y-3 shrink-0 bg-wa-bg-main">
-        <h2 className="text-lg font-bold text-wa-text-main">Conversas</h2>
-        
+    <div className="flex flex-col h-full bg-wa-bg-main">
+      {/* Header with search */}
+      <div className="p-3 border-b border-wa-border space-y-3 bg-wa-bg-main">
         {/* Search bar */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-wa-text-muted" />
@@ -53,7 +51,7 @@ export const EvolutionChatList = ({
             placeholder="Pesquisar por nome ou número"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 bg-wa-bg-main border-wa-border rounded-md text-sm placeholder:text-wa-text-muted"
+            className="pl-9 h-9 bg-wa-surface border-wa-border rounded-md text-sm placeholder:text-wa-text-muted focus:ring-1 focus:ring-wa-info"
           />
         </div>
 
@@ -64,7 +62,7 @@ export const EvolutionChatList = ({
             className={cn(
               'px-4 py-1.5 rounded-full text-xs font-medium transition-colors',
               filter === 'all'
-                ? 'bg-wa-primary text-wa-primary-foreground'
+                ? 'bg-wa-text-main text-wa-bg-main'
                 : 'bg-wa-surface text-wa-text-main hover:bg-wa-border'
             )}
           >
@@ -75,7 +73,7 @@ export const EvolutionChatList = ({
             className={cn(
               'px-4 py-1.5 rounded-full text-xs font-medium transition-colors',
               filter === 'mine'
-                ? 'bg-wa-primary text-wa-primary-foreground'
+                ? 'bg-wa-text-main text-wa-bg-main'
                 : 'bg-wa-surface text-wa-text-main hover:bg-wa-border'
             )}
           >
@@ -84,32 +82,30 @@ export const EvolutionChatList = ({
         </div>
       </div>
 
-      {/* Scrollable chat list */}
-      <div className="flex-1 overflow-y-auto overscroll-contain">
+      {/* Chat list - natural scroll */}
+      <div className="flex-1 overflow-y-auto">
         {filteredChats.length > 0 ? (
           filteredChats.map((chat) => (
             <button
               key={chat.id}
               onClick={() => onSelect(chat)}
               className={cn(
-                'w-full px-4 py-3 flex items-center gap-3 border-b border-wa-border transition-colors text-left relative',
+                'w-full px-3 py-3 flex items-center gap-3 border-b border-wa-border/50 transition-colors text-left',
                 selectedId === chat.id
-                  ? 'bg-wa-bg-main border-l-4 border-l-wa-info'
-                  : 'bg-wa-bg-main hover:bg-wa-surface'
+                  ? 'bg-wa-surface border-l-[3px] border-l-wa-info'
+                  : 'bg-wa-bg-main hover:bg-wa-surface/50'
               )}
             >
-              {/* Avatar with online indicator */}
+              {/* Avatar */}
               <div className="relative flex-shrink-0">
-                <Avatar className="h-12 w-12">
+                <Avatar className="h-11 w-11">
                   {chat.profilePicUrl && (
                     <AvatarImage src={chat.profilePicUrl} alt={chat.name} />
                   )}
-                  <AvatarFallback className="bg-wa-primary text-wa-primary-foreground font-semibold">
+                  <AvatarFallback className="bg-wa-surface text-wa-text-main font-semibold text-sm">
                     {chat.name?.[0]?.toUpperCase() || '?'}
                   </AvatarFallback>
                 </Avatar>
-                {/* Online indicator */}
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-wa-info rounded-full border-2 border-wa-bg-main" />
               </div>
 
               <div className="flex-1 min-w-0">
@@ -120,23 +116,23 @@ export const EvolutionChatList = ({
                   )}>
                     {chat.name || formatPhone(chat.remoteJid)}
                   </span>
-                  <span className="text-xs text-wa-text-muted ml-2 flex-shrink-0">
+                  <span className="text-[11px] text-wa-text-muted ml-2 flex-shrink-0">
                     {formatTimestamp(chat.lastMessageTimestamp)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   {chat.lastMessage && (
                     <p className={cn(
-                      'text-xs truncate',
+                      'text-xs truncate max-w-[160px]',
                       chat.unreadCount && chat.unreadCount > 0 
-                        ? 'text-wa-text-main font-medium' 
+                        ? 'text-wa-text-main' 
                         : 'text-wa-text-muted'
                     )}>
                       {chat.lastMessage}
                     </p>
                   )}
                   {chat.unreadCount && chat.unreadCount > 0 && (
-                    <span className="ml-2 flex-shrink-0 h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full bg-wa-primary text-wa-primary-foreground text-xs font-bold">
+                    <span className="ml-2 flex-shrink-0 h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full bg-wa-primary text-wa-primary-foreground text-[10px] font-bold">
                       {chat.unreadCount}
                     </span>
                   )}
