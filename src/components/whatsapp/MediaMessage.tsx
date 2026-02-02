@@ -44,28 +44,38 @@ const handleDownload = (fileUrl: string, fileName: string, mimeType?: string) =>
 export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMessageProps) => {
   const [imageError, setImageError] = useState(false);
   
-  // Extract media URL based on message type
-  const getMediaUrl = () => {
-    if (message?.imageMessage?.url) return message.imageMessage.url;
-    if (message?.videoMessage?.url) return message.videoMessage.url;
-    if (message?.audioMessage?.url) return message.audioMessage.url;
-    if (message?.documentMessage?.url) return message.documentMessage.url;
-    if (message?.stickerMessage?.url) return message.stickerMessage.url;
-    return null;
+  // Extract media data based on message type - Evolution API format
+  const getMediaData = () => {
+    const msgData = message?.[messageType];
+    if (!msgData) return { url: null, mimeType: null, base64: null };
+    
+    // Evolution API can return URL or base64
+    const url = msgData.url || null;
+    const mimeType = msgData.mimetype || msgData.mimeType || null;
+    const base64 = msgData.base64 || null;
+    
+    return { url, mimeType, base64 };
   };
 
-  // Extract MIME type
-  const getMimeType = () => {
-    if (message?.imageMessage?.mimetype) return message.imageMessage.mimetype;
-    if (message?.videoMessage?.mimetype) return message.videoMessage.mimetype;
-    if (message?.audioMessage?.mimetype) return message.audioMessage.mimetype;
-    if (message?.documentMessage?.mimetype) return message.documentMessage.mimetype;
-    if (message?.stickerMessage?.mimetype) return message.stickerMessage.mimetype;
-    return null;
+  // Get displayable URL - either direct URL or base64 data URI
+  const getDisplayUrl = () => {
+    const { url, mimeType, base64 } = getMediaData();
+    
+    // If we have base64, convert to data URI
+    if (base64) {
+      const mime = mimeType || 'application/octet-stream';
+      // Check if base64 already includes data URI prefix
+      if (base64.startsWith('data:')) {
+        return base64;
+      }
+      return `data:${mime};base64,${base64}`;
+    }
+    
+    return url;
   };
 
-  const mediaUrl = getMediaUrl();
-  const mimeType = getMimeType();
+  const { mimeType } = getMediaData();
+  const mediaUrl = getDisplayUrl();
   const caption = message?.imageMessage?.caption || 
                   message?.videoMessage?.caption || 
                   message?.documentMessage?.fileName ||
@@ -123,19 +133,31 @@ export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMess
         </div>
       );
 
-    case 'audioMessage':
-      return mediaUrl ? (
-        <AudioPlayer url={mediaUrl} fromMe={fromMe} mimeType={mimeType} />
+    case 'audioMessage': {
+      const audioBase64 = message?.audioMessage?.base64;
+      const audioMimeType = message?.audioMessage?.mimetype || mimeType;
+      return mediaUrl || audioBase64 ? (
+        <AudioPlayer 
+          url={mediaUrl || ''} 
+          fromMe={fromMe} 
+          mimeType={audioMimeType} 
+          base64={audioBase64}
+        />
       ) : (
         <div className="flex items-center gap-2 p-3 bg-wa-primary rounded-lg min-w-[180px]">
           <Mic className="h-5 w-5 text-wa-primary-foreground" />
           <span className="text-sm text-wa-primary-foreground">🎵 Áudio</span>
         </div>
       );
+    }
 
-    case 'documentMessage':
+    case 'documentMessage': {
       const fileName = message?.documentMessage?.fileName || 'Documento';
-      const docMimeType = message?.documentMessage?.mimetype;
+      const docMimeType = message?.documentMessage?.mimetype || mimeType;
+      const docBase64 = message?.documentMessage?.base64;
+      const docUrl = docBase64 
+        ? `data:${docMimeType || 'application/octet-stream'};base64,${docBase64}`
+        : mediaUrl;
       return (
         <div className="flex items-center gap-3 p-3 bg-wa-surface rounded-lg min-w-[200px]">
           <div className="h-10 w-10 rounded-lg bg-wa-primary/10 flex items-center justify-center">
@@ -145,18 +167,19 @@ export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMess
             <p className="text-sm font-medium text-wa-text-main truncate">{fileName}</p>
             <p className="text-xs text-wa-text-muted">Documento</p>
           </div>
-          {mediaUrl && (
+          {(docUrl || mediaUrl) && (
             <Button 
               variant="ghost" 
               size="icon" 
               className="h-8 w-8 text-wa-text-muted hover:text-wa-text-main"
-              onClick={() => handleDownload(mediaUrl, fileName, docMimeType)}
+              onClick={() => handleDownload(docUrl || mediaUrl!, fileName, docMimeType)}
             >
               <Download className="h-4 w-4" />
             </Button>
           )}
         </div>
       );
+    }
 
     case 'stickerMessage':
       return mediaUrl ? (
@@ -171,7 +194,7 @@ export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMess
         </div>
       );
 
-    case 'contactMessage':
+    case 'contactMessage': {
       const displayName = message?.contactMessage?.displayName || 'Contato';
       return (
         <div className="flex items-center gap-3 p-3 bg-wa-surface rounded-lg min-w-[180px]">
@@ -184,8 +207,9 @@ export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMess
           </div>
         </div>
       );
+    }
 
-    case 'locationMessage':
+    case 'locationMessage': {
       const lat = message?.locationMessage?.degreesLatitude;
       const lng = message?.locationMessage?.degreesLongitude;
       return (
@@ -210,6 +234,7 @@ export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMess
           </div>
         </div>
       );
+    }
 
     default:
       return (

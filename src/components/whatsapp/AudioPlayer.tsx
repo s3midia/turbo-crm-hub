@@ -7,15 +7,28 @@ interface AudioPlayerProps {
   url: string;
   fromMe?: boolean;
   mimeType?: string;
+  base64?: string;
 }
 
-export const AudioPlayer = ({ url, fromMe = false, mimeType }: AudioPlayerProps) => {
+export const AudioPlayer = ({ url, fromMe = false, mimeType, base64 }: AudioPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [error, setError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Get the audio source URL (handle base64 if provided)
+  const getAudioSource = () => {
+    if (base64) {
+      const mime = mimeType || 'audio/ogg';
+      if (base64.startsWith('data:')) return base64;
+      return `data:${mime};base64,${base64}`;
+    }
+    return url;
+  };
+
+  const audioSource = getAudioSource();
 
   // Determine audio type for better compatibility
   const getAudioType = () => {
@@ -106,9 +119,9 @@ export const AudioPlayer = ({ url, fromMe = false, mimeType }: AudioPlayerProps)
         onError={handleError}
         onCanPlay={handleCanPlay}
       >
-        <source src={url} type={getAudioType()} />
-        <source src={url} type="audio/ogg; codecs=opus" />
-        <source src={url} type="audio/mpeg" />
+        <source src={audioSource} type={getAudioType()} />
+        <source src={audioSource} type="audio/ogg; codecs=opus" />
+        <source src={audioSource} type="audio/mpeg" />
         Your browser does not support the audio element.
       </audio>
       
