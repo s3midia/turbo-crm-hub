@@ -4,7 +4,7 @@ import { QRCodeConnection } from '@/components/whatsapp/QRCodeConnection';
 import { EvolutionChatList } from '@/components/whatsapp/EvolutionChatList';
 import { EvolutionChatWindow } from '@/components/whatsapp/EvolutionChatWindow';
 import { InstanceSelector } from '@/components/whatsapp/InstanceSelector';
-import { Loader2, RefreshCw, Settings, ExternalLink } from 'lucide-react';
+import { Loader2, RefreshCw, Settings, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -28,9 +28,12 @@ export default function WhatsAppPage() {
 
   const [selectedChat, setSelectedChat] = useState<EvolutionChat | null>(null);
 
+  // Count total unread messages
+  const totalUnread = chats.reduce((acc, chat) => acc + (chat.unreadCount || 0), 0);
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full bg-wa-bg-subtle">
+      <div className="flex items-center justify-center h-full bg-wa-bg-main">
         <div className="text-center space-y-4">
           <Loader2 className="h-10 w-10 animate-spin text-wa-primary mx-auto" />
           <p className="text-wa-text-muted">Carregando instâncias...</p>
@@ -42,7 +45,7 @@ export default function WhatsAppPage() {
   // If not connected, show connection screen
   if (!isConnected) {
     return (
-      <div className="flex items-center justify-center h-full p-6 bg-wa-bg-subtle">
+      <div className="flex items-center justify-center h-full p-6 bg-wa-bg-main">
         <div className="w-full max-w-lg space-y-6">
           {instances.length > 0 && (
             <InstanceSelector
@@ -67,68 +70,62 @@ export default function WhatsAppPage() {
 
   // Connected - show chat interface
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-wa-bg-main">
-      {/* Main Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-wa-border bg-wa-bg-main shrink-0">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-9 w-9">
-            {currentInstance?.profilePicUrl && (
-              <AvatarImage src={currentInstance.profilePicUrl} alt="Profile" />
-            )}
-            <AvatarFallback className="bg-wa-primary text-wa-primary-foreground text-sm font-semibold">
-              {currentInstance?.profileName?.[0]?.toUpperCase() || 'W'}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold text-sm text-wa-text-main">
-              {currentInstance?.profileName || currentInstance?.name}
-            </p>
-            <p className="text-xs text-wa-text-muted">
-              {currentInstance?._count?.Chat || 0} conversas • {currentInstance?._count?.Message || 0} mensagens
-            </p>
+    <div className="h-full flex flex-col bg-wa-bg-main">
+      {/* Main Content - Two Column Layout */}
+      <div className="flex flex-1 min-h-0">
+        {/* Sidebar - Contact List */}
+        <aside className="w-80 border-r border-wa-border flex flex-col bg-wa-bg-main">
+          {/* Sidebar Header with Profile */}
+          <div className="px-3 py-2.5 border-b border-wa-border flex items-center justify-between bg-wa-bg-main">
+            <div className="flex items-center gap-2">
+              <Avatar className="h-9 w-9">
+                {currentInstance?.profilePicUrl && (
+                  <AvatarImage src={currentInstance.profilePicUrl} alt="Profile" />
+                )}
+                <AvatarFallback className="bg-wa-surface text-wa-text-main text-sm font-semibold">
+                  {currentInstance?.profileName?.[0]?.toUpperCase() || 'W'}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium text-wa-text-main">
+                {currentInstance?.profileName || currentInstance?.name}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              {/* Notification bell with badge */}
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="h-8 w-8 relative text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface"
+              >
+                <Bell className="h-4 w-4" />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 flex items-center justify-center rounded-full bg-wa-primary text-wa-primary-foreground text-[9px] font-bold">
+                    {totalUnread > 99 ? '99+' : totalUnread}
+                  </span>
+                )}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="h-8 w-8 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={fetchChats}
-            className="h-9 w-9 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="h-9 w-9 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={disconnect}
-            className="ml-2 text-wa-danger border-wa-danger/30 hover:bg-wa-danger/10 hover:text-wa-danger"
-          >
-            Desconectar
-          </Button>
-        </div>
-      </header>
-      
-      {/* Chat Interface - Two Column Layout */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Sidebar - Contact List (320px fixed) */}
-        <aside className="w-80 border-r border-wa-border flex-shrink-0 h-full overflow-hidden">
-          <EvolutionChatList
-            chats={chats}
-            selectedId={selectedChat?.id || null}
-            onSelect={setSelectedChat}
-          />
+          {/* Chat List */}
+          <div className="flex-1 overflow-y-auto">
+            <EvolutionChatList
+              chats={chats}
+              selectedId={selectedChat?.id || null}
+              onSelect={setSelectedChat}
+            />
+          </div>
         </aside>
 
-        {/* Main Chat Area (Flex) */}
-        <main className="flex-1 h-full overflow-hidden">
+        {/* Main Chat Area */}
+        <main className="flex-1 flex flex-col min-w-0">
           <EvolutionChatWindow
             chat={selectedChat}
             onSendMessage={sendMessage}
