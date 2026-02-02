@@ -179,6 +179,17 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     }
   }, [callEvolutionAPI, currentInstance, fetchInstances, toast]);
 
+  // Fetch profile picture for a contact
+  const fetchProfilePic = useCallback(async (remoteJid: string): Promise<string | null> => {
+    if (!currentInstance) return null;
+    try {
+      const response = await callEvolutionAPI('getProfilePic', currentInstance.name, { number: remoteJid });
+      return response?.profilePictureUrl || response?.profilePicUrl || null;
+    } catch {
+      return null;
+    }
+  }, [currentInstance, callEvolutionAPI]);
+
   // Fetch chats
   const fetchChats = useCallback(async () => {
     if (!isConnected || !currentInstance) {
@@ -190,7 +201,8 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       console.log('Fetching chats for instance:', currentInstance.name);
       const response = await callEvolutionAPI('getChats', currentInstance.name);
       
-      console.log('getChats raw response:', response);
+      console.log('getChats raw response type:', typeof response, Array.isArray(response));
+      console.log('getChats first item:', response?.[0] || response?.['0']);
       
       if (response?.error) {
         console.error('Error fetching chats:', response.message);
@@ -199,62 +211,101 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       
       let chatList: any[] = [];
       
-      // Handle different response formats from Evolution API
+      // Evolution API returns an array directly: [{id: null, lastMessage: {...}, unreadCount: 0}, ...]
       if (Array.isArray(response)) {
         chatList = response;
       } else if (response?.data && Array.isArray(response.data)) {
         chatList = response.data;
       } else if (typeof response === 'object') {
-        // Response is an object with numeric keys (0, 1, 2, etc.)
+        // Convert object with numeric keys to array
         for (const key in response) {
           if (key !== 'success' && response[key]) {
-            const item = response[key];
-            // Check if it has lastMessage (chat format from Evolution API)
-            if (item.lastMessage?.key?.remoteJid) {
-              chatList.push({
-                remoteJid: item.lastMessage.key.remoteJid,
-                name: item.lastMessage.pushName || item.lastMessage.key.remoteJid?.split('@')[0],
-                lastMessage: item.lastMessage,
-                unreadCount: item.unreadCount || 0,
-              });
-            } else if (item.remoteJid) {
-              chatList.push(item);
-            }
+            chatList.push(response[key]);
           }
         }
       }
       
       console.log('Parsed chat list:', chatList.length, 'chats');
       
-      const formattedChats: EvolutionChat[] = chatList.map((chat: any) => {
-        const remoteJid = chat.remoteJid || chat.lastMessage?.key?.remoteJid || chat.id;
-        const pushName = chat.name || chat.pushName || chat.lastMessage?.pushName;
-        const lastMsgContent = chat.lastMessage?.message?.conversation || 
-                               chat.lastMessage?.message?.extendedTextMessage?.text ||
-                               chat.lastMessage?.message?.imageMessage?.caption ||
-                               (chat.lastMessage?.message?.audioMessage ? '[Áudio]' : null) ||
-                               chat.lastMsgContent;
-        
-        return {
-          id: chat.id || remoteJid,
-          remoteJid: remoteJid,
-          name: pushName || remoteJid?.split('@')[0]?.replace(/[^0-9]/g, ''),
-          profilePicUrl: chat.profilePicUrl,
-          lastMessage: lastMsgContent || '[Mídia]',
-          unreadCount: chat.unreadCount || 0,
-        };
-      }).filter(chat => chat.remoteJid); // Filter out any without remoteJid
+      const formattedChats: EvolutionChat[] = chatList
+        .filter((chat: any) => {
+          // Must have lastMessage with remoteJid
+          const jid = chat.remoteJid || chat.lastMessage?.key?.remoteJid;
+          return !!jid;
+        })
+        .map((chat: any) => {
+          const lastMsg = chat.lastMessage;
+          const remoteJid = chat.remoteJid || lastMsg?.key?.remoteJid;
+          
+          // Get name from pushName, participant name, or extract from JID
+          let name = chat.name || chat.pushName || lastMsg?.pushName;
+          if (!name && remoteJid) {
+            // Extract phone number or group name from JID
+            const isGroup = remoteJid.includes('@g.us');
+            if (isGroup) {
+              name = 'Grupo';
+            } else {
+              name = remoteJid.split('@')[0];
+            }
+          }
+          
+          // Extract last message content
+          const msgContent = lastMsg?.message;
+          let lastMsgText = '';
+          if (msgContent?.conversation) {
+            lastMsgText = msgContent.conversation;
+          } else if (msgContent?.extendedTextMessage?.text) {
+            lastMsgText = msgContent.extendedTextMessage.text;
+          } else if (msgContent?.imageMessage) {
+            lastMsgText = msgContent.imageMessage.caption || '📷 Imagem';
+          } else if (msgContent?.videoMessage) {
+            lastMsgText = msgContent.videoMessage.caption || '🎥 Vídeo';
+          } else if (msgContent?.audioMessage) {
+            lastMsgText = '🎵 Áudio';
+          } else if (msgContent?.documentMessage) {
+            lastMsgText = '📎 Documento';
+          } else if (msgContent?.stickerMessage) {
+            lastMsgText = '🎨 Sticker';
+          } else if (msgContent?.contactMessage) {
+            lastMsgText = '👤 Contato';
+          } else if (msgContent?.locationMessage) {
+            lastMsgText = '📍 Localização';
+          } else {
+            lastMsgText = '[Mídia]';
+          }
+          
+          return {
+            id: remoteJid,
+            remoteJid: remoteJid,
+            name: name,
+            profilePicUrl: chat.profilePicUrl || null,
+            lastMessage: lastMsgText.substring(0, 100), // Truncate long messages
+            unreadCount: chat.unreadCount || 0,
+          };
+        });
       
-      // Sort by most recent (based on order from API, which is already sorted)
-      console.log('Formatted chats:', formattedChats.length);
+      console.log('Formatted chats:', formattedChats.length, formattedChats.slice(0, 3));
       
       setChats(formattedChats);
+      
+      // Fetch profile pictures in background (don't block UI)
+      formattedChats.forEach(async (chat, index) => {
+        if (!chat.profilePicUrl && chat.remoteJid) {
+          const picUrl = await fetchProfilePic(chat.remoteJid);
+          if (picUrl) {
+            setChats(prev => prev.map(c => 
+              c.id === chat.id ? { ...c, profilePicUrl: picUrl } : c
+            ));
+          }
+        }
+      });
+      
       return formattedChats;
     } catch (error) {
       console.error('Error fetching chats:', error);
       return [];
     }
-  }, [isConnected, currentInstance, callEvolutionAPI]);
+  }, [isConnected, currentInstance, callEvolutionAPI, fetchProfilePic]);
 
   // Fetch messages
   const fetchMessages = useCallback(async (remoteJid: string) => {

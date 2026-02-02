@@ -98,6 +98,14 @@ serve(async (req) => {
         });
         break;
 
+      case 'getProfilePic':
+        endpoint = `/chat/fetchProfilePictureUrl/${instance}`;
+        method = 'POST';
+        body = JSON.stringify({
+          number: data?.number,
+        });
+        break;
+
       case 'logout':
         endpoint = `/instance/logout/${instance}`;
         method = 'DELETE';
