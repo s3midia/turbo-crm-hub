@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { mapWithConcurrency, sleep } from '@/lib/async';
 
 export interface EvolutionChat {
   id: string;
@@ -54,19 +55,46 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const callEvolutionAPI = useCallback(async (action: string, instance?: string, data?: any) => {
-    try {
-      console.log(`Calling Evolution API: ${action}, instance: ${instance || instanceName}`);
-      const { data: response, error } = await supabase.functions.invoke('evolution-api', {
-        body: { action, instanceName: instance || instanceName, data },
-      });
+  // Avoid flooding the backend function with a burst of requests (which can cause intermittent BOOT_ERROR/503).
+  const profilePicCacheRef = useRef<Map<string, string | null>>(new Map());
+  const inflightProfilePicsRef = useRef<Set<string>>(new Set());
 
-      if (error) throw error;
-      console.log(`Evolution API Response (${action}):`, response);
-      return response;
-    } catch (error: any) {
-      console.error(`Evolution API Error (${action}):`, error);
-      throw error;
+  const isRetryableInvokeError = (err: unknown) => {
+    const anyErr = err as any;
+    const message = String(anyErr?.message ?? '');
+    const name = String(anyErr?.name ?? '');
+
+    // Supabase JS often throws FunctionsHttpError with a generic message when it receives 503/BOOT_ERROR.
+    return (
+      name.includes('FunctionsHttpError') ||
+      message.includes('BOOT_ERROR') ||
+      message.includes('Function failed to start') ||
+      message.includes('non-2xx') ||
+      message.includes('503')
+    );
+  };
+
+  const callEvolutionAPI = useCallback(async (action: string, instance?: string, data?: any) => {
+    const targetInstance = instance || instanceName;
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`Calling Evolution API: ${action}, instance: ${targetInstance}`);
+        const { data: response, error } = await supabase.functions.invoke('evolution-api', {
+          body: { action, instanceName: targetInstance, data },
+        });
+
+        if (error) throw error;
+        console.log(`Evolution API Response (${action}):`, response);
+        return response;
+      } catch (err: any) {
+        const retryable = attempt < maxAttempts && isRetryableInvokeError(err);
+        console.error(`Evolution API Error (${action}) [attempt ${attempt}/${maxAttempts}]:`, err);
+
+        if (!retryable) throw err;
+        await sleep(250 * attempt);
+      }
     }
   }, [instanceName]);
 
@@ -183,11 +211,26 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   // Fetch profile picture for a contact
   const fetchProfilePic = useCallback(async (remoteJid: string): Promise<string | null> => {
     if (!currentInstance) return null;
+
+    // Cached (including null) => don't re-fetch.
+    if (profilePicCacheRef.current.has(remoteJid)) {
+      return profilePicCacheRef.current.get(remoteJid) ?? null;
+    }
+
+    // Prevent duplicate concurrent fetches.
+    if (inflightProfilePicsRef.current.has(remoteJid)) return null;
+    inflightProfilePicsRef.current.add(remoteJid);
+
     try {
       const response = await callEvolutionAPI('getProfilePic', currentInstance.name, { number: remoteJid });
-      return response?.profilePictureUrl || response?.profilePicUrl || null;
+      const url = response?.profilePictureUrl || response?.profilePicUrl || null;
+      profilePicCacheRef.current.set(remoteJid, url);
+      return url;
     } catch {
+      profilePicCacheRef.current.set(remoteJid, null);
       return null;
+    } finally {
+      inflightProfilePicsRef.current.delete(remoteJid);
     }
   }, [currentInstance, callEvolutionAPI]);
 
@@ -289,17 +332,17 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       
       setChats(formattedChats);
       
-      // Fetch profile pictures in background (don't block UI)
-      formattedChats.forEach(async (chat, index) => {
-        if (!chat.profilePicUrl && chat.remoteJid) {
-          const picUrl = await fetchProfilePic(chat.remoteJid);
-          if (picUrl) {
-            setChats(prev => prev.map(c => 
-              c.id === chat.id ? { ...c, profilePicUrl: picUrl } : c
-            ));
-          }
-        }
-      });
+       // Fetch profile pictures in background (throttled to avoid request bursts)
+       const candidates = formattedChats
+         .filter((c) => !c.profilePicUrl && !!c.remoteJid)
+         .slice(0, 80); // keep UI responsive; load the rest later on demand (future improvement)
+
+       void mapWithConcurrency(candidates, 4, async (chat) => {
+         if (!chat.remoteJid) return;
+         const picUrl = await fetchProfilePic(chat.remoteJid);
+         if (!picUrl) return;
+         setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, profilePicUrl: picUrl } : c)));
+       });
       
       return formattedChats;
     } catch (error) {
