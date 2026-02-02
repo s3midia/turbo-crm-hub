@@ -89,6 +89,17 @@ serve(async (req) => {
         });
         break;
 
+      // Decrypt WhatsApp media (.enc) into Base64
+      // Docs reference: /chat/getBase64FromMediaMessage/{instance}
+      case 'getBase64FromMediaMessage':
+        endpoint = `/chat/getBase64FromMediaMessage/${instance}`;
+        method = 'POST';
+        body = JSON.stringify({
+          message: data?.message,
+          convertToMp4: data?.convertToMp4 ?? true,
+        });
+        break;
+
       case 'sendMessage':
         endpoint = `/message/sendText/${instance}`;
         method = 'POST';

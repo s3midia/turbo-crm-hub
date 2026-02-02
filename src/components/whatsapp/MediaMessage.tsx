@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FileText, Image as ImageIcon, Video, Mic, Download, MapPin, User, ImageOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AudioPlayer } from './AudioPlayer';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MediaMessageProps {
   message: any;
   messageType: string;
   fromMe?: boolean;
+  envelope?: any; // full message record (contains key.id)
+  instanceName?: string | null;
 }
 
 // Helper function to fix .enc file extensions
@@ -41,8 +44,12 @@ const handleDownload = (fileUrl: string, fileName: string, mimeType?: string) =>
   document.body.removeChild(link);
 };
 
-export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMessageProps) => {
+export const MediaMessage = ({ message, messageType, fromMe = false, envelope, instanceName }: MediaMessageProps) => {
   const [imageError, setImageError] = useState(false);
+  const [resolvedBase64, setResolvedBase64] = useState<string | null>(null);
+  const [resolvedMimeType, setResolvedMimeType] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const keyId = envelope?.key?.id as string | undefined;
   
   // Extract media data based on message type - Evolution API format
   const getMediaData = () => {
@@ -74,8 +81,82 @@ export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMess
     return url;
   };
 
-  const { mimeType } = getMediaData();
-  const mediaUrl = getDisplayUrl();
+  const { mimeType, url: rawUrl } = getMediaData();
+
+  const isEncryptedEnc = useMemo(() => {
+    const u = String(rawUrl ?? '');
+    return u.includes('.enc');
+  }, [rawUrl]);
+
+  // Resolve .enc media to base64 using backend (server can decrypt WhatsApp media)
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      if (!isEncryptedEnc) return;
+      if (!instanceName || !keyId) return;
+      if (resolvedBase64) return;
+
+      setResolving(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('evolution-api', {
+          body: {
+            action: 'getBase64FromMediaMessage',
+            instanceName,
+            data: {
+              message: { key: { id: keyId } },
+              convertToMp4: messageType === 'videoMessage',
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        // The upstream endpoint may return JSON or plain text.
+        const base64 =
+          (data as any)?.base64 ??
+          (data as any)?.data?.base64 ??
+          (data as any)?.raw ??
+          null;
+
+        const mt =
+          (data as any)?.mimetype ??
+          (data as any)?.mimeType ??
+          (data as any)?.data?.mimetype ??
+          (data as any)?.data?.mimeType ??
+          null;
+
+        if (!cancelled && base64) {
+          setResolvedBase64(String(base64));
+          if (mt) setResolvedMimeType(String(mt));
+        }
+      } catch (err) {
+        console.error('Error resolving media base64:', err);
+      } finally {
+        if (!cancelled) setResolving(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [isEncryptedEnc, instanceName, keyId, messageType, resolvedBase64]);
+
+  const resolvedUrl = useMemo(() => {
+    if (!resolvedBase64) return null;
+    if (resolvedBase64.startsWith('data:')) return resolvedBase64;
+    const mt = resolvedMimeType || mimeType || 'application/octet-stream';
+    return `data:${mt};base64,${resolvedBase64}`;
+  }, [resolvedBase64, resolvedMimeType, mimeType]);
+
+  const mediaUrl = resolvedUrl || getDisplayUrl();
+
+  // If we initially failed to load the URL and later resolved to base64, allow re-render.
+  useEffect(() => {
+    setImageError(false);
+  }, [mediaUrl]);
+
   const caption = message?.imageMessage?.caption || 
                   message?.videoMessage?.caption || 
                   message?.documentMessage?.fileName ||
@@ -85,7 +166,12 @@ export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMess
     case 'imageMessage':
       return (
         <div className="space-y-2">
-          {mediaUrl && !imageError ? (
+          {resolving ? (
+            <div className="flex items-center gap-2 p-3 bg-wa-surface rounded-lg">
+              <ImageIcon className="h-5 w-5 text-wa-text-muted" />
+              <span className="text-sm text-wa-text-main">Carregando imagem…</span>
+            </div>
+          ) : mediaUrl && !imageError ? (
             <img 
               src={mediaUrl} 
               alt="Imagem" 
@@ -117,7 +203,7 @@ export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMess
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-2 right-2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white"
+                className="absolute top-2 right-2 h-7 w-7 bg-wa-bg-main/80 hover:bg-wa-surface text-wa-text-main"
                 onClick={() => handleDownload(mediaUrl, caption || 'video', mimeType)}
               >
                 <Download className="h-4 w-4" />
@@ -134,13 +220,13 @@ export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMess
       );
 
     case 'audioMessage': {
-      const audioBase64 = message?.audioMessage?.base64;
-      const audioMimeType = message?.audioMessage?.mimetype || mimeType;
+      const audioBase64 = resolvedBase64 ?? message?.audioMessage?.base64;
+      const audioMimeType = resolvedMimeType ?? message?.audioMessage?.mimetype ?? mimeType;
       return mediaUrl || audioBase64 ? (
-        <AudioPlayer 
-          url={mediaUrl || ''} 
-          fromMe={fromMe} 
-          mimeType={audioMimeType} 
+        <AudioPlayer
+          url={mediaUrl || ''}
+          fromMe={fromMe}
+          mimeType={audioMimeType}
           base64={audioBase64}
         />
       ) : (
@@ -153,9 +239,9 @@ export const MediaMessage = ({ message, messageType, fromMe = false }: MediaMess
 
     case 'documentMessage': {
       const fileName = message?.documentMessage?.fileName || 'Documento';
-      const docMimeType = message?.documentMessage?.mimetype || mimeType;
-      const docBase64 = message?.documentMessage?.base64;
-      const docUrl = docBase64 
+      const docMimeType = resolvedMimeType ?? message?.documentMessage?.mimetype ?? mimeType;
+      const docBase64 = resolvedBase64 ?? message?.documentMessage?.base64;
+      const docUrl = docBase64
         ? `data:${docMimeType || 'application/octet-stream'};base64,${docBase64}`
         : mediaUrl;
       return (

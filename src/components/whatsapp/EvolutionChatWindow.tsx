@@ -10,12 +10,14 @@ interface EvolutionChatWindowProps {
   chat: EvolutionChat | null;
   onSendMessage: (number: string, text: string) => Promise<any>;
   fetchMessages: (remoteJid: string) => Promise<EvolutionMessage[]>;
+  instanceName?: string | null;
 }
 
 export const EvolutionChatWindow = ({
   chat,
   onSendMessage,
   fetchMessages,
+  instanceName,
 }: EvolutionChatWindowProps) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -87,7 +89,15 @@ export const EvolutionChatWindow = ({
     }
     const mediaTypes = ['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage', 'stickerMessage', 'contactMessage', 'locationMessage'];
     if (mediaTypes.includes(messageType)) {
-      return <MediaMessage message={message} messageType={messageType} />;
+      return (
+        <MediaMessage
+          envelope={msg}
+          message={message}
+          messageType={messageType}
+          fromMe={!!msg.key?.fromMe}
+          instanceName={instanceName ?? null}
+        />
+      );
     }
     if (message?.conversation) {
       return <p className="text-sm whitespace-pre-wrap break-words">{message.conversation}</p>;
@@ -188,9 +198,9 @@ export const EvolutionChatWindow = ({
                   </span>
                 </div>
                 <div className="space-y-1.5">
-                  {msgs.map((msg: any) => (
+                  {msgs.map((msg: any, index: number) => (
                     <div
-                      key={msg.key?.id || msg.id}
+                      key={`${msg.key?.id ?? msg.id ?? 'msg'}-${msg.messageTimestamp ?? 't'}-${index}`}
                       className={cn(
                         'max-w-[65%] px-3 py-2 rounded-lg shadow-sm',
                         msg.key?.fromMe

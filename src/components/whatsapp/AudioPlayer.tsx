@@ -30,6 +30,17 @@ export const AudioPlayer = ({ url, fromMe = false, mimeType, base64 }: AudioPlay
 
   const audioSource = getAudioSource();
 
+  // Reset state when the source changes (e.g. when we resolve .enc to base64)
+  useEffect(() => {
+    setIsPlaying(false);
+    setDuration(0);
+    setCurrentTime(0);
+    setError(false);
+    setIsLoading(true);
+    // Force reload so <source> changes are picked up reliably
+    audioRef.current?.load();
+  }, [audioSource]);
+
   // Determine audio type for better compatibility
   const getAudioType = () => {
     if (mimeType) return mimeType;
@@ -112,6 +123,8 @@ export const AudioPlayer = ({ url, fromMe = false, mimeType, base64 }: AudioPlay
     )}>
       <audio
         ref={audioRef}
+        controls
+        className="hidden"
         preload="metadata"
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}

@@ -100,6 +100,7 @@ export default function WhatsAppPage() {
           chat={selectedChat}
           onSendMessage={sendMessage}
           fetchMessages={fetchMessages}
+          instanceName={currentInstance?.name ?? null}
         />
       </main>
     </div>
