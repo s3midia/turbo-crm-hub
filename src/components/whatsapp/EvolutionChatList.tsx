@@ -102,7 +102,7 @@ export const EvolutionChatList = ({
                     {chat.name?.[0]?.toUpperCase() || '?'}
                   </AvatarFallback>
                 </Avatar>
-                {chat.unreadCount && chat.unreadCount > 0 && (
+                {(chat.unreadCount ?? 0) > 0 && (
                   <div className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-accent border-2 border-white" />
                 )}
               </div>
@@ -111,7 +111,7 @@ export const EvolutionChatList = ({
                 <div className="flex items-center justify-between">
                   <span className={cn(
                     'text-sm truncate text-wa-text-main',
-                    chat.unreadCount && chat.unreadCount > 0 ? 'font-bold' : 'font-semibold'
+                    (chat.unreadCount ?? 0) > 0 ? 'font-bold' : 'font-semibold'
                   )}>
                     {chat.name || formatPhone(chat.remoteJid)}
                   </span>
@@ -128,7 +128,7 @@ export const EvolutionChatList = ({
                   )}>
                     {chat.lastMessage || '\u00A0'}
                   </p>
-                  {chat.unreadCount && chat.unreadCount > 0 && (
+                  {(chat.unreadCount ?? 0) > 0 && (
                     <span className="ml-2 shrink-0 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-accent text-white text-[10px] font-bold">
                       {chat.unreadCount}
                     </span>
