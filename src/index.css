@@ -7,108 +7,109 @@ All colors MUST be HSL.
 */
 
 @layer base {
-  /* Bolten Design System - Neutral + Orange/Blue Accent */
-  --background: 240 10% 96%;
-  /* Cinza muito claro de fundo */
-  --foreground: 222 47% 11%;
+  :root {
+    /* Bolten Design System - Neutral + Orange/Blue Accent */
+    --background: 240 10% 96%;
+    /* Cinza muito claro de fundo */
+    --foreground: 222 47% 11%;
 
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-  /* Primary - Professional Bolten Blue/Gray */
-  --primary: 220 14% 15%;
-  --primary-foreground: 0 0% 100%;
-  --primary-hover: 220 14% 10%;
+    /* Primary - Professional Bolten Blue/Gray */
+    --primary: 220 14% 15%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 220 14% 10%;
 
-  /* Secondary - Light Gray */
-  --secondary: 240 5% 90%;
-  --secondary-foreground: 220 14% 15%;
+    /* Secondary - Light Gray */
+    --secondary: 240 5% 90%;
+    --secondary-foreground: 220 14% 15%;
 
-  /* Muted */
-  --muted: 240 5% 94%;
-  --muted-foreground: 240 4% 46%;
+    /* Muted */
+    --muted: 240 5% 94%;
+    --muted-foreground: 240 4% 46%;
 
-  /* Accent - Bolten Orange for WhatsApp */
-  --accent: 22 92% 55%;
-  --accent-foreground: 0 0% 100%;
+    /* Accent - Bolten Orange for WhatsApp */
+    --accent: 22 92% 55%;
+    --accent-foreground: 0 0% 100%;
 
-  /* Borders and Inputs */
-  --border: 240 6% 90%;
-  --input: 240 6% 90%;
-  --ring: 22 92% 55%;
+    /* Borders and Inputs */
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 22 92% 55%;
 
-  --radius: 1.25rem;
-  /* Bordas mais arredondadas como no Bolten */
+    --radius: 1.25rem;
+    /* Bordas mais arredondadas como no Bolten */
 
-  /* Sidebar specific */
-  --sidebar-background: 0 0% 100%;
-  --sidebar-foreground: 240 4% 46%;
-  --sidebar-primary: 22 92% 55%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 5% 94%;
-  --sidebar-accent-foreground: 220 14% 15%;
-  --sidebar-border: 240 6% 96%;
+    /* Sidebar specific */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 4% 46%;
+    --sidebar-primary: 22 92% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 5% 94%;
+    --sidebar-accent-foreground: 220 14% 15%;
+    --sidebar-border: 240 6% 96%;
 
-  /* WhatsApp Bolten Design Tokens */
-  --wa-primary: 22 92% 55%;
-  /* Laranja Bolten */
-  --wa-primary-foreground: 0 0% 100%;
-  --wa-danger: 350 100% 55%;
-  --wa-bg-main: 0 0% 100%;
-  --wa-bg-subtle: 240 5% 96%;
-  --wa-surface: 240 5% 94%;
-  --wa-border: 240 6% 92%;
-  --wa-text-main: 220 14% 15%;
-  --wa-text-muted: 240 4% 46%;
-}
+    /* WhatsApp Bolten Design Tokens */
+    --wa-primary: 22 92% 55%;
+    /* Laranja Bolten */
+    --wa-primary-foreground: 0 0% 100%;
+    --wa-danger: 350 100% 55%;
+    --wa-bg-main: 0 0% 100%;
+    --wa-bg-subtle: 240 5% 96%;
+    --wa-surface: 240 5% 94%;
+    --wa-border: 240 6% 92%;
+    --wa-text-main: 220 14% 15%;
+    --wa-text-muted: 240 4% 46%;
+  }
 
-.dark {
-  /* Dark mode - Professional Dark Theme */
-  --background: 220 15% 8%;
-  --foreground: 220 8% 95%;
+  .dark {
+    /* Dark mode - Professional Dark Theme */
+    --background: 220 15% 8%;
+    --foreground: 220 8% 95%;
 
-  --card: 220 15% 10%;
-  --card-foreground: 220 8% 95%;
+    --card: 220 15% 10%;
+    --card-foreground: 220 8% 95%;
 
-  --popover: 220 15% 10%;
-  --popover-foreground: 220 8% 95%;
+    --popover: 220 15% 10%;
+    --popover-foreground: 220 8% 95%;
 
-  --primary: 142 76% 45%;
-  --primary-foreground: 220 15% 8%;
-  --primary-hover: 142 76% 40%;
-  --primary-light: 142 45% 15%;
+    --primary: 142 76% 45%;
+    --primary-foreground: 220 15% 8%;
+    --primary-hover: 142 76% 40%;
+    --primary-light: 142 45% 15%;
 
-  --secondary: 220 15% 15%;
-  --secondary-foreground: 220 8% 90%;
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 220 8% 90%;
 
-  --muted: 220 15% 15%;
-  --muted-foreground: 220 8% 65%;
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 8% 65%;
 
-  --accent: 220 15% 15%;
-  --accent-foreground: 210 80% 60%;
+    --accent: 220 15% 15%;
+    --accent-foreground: 210 80% 60%;
 
-  --success: 142 76% 45%;
-  --success-foreground: 220 15% 8%;
-  --warning: 43 96% 65%;
-  --warning-foreground: 30 100% 10%;
-  --destructive: 0 72% 60%;
-  --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 45%;
+    --success-foreground: 220 15% 8%;
+    --warning: 43 96% 65%;
+    --warning-foreground: 30 100% 10%;
+    --destructive: 0 72% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-  --border: 220 15% 20%;
-  --input: 220 15% 20%;
-  --ring: 142 76% 45%;
-  --sidebar-background: 240 5.9% 10%;
-  --sidebar-foreground: 240 4.8% 95.9%;
-  --sidebar-primary: 224.3 76.3% 48%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 3.7% 15.9%;
-  --sidebar-accent-foreground: 240 4.8% 95.9%;
-  --sidebar-border: 240 3.7% 15.9%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
-}
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 142 76% 45%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
 }
 
 @layer base {
