@@ -16,13 +16,13 @@ interface MediaMessageProps {
 const handleDownload = (fileUrl: string, fileName: string, mimeType?: string) => {
   const link = document.createElement('a');
   link.href = fileUrl;
-  
+
   let finalName = fileName || 'download';
-  
+
   // If file ends in .enc or has no extension, fix based on MIME type
   if (finalName.endsWith('.enc') || !finalName.includes('.')) {
     const baseName = finalName.replace('.enc', '');
-    
+
     if (mimeType?.includes('video/mp4')) finalName = baseName + '.mp4';
     else if (mimeType?.includes('video/webm')) finalName = baseName + '.webm';
     else if (mimeType?.includes('video/quicktime')) finalName = baseName + '.mov';
@@ -37,7 +37,7 @@ const handleDownload = (fileUrl: string, fileName: string, mimeType?: string) =>
     else if (mimeType?.includes('audio/ogg')) finalName = baseName + '.ogg';
     else if (mimeType?.includes('audio/wav')) finalName = baseName + '.wav';
   }
-  
+
   link.setAttribute('download', finalName);
   document.body.appendChild(link);
   link.click();
@@ -49,35 +49,38 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
   const [resolvedBase64, setResolvedBase64] = useState<string | null>(null);
   const [resolvedMimeType, setResolvedMimeType] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
-  const keyId = envelope?.key?.id as string | undefined;
-  
+  // Extract keyId from multiple possible locations in the message record
+  const keyId = useMemo(() => {
+    return (envelope?.key?.id || envelope?.id || message?.key?.id || message?.id) as string | undefined;
+  }, [envelope, message]);
+
   // Extract media data based on message type - Evolution API format
   const getMediaData = () => {
     const msgData = message?.[messageType];
     if (!msgData) return { url: null, mimeType: null, base64: null };
-    
+
     // Evolution API can return URL or base64
     const url = msgData.url || null;
-    const mimeType = msgData.mimetype || msgData.mimeType || null;
+    const mimeType = msgData.mimetype || msgData.mimeType || msgData.mediaKey || null; // fallback to mediaKey if mt missing
     const base64 = msgData.base64 || null;
-    
+
     return { url, mimeType, base64 };
   };
 
   // Get displayable URL - either direct URL or base64 data URI
   const getDisplayUrl = () => {
     const { url, mimeType, base64 } = getMediaData();
-    
+
     // If we have base64, convert to data URI
     if (base64) {
       const mime = mimeType || 'application/octet-stream';
       // Check if base64 already includes data URI prefix
-      if (base64.startsWith('data:')) {
+      if (String(base64).startsWith('data:')) {
         return base64;
       }
       return `data:${mime};base64,${base64}`;
     }
-    
+
     return url;
   };
 
@@ -85,18 +88,20 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
 
   const isEncryptedEnc = useMemo(() => {
     const u = String(rawUrl ?? '');
-    return u.includes('.enc');
-  }, [rawUrl]);
+    return u.includes('.enc') || u.includes('image-wa.evolution-api.com') || (imageError && keyId);
+  }, [rawUrl, imageError, keyId]);
 
-  // Resolve .enc media to base64 using backend (server can decrypt WhatsApp media)
+  // Resolve media to base64 using backend (server can decrypt WhatsApp media)
   useEffect(() => {
     let cancelled = false;
 
     const run = async () => {
-      if (!isEncryptedEnc) return;
+      // Only try to resolve if it looks encrypted OR if primary load failed and we have a keyId
+      if (!isEncryptedEnc && !imageError) return;
       if (!instanceName || !keyId) return;
       if (resolvedBase64) return;
 
+      console.log(`Resolving media for ${keyId} (instance: ${instanceName})...`);
       setResolving(true);
       try {
         const { data, error } = await supabase.functions.invoke('evolution-api', {
@@ -112,12 +117,17 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
 
         if (error) throw error;
 
-        // The upstream endpoint may return JSON or plain text.
-        const base64 =
-          (data as any)?.base64 ??
-          (data as any)?.data?.base64 ??
-          (data as any)?.raw ??
-          null;
+        // More robust base64 extraction from various response structures
+        let base64 = null;
+        if (typeof data === 'string') {
+          base64 = data;
+        } else {
+          base64 =
+            (data as any)?.base64 ??
+            (data as any)?.data?.base64 ??
+            (data as any)?.raw ??
+            ((typeof data === 'object' && Object.keys(data as any).length === 1) ? Object.values(data as any)[0] : null);
+        }
 
         const mt =
           (data as any)?.mimetype ??
@@ -126,12 +136,16 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
           (data as any)?.data?.mimeType ??
           null;
 
-        if (!cancelled && base64) {
-          setResolvedBase64(String(base64));
+        if (!cancelled && base64 && typeof base64 === 'string' && base64.length > 10) {
+          console.log(`Successfully resolved base64 for ${keyId}`);
+          setResolvedBase64(base64);
           if (mt) setResolvedMimeType(String(mt));
+          setImageError(false); // Reset error state on success
+        } else {
+          console.warn(`Resolution response for ${keyId} did not contain valid base64`, data);
         }
       } catch (err) {
-        console.error('Error resolving media base64:', err);
+        console.error('Error resolving media base64:', err, { keyId, instanceName });
       } finally {
         if (!cancelled) setResolving(false);
       }
@@ -141,7 +155,7 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
     return () => {
       cancelled = true;
     };
-  }, [isEncryptedEnc, instanceName, keyId, messageType, resolvedBase64]);
+  }, [isEncryptedEnc, instanceName, keyId, messageType, resolvedBase64, imageError]);
 
   const resolvedUrl = useMemo(() => {
     if (!resolvedBase64) return null;
@@ -157,10 +171,10 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
     setImageError(false);
   }, [mediaUrl]);
 
-  const caption = message?.imageMessage?.caption || 
-                  message?.videoMessage?.caption || 
-                  message?.documentMessage?.fileName ||
-                  '';
+  const caption = message?.imageMessage?.caption ||
+    message?.videoMessage?.caption ||
+    message?.documentMessage?.fileName ||
+    '';
 
   switch (messageType) {
     case 'imageMessage':
@@ -172,9 +186,9 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
               <span className="text-sm text-wa-text-main">Carregando imagem…</span>
             </div>
           ) : mediaUrl && !imageError ? (
-            <img 
-              src={mediaUrl} 
-              alt="Imagem" 
+            <img
+              src={mediaUrl}
+              alt="Imagem"
               className="max-w-[280px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => window.open(mediaUrl, '_blank')}
               onError={() => setImageError(true)}
@@ -194,9 +208,9 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
         <div className="space-y-2">
           {mediaUrl ? (
             <div className="relative">
-              <video 
-                src={mediaUrl} 
-                controls 
+              <video
+                src={mediaUrl}
+                controls
                 className="max-w-[280px] rounded-lg"
                 preload="metadata"
               />
@@ -254,9 +268,9 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
             <p className="text-xs text-wa-text-muted">Documento</p>
           </div>
           {(docUrl || mediaUrl) && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-8 w-8 text-wa-text-muted hover:text-wa-text-main"
               onClick={() => handleDownload(docUrl || mediaUrl!, fileName, docMimeType)}
             >
@@ -269,9 +283,9 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
 
     case 'stickerMessage':
       return mediaUrl ? (
-        <img 
-          src={mediaUrl} 
-          alt="Sticker" 
+        <img
+          src={mediaUrl}
+          alt="Sticker"
           className="w-28 h-28 object-contain"
         />
       ) : (
@@ -307,7 +321,7 @@ export const MediaMessage = ({ message, messageType, fromMe = false, envelope, i
             <div>
               <p className="text-sm font-medium text-wa-text-main">Localização</p>
               {lat && lng && (
-                <a 
+                <a
                   href={`https://www.google.com/maps?q=${lat},${lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
