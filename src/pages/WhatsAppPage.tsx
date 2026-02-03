@@ -63,22 +63,22 @@ export default function WhatsAppPage() {
   }
 
   return (
-    <div className="absolute inset-0 flex bg-wa-bg-main rounded-lg overflow-hidden border border-wa-border shadow-sm">
+    <div className="flex h-full w-full bg-wa-bg-main overflow-hidden">
       {/* Sidebar */}
       <aside className="w-80 flex flex-col border-r border-wa-border bg-wa-bg-main">
         {/* Sidebar Header */}
-        <div className="shrink-0 px-3 py-2 border-b border-wa-border flex items-center justify-between">
+        <div className="shrink-0 px-4 py-3 bg-wa-bg-main border-none flex items-center justify-between">
           <button
             type="button"
-            className="flex items-center gap-2 rounded-md border border-wa-border bg-wa-surface px-3 py-1.5 text-sm text-wa-text-main truncate max-w-[200px]"
+            className="flex items-center gap-2 rounded-full border border-wa-border bg-wa-surface px-4 py-2 text-xs font-bold text-wa-text-main truncate max-w-[200px] transition-all hover:bg-wa-border/50 shadow-sm"
           >
-            <Smartphone className="h-4 w-4 shrink-0 text-wa-text-muted" />
-            <span className="truncate">{currentInstance?.profileName || currentInstance?.name}</span>
+            <Smartphone className="h-4 w-4 shrink-0 text-accent" />
+            <span className="truncate uppercase tracking-wider">{currentInstance?.profileName || currentInstance?.name}</span>
           </button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 text-wa-text-muted hover:text-wa-text-main hover:bg-wa-surface"
+            className="h-9 w-9 shrink-0 text-wa-text-muted hover:text-accent rounded-full"
           >
             <Settings className="h-4 w-4" />
           </Button>
@@ -95,7 +95,7 @@ export default function WhatsAppPage() {
       </aside>
 
       {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-wa-bg-subtle">
         <EvolutionChatWindow
           chat={selectedChat}
           onSendMessage={sendMessage}
