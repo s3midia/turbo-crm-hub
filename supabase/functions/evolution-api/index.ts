@@ -24,7 +24,7 @@ serve(async (req) => {
 
     // Remove trailing slash if present
     const baseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
-    
+
     const { action, instanceName, data } = await req.json();
     const instance = instanceName || 'crm-turbo';
     console.log(`Evolution API - Action: ${action}, Instance: ${instance}`);
@@ -117,6 +117,14 @@ serve(async (req) => {
         });
         break;
 
+      case 'fetchPresence':
+        endpoint = `/chat/fetchPresence/${instance}`;
+        method = 'POST';
+        body = JSON.stringify({
+          number: data?.number,
+        });
+        break;
+
       case 'logout':
         endpoint = `/instance/logout/${instance}`;
         method = 'DELETE';
@@ -144,7 +152,7 @@ serve(async (req) => {
 
     const response = await fetch(url, fetchOptions);
     const responseText = await response.text();
-    
+
     console.log(`Evolution API Response Status: ${response.status}`);
     console.log(`Evolution API Response: ${responseText.substring(0, 1000)}`);
 
@@ -157,11 +165,11 @@ serve(async (req) => {
 
     // Handle 404 specially - instance doesn't exist
     if (response.status === 404) {
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: 'INSTANCE_NOT_FOUND',
         message: 'Instância não encontrada',
         data: responseData,
-        success: false 
+        success: false
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200, // Return 200 so frontend can handle gracefully
@@ -170,11 +178,11 @@ serve(async (req) => {
 
     // Handle 409 - instance already exists
     if (response.status === 409) {
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: 'INSTANCE_EXISTS',
         message: 'Instância já existe',
         data: responseData,
-        success: true 
+        success: true
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -183,11 +191,11 @@ serve(async (req) => {
 
     if (!response.ok) {
       console.error(`API Error: ${response.status} - ${responseText}`);
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: `API_ERROR_${response.status}`,
         message: responseData?.message || responseData?.response?.message || `Erro na API: ${response.status}`,
         data: responseData,
-        success: false 
+        success: false
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200, // Return 200 so frontend handles it
@@ -205,9 +213,9 @@ serve(async (req) => {
   } catch (error) {
     console.error('Evolution API Error:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error instanceof Error ? error.message : 'Erro desconhecido',
-        success: false 
+        success: false
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

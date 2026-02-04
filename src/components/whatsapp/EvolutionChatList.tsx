@@ -129,7 +129,10 @@ export const EvolutionChatList = ({
                     {chat.lastMessage || '\u00A0'}
                   </p>
                   {(chat.unreadCount ?? 0) > 0 && (
-                    <div className="ml-2 shrink-0 h-6 min-w-[24px] flex items-center justify-center rounded-full bg-accent text-white text-[12px] font-bold shadow-sm">
+                    <div
+                      className="shrink-0 h-6 min-w-[24px] px-2 flex items-center justify-center rounded-full bg-blue-500 text-white text-[12px] font-bold shadow-sm"
+                      onClick={() => console.log('Badge clicado:', chat.name, 'unreadCount:', chat.unreadCount)}
+                    >
                       {chat.unreadCount}
                     </div>
                   )}

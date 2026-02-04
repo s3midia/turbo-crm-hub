@@ -102,12 +102,12 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   const fetchInstances = useCallback(async () => {
     try {
       const response = await callEvolutionAPI('fetchInstances');
-      
+
       if (response?.error) {
         console.error('Error fetching instances:', response.message);
         return [];
       }
-      
+
       // Convert object to array
       const instanceList: EvolutionInstance[] = [];
       for (const key in response) {
@@ -115,9 +115,9 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
           instanceList.push(response[key]);
         }
       }
-      
+
       setInstances(instanceList);
-      
+
       // Find the connected instance
       const connectedInstance = instanceList.find(i => i.connectionStatus === 'open');
       if (connectedInstance) {
@@ -129,7 +129,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       } else {
         setIsConnected(false);
       }
-      
+
       return instanceList;
     } catch (error) {
       console.error('Error fetching instances:', error);
@@ -142,12 +142,12 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     try {
       setIsConnecting(true);
       setError(null);
-      
+
       const targetInstance = instance || instanceName;
       console.log('Getting QR code for:', targetInstance);
-      
+
       const response = await callEvolutionAPI('getQrCode', targetInstance);
-      
+
       if (response?.error === 'INSTANCE_NOT_FOUND') {
         // Create instance first
         const createResponse = await callEvolutionAPI('createInstance', targetInstance);
@@ -156,7 +156,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
           return createResponse;
         }
       }
-      
+
       const qr = response?.base64 || response?.qrcode?.base64 || response?.code;
       if (qr) {
         setQrCode(qr);
@@ -165,7 +165,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
           description: 'Escaneie com seu WhatsApp',
         });
       }
-      
+
       return response;
     } catch (error: any) {
       console.error('Get QR code error:', error);
@@ -240,21 +240,22 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       console.log('fetchChats: Not connected or no instance', { isConnected, currentInstance: currentInstance?.name });
       return [];
     }
-    
+
     try {
       console.log('Fetching chats for instance:', currentInstance.name);
       const response = await callEvolutionAPI('getChats', currentInstance.name);
-      
+
       console.log('getChats raw response type:', typeof response, Array.isArray(response));
       console.log('getChats first item:', response?.[0] || response?.['0']);
-      
+      console.log('getChats FULL first 2 items:', JSON.stringify(response?.slice?.(0, 2) || [response?.[0], response?.[1]], null, 2));
+
       if (response?.error) {
         console.error('Error fetching chats:', response.message);
         return [];
       }
-      
+
       let chatList: any[] = [];
-      
+
       // Evolution API returns an array directly: [{id: null, lastMessage: {...}, unreadCount: 0}, ...]
       if (Array.isArray(response)) {
         chatList = response;
@@ -268,19 +269,20 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
           }
         }
       }
-      
+
       console.log('Parsed chat list:', chatList.length, 'chats');
-      
+
+      let formattedChatsCount = 0;
       const formattedChats: EvolutionChat[] = chatList
         .filter((chat: any) => {
           // Must have lastMessage with remoteJid
           const jid = chat.remoteJid || chat.lastMessage?.key?.remoteJid;
           return !!jid;
         })
-        .map((chat: any) => {
+        .map((chat: any, index: number) => {
           const lastMsg = chat.lastMessage;
           const remoteJid = chat.remoteJid || lastMsg?.key?.remoteJid;
-          
+
           // Get name from pushName, participant name, or extract from JID
           let name = chat.name || chat.pushName || lastMsg?.pushName;
           if (!name && remoteJid) {
@@ -292,7 +294,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
               name = remoteJid.split('@')[0];
             }
           }
-          
+
           // Extract last message content
           const msgContent = lastMsg?.message;
           let lastMsgText = '';
@@ -317,33 +319,120 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
           } else {
             lastMsgText = '[Mídia]';
           }
-          
+
+          const unreadCount = chat.unreadCount ?? chat.unread ?? chat.count ?? 0;
+
+          // Debug logging for first few chats
+          if (index < 3) {
+            console.log(`Chat ${index}:`, {
+              name,
+              remoteJid,
+              'chat.unreadCount': chat.unreadCount,
+              'chat.unread': chat.unread,
+              'chat.count': chat.count,
+              'final unreadCount': unreadCount,
+              'fullChat': chat
+            });
+          }
+
           return {
             id: remoteJid,
             remoteJid: remoteJid,
             name: name,
             profilePicUrl: chat.profilePicUrl || null,
             lastMessage: lastMsgText.substring(0, 100), // Truncate long messages
-            unreadCount: chat.unreadCount || 0,
+            unreadCount: unreadCount,
           };
         });
-      
-      console.log('Formatted chats:', formattedChats.length, formattedChats.slice(0, 3));
-      
-      setChats(formattedChats);
-      
-       // Fetch profile pictures in background (throttled to avoid request bursts)
-       const candidates = formattedChats
-         .filter((c) => !c.profilePicUrl && !!c.remoteJid)
-         .slice(0, 80); // keep UI responsive; load the rest later on demand (future improvement)
 
-       void mapWithConcurrency(candidates, 4, async (chat) => {
-         if (!chat.remoteJid) return;
-         const picUrl = await fetchProfilePic(chat.remoteJid);
-         if (!picUrl) return;
-         setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, profilePicUrl: picUrl } : c)));
-       });
-      
+      console.log('Formatted chats:', formattedChats.length, formattedChats.slice(0, 3));
+
+      // 🔥 Sistema LOCAL de unread count (usando localStorage)
+      try {
+        // Buscar unread counts salvos localmente
+        const savedUnreadCounts = localStorage.getItem('whatsapp_unread_counts');
+        let unreadMap = savedUnreadCounts ? JSON.parse(savedUnreadCounts) : {};
+
+        // 🔥 DETECTAR NOVAS MENSAGENS RECEBIDAS
+        const lastSeenMessages = localStorage.getItem('whatsapp_last_seen_messages');
+        const lastSeenMap = lastSeenMessages ? JSON.parse(lastSeenMessages) : {};
+
+        formattedChats.forEach(chat => {
+          const lastMessageTimestamp = chat.lastMessageTimestamp || 0;
+          const lastSeenTimestamp = lastSeenMap[chat.remoteJid] || 0;
+
+          // Se há uma mensagem nova
+          if (lastMessageTimestamp > lastSeenTimestamp) {
+            // Buscar a última mensagem para ver se é do usuário ou não
+            const lastMsg = chatList.find((c: any) => {
+              const jid = c.remoteJid || c.lastMessage?.key?.remoteJid;
+              return jid === chat.remoteJid;
+            });
+
+            const isFromMe = lastMsg?.lastMessage?.key?.fromMe === true;
+
+            if (!isFromMe) {
+              // Incrementar contador apenas se não for mensagem do usuário
+              const currentCount = unreadMap[chat.remoteJid] || 0;
+              unreadMap[chat.remoteJid] = currentCount + 1;
+              console.log(`📩 Nova mensagem detectada em ${chat.name}: ${unreadMap[chat.remoteJid]} não lidas`);
+            }
+
+            // Atualizar timestamp para NÃO incrementar de novo na próxima verificação
+            lastSeenMap[chat.remoteJid] = lastMessageTimestamp;
+          }
+        });
+
+        // Salvar timestamps e contadores
+        localStorage.setItem('whatsapp_last_seen_messages', JSON.stringify(lastSeenMap));
+        localStorage.setItem('whatsapp_unread_counts', JSON.stringify(unreadMap));
+
+        console.log('Unread counts from localStorage:', unreadMap);
+
+        // Aplicar unread counts aos chats
+        const mergedChats = formattedChats.map(chat => {
+          const unreadCount = unreadMap[chat.remoteJid] || 0;
+          return {
+            ...chat,
+            unreadCount: unreadCount,
+          };
+        });
+
+        console.log('Chats with unread counts:', mergedChats.filter(c => (c.unreadCount ?? 0) > 0).map(c => ({ name: c.name, unread: c.unreadCount })));
+
+        setChats(mergedChats);
+
+        // Fetch profile pictures in background
+        const candidates = mergedChats
+          .filter((c) => !c.profilePicUrl && !!c.remoteJid)
+          .slice(0, 80);
+
+        void mapWithConcurrency(candidates, 4, async (chat) => {
+          if (!chat.remoteJid) return;
+          const picUrl = await fetchProfilePic(chat.remoteJid);
+          if (!picUrl) return;
+          setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, profilePicUrl: picUrl } : c)));
+        });
+
+        return mergedChats;
+      } catch (error) {
+        console.error('Error with localStorage unread counts:', error);
+      }
+
+      setChats(formattedChats);
+
+      // Fetch profile pictures in background (throttled to avoid request bursts)
+      const candidates = formattedChats
+        .filter((c) => !c.profilePicUrl && !!c.remoteJid)
+        .slice(0, 80); // keep UI responsive; load the rest later on demand (future improvement)
+
+      void mapWithConcurrency(candidates, 4, async (chat) => {
+        if (!chat.remoteJid) return;
+        const picUrl = await fetchProfilePic(chat.remoteJid);
+        if (!picUrl) return;
+        setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, profilePicUrl: picUrl } : c)));
+      });
+
       return formattedChats;
     } catch (error) {
       console.error('Error fetching chats:', error);
@@ -354,20 +443,20 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   // Fetch messages
   const fetchMessages = useCallback(async (remoteJid: string) => {
     if (!isConnected || !currentInstance) return [];
-    
+
     try {
       console.log('Fetching messages for:', remoteJid);
       const response = await callEvolutionAPI('getMessages', currentInstance.name, { remoteJid });
-      
+
       console.log('getMessages response:', response);
-      
+
       if (response?.error) {
         console.error('Error fetching messages:', response.message);
         return [];
       }
-      
+
       let messages: any[] = [];
-      
+
       // Evolution API returns: { messages: { records: [...], total, pages, currentPage } }
       if (response?.messages?.records && Array.isArray(response.messages.records)) {
         messages = response.messages.records;
@@ -378,12 +467,12 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       } else if (response?.data) {
         messages = response.data;
       }
-      
+
       console.log('Parsed messages:', messages.length);
-      
+
       // Sort by timestamp (oldest first for display)
       messages.sort((a, b) => (a.messageTimestamp || 0) - (b.messageTimestamp || 0));
-      
+
       return messages;
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -396,14 +485,14 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     if (!currentInstance) {
       throw new Error('Nenhuma instância conectada');
     }
-    
+
     try {
       const response = await callEvolutionAPI('sendMessage', currentInstance.name, { number, text });
-      
+
       if (response?.error) {
         throw new Error(response.message);
       }
-      
+
       toast({
         title: 'Mensagem enviada',
         description: 'Mensagem enviada com sucesso',
@@ -419,6 +508,8 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     }
   }, [currentInstance, callEvolutionAPI, toast]);
 
+
+
   // Select instance
   const selectInstance = useCallback((instance: EvolutionInstance) => {
     setCurrentInstance(instance);
@@ -432,7 +523,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   // Initialize on mount
   useEffect(() => {
     let mounted = true;
-    
+
     const init = async () => {
       if (!mounted) return;
       setLoading(true);
@@ -441,9 +532,9 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
         setLoading(false);
       }
     };
-    
+
     init();
-    
+
     return () => {
       mounted = false;
     };
@@ -452,7 +543,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   // Poll for connection status when showing QR code
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
-    
+
     if (isConnecting && qrCode) {
       interval = setInterval(async () => {
         const instanceList = await fetchInstances();
@@ -466,7 +557,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
         }
       }, 3000);
     }
-    
+
     return () => {
       if (interval) {
         clearInterval(interval);
@@ -474,21 +565,66 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     };
   }, [isConnecting, qrCode, fetchInstances, toast]);
 
-  // Fetch chats when connected
+  // Fetch chats when connected with simple polling
   useEffect(() => {
     let mounted = true;
-    
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    const load = async () => {
+      if (!mounted || !isConnected || !currentInstance) return;
+      try {
+        await fetchChats();
+      } catch (err) {
+        console.error('Polling fetchChats error:', err);
+      }
+    };
+
     if (isConnected && currentInstance) {
-      console.log('Auto-fetching chats - connected to:', currentInstance.name);
-      fetchChats().catch(console.error);
+      console.log('Starting chat polling - connected to:', currentInstance.name);
+      load(); // Initial load
+
+      // Refresh every 15 seconds
+      pollInterval = setInterval(load, 15000);
     }
-    
+
     return () => {
       mounted = false;
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [isConnected, currentInstance, fetchChats]);
 
+  // 🔥 Marcar conversa como aberta (zera unread_count) - usando localStorage
+  const markChatAsOpen = useCallback(async (remoteJid: string) => {
+    try {
+      // Buscar mapa atual
+      const savedUnreadCounts = localStorage.getItem('whatsapp_unread_counts');
+      const unreadMap = savedUnreadCounts ? JSON.parse(savedUnreadCounts) : {};
+
+      // Zerar contador
+      unreadMap[remoteJid] = 0;
+
+      // Salvar
+      localStorage.setItem('whatsapp_unread_counts', JSON.stringify(unreadMap));
+
+      console.log('Chat marked as open (localStorage):', remoteJid);
+
+      // Atualizar estado local
+      setChats(prev => prev.map(c =>
+        c.remoteJid === remoteJid ? { ...c, unreadCount: 0 } : c
+      ));
+    } catch (error) {
+      console.error('Error marking chat as open:', error);
+    }
+  }, []);
+
+  // 🔥 Marcar conversa como fechada - localStorage (não faz nada, apenas log)
+  const markChatAsClosed = useCallback(async (remoteJid: string) => {
+    console.log('Chat marked as closed (localStorage):', remoteJid);
+    // Não precisa fazer nada, o contador só incrementa quando recebe mensagem
+  }, []);
+
   return {
+    instanceName,
     isConnected,
     isConnecting,
     instances,
@@ -504,5 +640,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     sendMessage,
     selectInstance,
     fetchInstances,
+    markChatAsOpen,
+    markChatAsClosed,
   };
 };

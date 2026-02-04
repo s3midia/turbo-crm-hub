@@ -5,6 +5,7 @@ import { EvolutionChat, EvolutionMessage } from '@/hooks/useEvolutionAPI';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MediaMessage } from './MediaMessage';
+import { useToast } from '@/hooks/use-toast';
 
 interface EvolutionChatWindowProps {
   chat: EvolutionChat | null;
@@ -25,6 +26,7 @@ export const EvolutionChatWindow = ({
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -63,8 +65,21 @@ export const EvolutionChatWindow = ({
       const number = chat.remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '');
       await onSendMessage(number, text);
       await loadMessages();
+
+      // Visual confirmation
+      toast({
+        title: '✓ Mensagem enviada',
+        description: 'Sua mensagem foi entregue com sucesso!',
+        duration: 2000,
+      });
     } catch (error) {
       console.error('Error sending message:', error);
+      toast({
+        title: '✗ Erro ao enviar',
+        description: 'Não foi possível enviar a mensagem. Tente novamente.',
+        variant: 'destructive',
+        duration: 3000,
+      });
     } finally {
       setSending(false);
     }

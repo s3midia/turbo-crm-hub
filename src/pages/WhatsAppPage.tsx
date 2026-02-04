@@ -23,9 +23,21 @@ export default function WhatsAppPage() {
     sendMessage,
     selectInstance,
     fetchInstances,
+    markChatAsOpen,
+    markChatAsClosed,
   } = useEvolutionAPI();
 
   const [selectedChat, setSelectedChat] = useState<EvolutionChat | null>(null);
+
+  const handleChatSelect = (chat: EvolutionChat) => {
+    // Fechar chat anterior
+    if (selectedChat && selectedChat.remoteJid !== chat.remoteJid) {
+      markChatAsClosed(selectedChat.remoteJid);
+    }
+    // Abrir novo chat (zera unread_count)
+    markChatAsOpen(chat.remoteJid);
+    setSelectedChat(chat);
+  };
 
   if (loading) {
     return (
@@ -89,7 +101,7 @@ export default function WhatsAppPage() {
           <EvolutionChatList
             chats={chats}
             selectedId={selectedChat?.id || null}
-            onSelect={setSelectedChat}
+            onSelect={handleChatSelect}
           />
         </div>
       </aside>
