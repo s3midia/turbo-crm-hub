@@ -21,6 +21,7 @@ export default function WhatsAppPage() {
     fetchChats,
     fetchMessages,
     sendMessage,
+    markChatAsRead,
     selectInstance,
     fetchInstances,
   } = useEvolutionAPI();
@@ -89,7 +90,10 @@ export default function WhatsAppPage() {
           <EvolutionChatList
             chats={chats}
             selectedId={selectedChat?.id || null}
-            onSelect={setSelectedChat}
+            onSelect={(chat) => {
+              setSelectedChat(chat);
+              markChatAsRead(chat.remoteJid);
+            }}
           />
         </div>
       </aside>

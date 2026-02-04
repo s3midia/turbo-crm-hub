@@ -11,6 +11,8 @@ export interface EvolutionChat {
   lastMessage?: string;
   lastMessageTimestamp?: number;
   unreadCount?: number;
+  // internal: used to compute unread locally when server doesn't provide counts
+  lastMessageKeyId?: string;
 }
 
 export interface EvolutionMessage {
@@ -55,6 +57,12 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Local unread tracking (fallback when Evolution doesn't provide unread counts)
+  const unreadByJidRef = useRef<Record<string, number>>({});
+  const lastMessageKeyIdByJidRef = useRef<Record<string, string | null>>({});
+  const activeChatJidRef = useRef<string | null>(null);
+  const fetchingChatsRef = useRef(false);
+
   // Avoid flooding the backend function with a burst of requests (which can cause intermittent BOOT_ERROR/503).
   const profilePicCacheRef = useRef<Map<string, string | null>>(new Map());
   const inflightProfilePicsRef = useRef<Set<string>>(new Set());
@@ -97,6 +105,46 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       }
     }
   }, [instanceName]);
+
+  const markChatAsRead = useCallback((remoteJid: string | null) => {
+    activeChatJidRef.current = remoteJid;
+    if (!remoteJid) return;
+
+    unreadByJidRef.current[remoteJid] = 0;
+
+    setChats((prev) =>
+      prev.map((c) => {
+        if (c.remoteJid !== remoteJid) return c;
+        if (c.lastMessageKeyId) lastMessageKeyIdByJidRef.current[remoteJid] = c.lastMessageKeyId;
+        return { ...c, unreadCount: 0 };
+      })
+    );
+  }, []);
+
+  const getServerUnreadCount = useCallback((chat: any): number | null => {
+    const candidates = [
+      'unreadCount',
+      'unread',
+      'unreadMessages',
+      'unreadMessagesCount',
+      'messagesUnread',
+      'countUnread',
+    ] as const;
+
+    const hasAny = candidates.some((k) => chat?.[k] !== undefined && chat?.[k] !== null);
+    if (!hasAny) return null;
+
+    const raw =
+      chat?.unreadCount ??
+      chat?.unread ??
+      chat?.unreadMessages ??
+      chat?.unreadMessagesCount ??
+      chat?.messagesUnread ??
+      chat?.countUnread;
+
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  }, []);
 
   // Fetch all instances
   const fetchInstances = useCallback(async () => {
@@ -240,6 +288,10 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       console.log('fetchChats: Not connected or no instance', { isConnected, currentInstance: currentInstance?.name });
       return [];
     }
+
+    // Avoid overlapping polls
+    if (fetchingChatsRef.current) return [];
+    fetchingChatsRef.current = true;
     
     try {
       console.log('Fetching chats for instance:', currentInstance.name);
@@ -270,12 +322,6 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       }
       
       console.log('Parsed chat list:', chatList.length, 'chats');
-      console.log('Raw chat unreadCount samples:', chatList.slice(0, 5).map(c => ({ 
-        remoteJid: c.remoteJid || c.lastMessage?.key?.remoteJid, 
-        unreadCount: c.unreadCount,
-        markedAsUnread: c.markedAsUnread,
-        unread: c.unread 
-      })));
       
       const formattedChats: EvolutionChat[] = chatList
         .filter((chat: any) => {
@@ -285,7 +331,40 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
         })
         .map((chat: any) => {
           const lastMsg = chat.lastMessage;
-          const remoteJid = chat.remoteJid || lastMsg?.key?.remoteJid;
+          const remoteJid = String(chat.remoteJid || lastMsg?.key?.remoteJid);
+
+          const lastMessageKeyId =
+            lastMsg?.key?.id ??
+            lastMsg?.id ??
+            null;
+
+          const lastFromMe = Boolean(lastMsg?.key?.fromMe);
+
+          const isActive = activeChatJidRef.current === remoteJid;
+          const serverUnread = getServerUnreadCount(chat);
+          const prevLastKeyId = lastMessageKeyIdByJidRef.current[remoteJid] ?? null;
+          const prevUnread = unreadByJidRef.current[remoteJid] ?? 0;
+
+          const isNewLast = !!(prevLastKeyId && lastMessageKeyId && String(lastMessageKeyId) !== String(prevLastKeyId));
+          const isNewIncoming = isNewLast && !lastFromMe;
+
+          let nextUnread = 0;
+          if (isActive) {
+            nextUnread = 0;
+          } else if (serverUnread !== null && serverUnread > 0) {
+            // Trust server when it actually has counts.
+            nextUnread = serverUnread;
+          } else if (isNewIncoming) {
+            // Fallback: when server doesn't track reads (often returns 0), increment locally per new incoming message.
+            nextUnread = prevUnread + 1;
+          } else if (serverUnread !== null) {
+            nextUnread = serverUnread; // usually 0
+          } else {
+            nextUnread = prevUnread;
+          }
+
+          if (lastMessageKeyId) lastMessageKeyIdByJidRef.current[remoteJid] = String(lastMessageKeyId);
+          unreadByJidRef.current[remoteJid] = nextUnread;
           
           // Get name from pushName, participant name, or extract from JID
           let name = chat.name || chat.pushName || lastMsg?.pushName;
@@ -323,6 +402,8 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
           } else {
             lastMsgText = '[Mídia]';
           }
+
+          const lastMessageTimestamp = Number(lastMsg?.messageTimestamp ?? chat.lastMessageTimestamp) || undefined;
           
           return {
             id: remoteJid,
@@ -330,7 +411,9 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
             name: name,
             profilePicUrl: chat.profilePicUrl || null,
             lastMessage: lastMsgText.substring(0, 100), // Truncate long messages
-            unreadCount: chat.unreadCount || 0,
+            lastMessageTimestamp,
+            unreadCount: nextUnread,
+            lastMessageKeyId: lastMessageKeyId ? String(lastMessageKeyId) : undefined,
           };
         });
       
@@ -354,8 +437,10 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     } catch (error) {
       console.error('Error fetching chats:', error);
       return [];
+    } finally {
+      fetchingChatsRef.current = false;
     }
-  }, [isConnected, currentInstance, callEvolutionAPI, fetchProfilePic]);
+  }, [isConnected, currentInstance, callEvolutionAPI, fetchProfilePic, getServerUnreadCount]);
 
   // Fetch messages
   const fetchMessages = useCallback(async (remoteJid: string) => {
@@ -363,6 +448,8 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     
     try {
       console.log('Fetching messages for:', remoteJid);
+      // Opening a conversation implies reading it.
+      markChatAsRead(remoteJid);
       const response = await callEvolutionAPI('getMessages', currentInstance.name, { remoteJid });
       
       console.log('getMessages response:', response);
@@ -395,7 +482,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       console.error('Error fetching messages:', error);
       return [];
     }
-  }, [isConnected, currentInstance, callEvolutionAPI]);
+  }, [isConnected, currentInstance, callEvolutionAPI, markChatAsRead]);
 
   // Send message
   const sendMessage = useCallback(async (number: string, text: string) => {
@@ -482,16 +569,16 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
 
   // Fetch chats when connected
   useEffect(() => {
-    let mounted = true;
-    
     if (isConnected && currentInstance) {
       console.log('Auto-fetching chats - connected to:', currentInstance.name);
       fetchChats().catch(console.error);
+
+      const interval = setInterval(() => {
+        fetchChats().catch(console.error);
+      }, 10000);
+
+      return () => clearInterval(interval);
     }
-    
-    return () => {
-      mounted = false;
-    };
   }, [isConnected, currentInstance, fetchChats]);
 
   return {
@@ -508,6 +595,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     fetchChats,
     fetchMessages,
     sendMessage,
+    markChatAsRead,
     selectInstance,
     fetchInstances,
   };
