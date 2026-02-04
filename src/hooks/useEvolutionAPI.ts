@@ -270,6 +270,12 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       }
       
       console.log('Parsed chat list:', chatList.length, 'chats');
+      console.log('Raw chat unreadCount samples:', chatList.slice(0, 5).map(c => ({ 
+        remoteJid: c.remoteJid || c.lastMessage?.key?.remoteJid, 
+        unreadCount: c.unreadCount,
+        markedAsUnread: c.markedAsUnread,
+        unread: c.unread 
+      })));
       
       const formattedChats: EvolutionChat[] = chatList
         .filter((chat: any) => {
