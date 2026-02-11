@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { QrCode, Smartphone, RefreshCw, LogOut, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DeviceManager } from './DeviceManager';
 
 interface QRCodeConnectionProps {
   isConnected: boolean;
@@ -9,6 +10,7 @@ interface QRCodeConnectionProps {
   qrCode: string | null;
   onConnect: () => void;
   onDisconnect: () => void;
+  deviceLimitError?: boolean;
 }
 
 export const QRCodeConnection = ({
@@ -17,7 +19,13 @@ export const QRCodeConnection = ({
   qrCode,
   onConnect,
   onDisconnect,
+  deviceLimitError = false,
 }: QRCodeConnectionProps) => {
+  // Se atingiu limite de dispositivos, mostrar gerenciador
+  if (deviceLimitError) {
+    return <DeviceManager onContinue={onConnect} />;
+  }
+
   if (isConnected) {
     return (
       <Card className="border-green-500/50 bg-green-500/5">
@@ -55,7 +63,7 @@ export const QRCodeConnection = ({
         {qrCode ? (
           <div className="flex flex-col items-center gap-4">
             <div className="bg-white p-4 rounded-lg shadow-inner">
-              <img 
+              <img
                 src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`}
                 alt="QR Code WhatsApp"
                 className="w-48 h-48"

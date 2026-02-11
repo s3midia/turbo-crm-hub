@@ -54,6 +54,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   const [chats, setChats] = useState<EvolutionChat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deviceLimitError, setDeviceLimitError] = useState(false);
   const { toast } = useToast();
 
   // Avoid flooding the backend function with a burst of requests (which can cause intermittent BOOT_ERROR/503).
@@ -180,6 +181,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   const connect = useCallback(async (instance?: string) => {
     try {
       setError(null);
+      setDeviceLimitError(false); // Reset device limit error on new attempt
       await getQrCode(instance);
     } catch (error: any) {
       setIsConnecting(false);
@@ -587,16 +589,30 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   // Poll for connection status when showing QR code
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
+    let pollCount = 0;
+    const MAX_POLLS = 40; // 2 minutos (40 * 3 segundos)
 
     if (isConnecting && qrCode) {
       interval = setInterval(async () => {
+        pollCount++;
         const instanceList = await fetchInstances();
         const connected = instanceList.find(i => i.connectionStatus === 'open');
+
         if (connected) {
           setIsConnecting(false);
+          setDeviceLimitError(false);
           toast({
             title: 'Conectado!',
             description: `WhatsApp conectado: ${connected.profileName || connected.name}`,
+          });
+        } else if (pollCount >= MAX_POLLS) {
+          // Após 2 minutos sem conectar, assumir que pode ser limite de dispositivos
+          setIsConnecting(false);
+          setDeviceLimitError(true);
+          toast({
+            title: 'Tempo esgotado',
+            description: 'Não foi possível conectar. Você pode ter atingido o limite de dispositivos.',
+            variant: 'destructive',
           });
         }
       }, 3000);
@@ -694,6 +710,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     chats,
     loading,
     error,
+    deviceLimitError,
     connect,
     disconnect,
     fetchChats,

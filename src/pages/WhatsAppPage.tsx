@@ -16,6 +16,8 @@ export default function WhatsAppPage() {
     qrCode,
     chats,
     loading,
+    error,
+    deviceLimitError,
     connect,
     disconnect,
     fetchChats,
@@ -68,6 +70,7 @@ export default function WhatsAppPage() {
             qrCode={qrCode}
             onConnect={() => connect()}
             onDisconnect={disconnect}
+            deviceLimitError={deviceLimitError}
           />
         </div>
       </div>
