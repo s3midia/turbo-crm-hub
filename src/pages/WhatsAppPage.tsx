@@ -4,6 +4,7 @@ import { QRCodeConnection } from '@/components/whatsapp/QRCodeConnection';
 import { EvolutionChatList } from '@/components/whatsapp/EvolutionChatList';
 import { EvolutionChatWindow } from '@/components/whatsapp/EvolutionChatWindow';
 import { InstanceSelector } from '@/components/whatsapp/InstanceSelector';
+import { WhatsAppDiagnostic } from '@/components/whatsapp/WhatsAppDiagnostic';
 import { Loader2, Settings, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -72,6 +73,8 @@ export default function WhatsAppPage() {
             onDisconnect={disconnect}
             deviceLimitError={deviceLimitError}
           />
+
+          <WhatsAppDiagnostic />
         </div>
       </div>
     );

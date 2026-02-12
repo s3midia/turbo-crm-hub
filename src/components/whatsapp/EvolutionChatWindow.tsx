@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MediaMessage } from './MediaMessage';
 import { useToast } from '@/hooks/use-toast';
+import { OpportunityModal } from './OpportunityModal';
 
 interface EvolutionChatWindowProps {
   chat: EvolutionChat | null;
@@ -24,6 +25,7 @@ export const EvolutionChatWindow = ({
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [opportunityModalOpen, setOpportunityModalOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -193,7 +195,12 @@ export const EvolutionChatWindow = ({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="h-8 rounded-full text-xs font-bold border-wa-border text-wa-text-main hover:bg-wa-surface shadow-none">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 rounded-full text-xs font-bold border-wa-border text-wa-text-main hover:bg-wa-surface shadow-none"
+            onClick={() => setOpportunityModalOpen(true)}
+          >
             Funil de vendas
           </Button>
           <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-wa-text-muted hover:text-wa-text-main">
@@ -301,6 +308,18 @@ export const EvolutionChatWindow = ({
           </div>
         </div>
       </div>
+
+      {/* Opportunity Modal */}
+      <OpportunityModal
+        open={opportunityModalOpen}
+        onClose={() => setOpportunityModalOpen(false)}
+        contactName={chat.name}
+        contactPhone={chat.remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '')}
+        onSaved={() => {
+          // Reload opportunities if needed
+          console.log('Opportunity saved from WhatsApp');
+        }}
+      />
     </div>
   );
 };
