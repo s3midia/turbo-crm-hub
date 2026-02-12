@@ -9,8 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DealDetailsModal } from "./pipeline/DealDetailsModal";
-import { getOpportunities, type Opportunity as DbOpportunity } from "@/hooks/useOpportunities";
+import { OpportunityModal } from "./whatsapp/OpportunityModal";
+import { getOpportunities, initializeDemoData, type Opportunity as DbOpportunity } from "@/hooks/useOpportunities";
 
 interface Opportunity {
   id: string;
@@ -31,8 +31,14 @@ export default function Pipeline() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load opportunities from Supabase
+  // Modal states
+  const [opportunityModalOpen, setOpportunityModalOpen] = useState(false);
+  const [selectedStage, setSelectedStage] = useState<string>('new_contact');
+  const [editingOpportunityId, setEditingOpportunityId] = useState<string | undefined>(undefined);
+
+  // Load opportunities from localStorage
   useEffect(() => {
+    initializeDemoData(); // Initialize with demo data
     loadOpportunities();
   }, []);
 
@@ -97,14 +103,18 @@ export default function Pipeline() {
   };
 
   const handleCardClick = (opportunity: Opportunity) => {
-    setSelectedOpportunity(opportunity);
-    setIsModalOpen(true);
+    setEditingOpportunityId(opportunity.id);
+    setOpportunityModalOpen(true);
   };
 
-  const handleUpdateOpportunity = (updatedOpportunity: Opportunity) => {
-    // TODO: Update opportunity in state/database via Supabase
-    console.log("Oportunidade atualizada:", updatedOpportunity);
-    setIsModalOpen(false);
+  const handleNewOpportunity = (stage?: string) => {
+    setSelectedStage(stage || 'new_contact');
+    setEditingOpportunityId(undefined);
+    setOpportunityModalOpen(true);
+  };
+
+  const handleModalSaved = () => {
+    loadOpportunities(); // Reload after saving
   };
 
   return (
@@ -117,11 +127,14 @@ export default function Pipeline() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" disabled title="Em breve">
             <FileText className="mr-2 h-4 w-4" />
             Relatório
           </Button>
-          <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
+          <Button
+            onClick={() => handleNewOpportunity()}
+            className="bg-primary hover:bg-primary-hover text-primary-foreground"
+          >
             <Plus className="mr-2 h-4 w-4" />
             Nova Oportunidade
           </Button>
@@ -255,12 +268,13 @@ export default function Pipeline() {
         </div>
       )}
 
-      {/* Opportunity Details Modal */}
-      <DealDetailsModal
-        opportunity={selectedOpportunity}
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onUpdate={handleUpdateOpportunity}
+      {/* Opportunity Modal */}
+      <OpportunityModal
+        open={opportunityModalOpen}
+        onClose={() => setOpportunityModalOpen(false)}
+        stage={selectedStage}
+        opportunityId={editingOpportunityId}
+        onSaved={handleModalSaved}
       />
     </div>
   );
