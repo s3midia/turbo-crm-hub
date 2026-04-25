@@ -2,12 +2,22 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || "";
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.SUPABASE_PUBLISHABLE_KEY || "";
+let SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || "";
+let SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.SUPABASE_PUBLISHABLE_KEY || "";
+
+// Patch de Emergência para Vercel
+if (typeof window !== 'undefined' && (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY)) {
+  const isVercel = window.location.hostname.includes('vercel.app');
+  if (isVercel) {
+    console.log("🛠️ Aplicando Patch de Produção S3...");
+    SUPABASE_URL = "https://snpadflziaoxlwjgddrr.supabase.co";
+    SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNucGFkZmx6aWFveGx3amdkZHJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxNTkyMjYsImV4cCI6MjA3NDczNTIyNn0.JiyrG08JeJoqTUpRvax8n0zzG3G07HtJ5jE6dSBwi68";
+  }
+}
 
 console.log("--- DIAGNÓSTICO SUPABASE ---");
-console.log("URL encontrada:", SUPABASE_URL ? "SIM (Inicia com " + SUPABASE_URL.substring(0, 10) + "...)" : "NÃO ❌");
-console.log("KEY encontrada:", SUPABASE_PUBLISHABLE_KEY ? "SIM (Inicia com " + SUPABASE_PUBLISHABLE_KEY.substring(0, 10) + "...)" : "NÃO ❌");
+console.log("URL encontrada:", SUPABASE_URL ? "SIM ✅" : "NÃO ❌");
+console.log("KEY encontrada:", SUPABASE_PUBLISHABLE_KEY ? "SIM ✅" : "NÃO ❌");
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   console.error("🚨 ERRO: As chaves não estão chegando ao navegador. Verifique o painel da Vercel!");
