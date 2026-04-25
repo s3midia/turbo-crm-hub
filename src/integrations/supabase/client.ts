@@ -2,16 +2,18 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || "";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.SUPABASE_PUBLISHABLE_KEY || "";
+
+console.log("--- DIAGNÓSTICO SUPABASE ---");
+console.log("URL encontrada:", SUPABASE_URL ? "SIM (Inicia com " + SUPABASE_URL.substring(0, 10) + "...)" : "NÃO ❌");
+console.log("KEY encontrada:", SUPABASE_PUBLISHABLE_KEY ? "SIM (Inicia com " + SUPABASE_PUBLISHABLE_KEY.substring(0, 10) + "...)" : "NÃO ❌");
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  console.error("❌ ERRO CRÍTICO: Variáveis de ambiente do Supabase não encontradas!");
-  console.log("VITE_SUPABASE_URL:", SUPABASE_URL ? "Configurada ✅" : "FALTANDO ❌");
-  console.log("VITE_SUPABASE_PUBLISHABLE_KEY:", SUPABASE_PUBLISHABLE_KEY ? "Configurada ✅" : "FALTANDO ❌");
+  console.error("🚨 ERRO: As chaves não estão chegando ao navegador. Verifique o painel da Vercel!");
 }
 
-export const supabase = createClient<Database>(SUPABASE_URL || '', SUPABASE_PUBLISHABLE_KEY || '', {
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
