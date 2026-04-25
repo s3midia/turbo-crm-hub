@@ -1,0 +1,529 @@
+/* =====================================================
+   Bolten Design System - Pipeline Executive Report
+   =====================================================
+   Relatório executivo premium para tomada de decisão
+   ===================================================== */
+
+/* ==================== LAYOUT PRINCIPAL ==================== */
+
+.report-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    animation: reportFadeIn 0.5s ease-out;
+}
+
+@keyframes reportFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================== HEADER ==================== */
+
+.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 32px;
+}
+
+.report-header-left h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #1F2937;
+    margin: 0 0 4px;
+}
+
+.report-header-left p {
+    font-size: 14px;
+    color: #6B7280;
+    margin: 0;
+}
+
+.report-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #4B5563;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.report-back-btn:hover {
+    background: #F9FAFB;
+    border-color: #D1D5DB;
+    color: #1F2937;
+}
+
+/* ==================== KPI CARDS ==================== */
+
+.report-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.report-kpi-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+.report-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.report-kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+
+.report-kpi-card.kpi-opportunities::before {
+    background: linear-gradient(90deg, #3B82F6, #60A5FA);
+}
+
+.report-kpi-card.kpi-value::before {
+    background: linear-gradient(90deg, #10B981, #34D399);
+}
+
+.report-kpi-card.kpi-ticket::before {
+    background: linear-gradient(90deg, #F59E0B, #FBBF24);
+}
+
+.report-kpi-card.kpi-conversion::before {
+    background: linear-gradient(90deg, #8B5CF6, #A78BFA);
+}
+
+.report-kpi-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.kpi-opportunities .report-kpi-icon {
+    background: #EFF6FF;
+    color: #3B82F6;
+}
+
+.kpi-value .report-kpi-icon {
+    background: #ECFDF5;
+    color: #10B981;
+}
+
+.kpi-ticket .report-kpi-icon {
+    background: #FFFBEB;
+    color: #F59E0B;
+}
+
+.kpi-conversion .report-kpi-icon {
+    background: #F5F3FF;
+    color: #8B5CF6;
+}
+
+.report-kpi-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #6B7280;
+    margin-bottom: 6px;
+}
+
+.report-kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1F2937;
+    line-height: 1.1;
+}
+
+/* ==================== SEÇÃO GENÉRICA ==================== */
+
+.report-section {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.report-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1F2937;
+    margin: 0 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.report-section-title svg {
+    color: #6B7280;
+}
+
+/* ==================== FUNIL DE VENDAS ==================== */
+
+.report-funnel-stages {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.report-funnel-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.report-funnel-label {
+    width: 140px;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: #4B5563;
+}
+
+.report-funnel-bar-track {
+    flex: 1;
+    height: 32px;
+    background: #F3F4F6;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.report-funnel-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #FFFFFF;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: fit-content;
+}
+
+.funnel-new_contact .report-funnel-bar-fill {
+    background: linear-gradient(90deg, #6B7280, #9CA3AF);
+}
+
+.funnel-in_contact .report-funnel-bar-fill {
+    background: linear-gradient(90deg, #3B82F6, #60A5FA);
+}
+
+.funnel-presentation .report-funnel-bar-fill {
+    background: linear-gradient(90deg, #F59E0B, #FBBF24);
+}
+
+.funnel-negotiation .report-funnel-bar-fill {
+    background: linear-gradient(90deg, #10B981, #34D399);
+}
+
+.report-funnel-stats {
+    width: 180px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+}
+
+.report-funnel-count {
+    font-weight: 600;
+    color: #374151;
+}
+
+.report-funnel-value {
+    color: #10B981;
+    font-weight: 600;
+}
+
+/* ==================== PRIORIDADES ==================== */
+
+.report-priority-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.report-priority-card {
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    border: 1px solid transparent;
+}
+
+.report-priority-card.priority-high {
+    background: #FEF2F2;
+    border-color: #FECACA;
+}
+
+.report-priority-card.priority-medium {
+    background: #FFFBEB;
+    border-color: #FDE68A;
+}
+
+.report-priority-card.priority-low {
+    background: #ECFDF5;
+    border-color: #A7F3D0;
+}
+
+.report-priority-label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.priority-high .report-priority-label {
+    color: #DC2626;
+}
+
+.priority-medium .report-priority-label {
+    color: #D97706;
+}
+
+.priority-low .report-priority-label {
+    color: #059669;
+}
+
+.report-priority-count {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1F2937;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.report-priority-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6B7280;
+}
+
+/* ==================== RANKING VENDEDORES ==================== */
+
+.report-ranking-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.report-ranking-table thead th {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 16px 14px;
+    text-align: left;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.report-ranking-table thead th:last-child,
+.report-ranking-table tbody td:last-child {
+    text-align: right;
+}
+
+.report-ranking-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.report-ranking-table tbody tr:hover {
+    background: #F9FAFB;
+}
+
+.report-ranking-table tbody td {
+    padding: 14px 16px;
+    font-size: 14px;
+    color: #374151;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.report-rank-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+
+.report-rank-1 {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+}
+
+.report-rank-2 {
+    background: linear-gradient(135deg, #9CA3AF, #6B7280);
+}
+
+.report-rank-3 {
+    background: linear-gradient(135deg, #D97706, #B45309);
+}
+
+.report-rank-default {
+    background: #E5E7EB;
+    color: #6B7280;
+}
+
+.report-vendedor-name {
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.report-conversion-badge {
+    display: inline-flex;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #ECFDF5;
+    color: #059669;
+}
+
+/* ==================== TOP OPORTUNIDADES ==================== */
+
+.report-top-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.report-top-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    background: #F9FAFB;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.report-top-item:hover {
+    background: #F3F4F6;
+}
+
+.report-top-rank {
+    font-size: 18px;
+    font-weight: 700;
+    color: #D1D5DB;
+    width: 30px;
+    text-align: center;
+}
+
+.report-top-info {
+    flex: 1;
+}
+
+.report-top-lead {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1F2937;
+    margin-bottom: 2px;
+}
+
+.report-top-stage {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.report-top-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #10B981;
+}
+
+.report-top-priority {
+    display: inline-flex;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.report-top-priority.pri-high {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.report-top-priority.pri-medium {
+    background: #FEF3C7;
+    color: #D97706;
+}
+
+.report-top-priority.pri-low {
+    background: #D1FAE5;
+    color: #059669;
+}
+
+/* ==================== RESPONSIVIDADE ==================== */
+
+@media (max-width: 1024px) {
+    .report-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .report-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .report-priority-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .report-header {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .report-funnel-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .report-funnel-label {
+        width: auto;
+    }
+
+    .report-funnel-stats {
+        width: auto;
+        justify-content: center;
+    }
+
+    .report-ranking-table {
+        font-size: 13px;
+    }
+
+    .report-top-item {
+        flex-wrap: wrap;
+    }
+}

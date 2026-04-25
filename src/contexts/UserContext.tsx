@@ -10,7 +10,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-    const [currentUser, setCurrentUser] = useState<User>(mockUsers[0]); // João Silva por padrão
+    const [currentUser, setCurrentUser] = useState<User>(mockUsers[4]); // Gerente Admin por padrão
 
     const isAdmin = currentUser.role === 'admin';
 

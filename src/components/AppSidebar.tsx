@@ -8,90 +8,148 @@ import {
   MessageCircle,
   BarChart3,
   Settings,
-  Building2,
+  Bot,
+  Zap,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
 
-const menuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Pipeline", url: "/pipeline", icon: TrendingUp },
-  { title: "Contatos", url: "/contacts", icon: Users },
-  { title: "Produtos", url: "/products", icon: Package },
-  { title: "Tarefas", url: "/tasks", icon: CheckSquare },
-  { title: "WhatsApp", url: "/whatsapp", icon: MessageCircle },
-  { title: "Relatórios", url: "/reports", icon: BarChart3 },
-  { title: "Configurações", url: "/settings", icon: Settings },
+const menuSections = [
+  {
+    group: "CRM & Vendas",
+    items: [
+      { title: "Painel", url: "/", icon: LayoutDashboard },
+      { title: "Funil de Vendas", url: "/pipeline", icon: TrendingUp },
+      { title: "Contatos", url: "/contacts", icon: Users },
+      { title: "WhatsApp", url: "/whatsapp", icon: MessageCircle },
+    ],
+  },
+  {
+    group: "Inteligência S3",
+    items: [
+      { title: "Agentes S3", url: "/agents", icon: Bot },
+      { title: "Automação Funil", url: "/automacao-funil", icon: Zap },
+    ],
+  },
+  {
+    group: "Gestão",
+    items: [
+      { title: "Financeiro", url: "/financeiro", icon: DollarSign },
+      { title: "Produtos", url: "/products", icon: Package },
+      { title: "Tarefas", url: "/tasks", icon: CheckSquare },
+    ],
+  },
+  {
+    group: "Sistema",
+    items: [
+      { title: "Relatórios", url: "/reports", icon: BarChart3 },
+      { title: "Configurações", url: "/settings", icon: Settings },
+    ],
+  },
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { data: settings } = useSystemSettings();
+
+  const companyName = settings?.company_name || "Bolten";
+  const logoCollapsed = settings?.logo_collapsed;
+  const logoCollapsedSize = settings?.logo_collapsed_size || 36;
+  // Use theme color from settings; default to orange if not set or if set to black
+  const rawThemeColor = settings?.theme_color;
+  const themeColor =
+    !rawThemeColor || rawThemeColor === "#000000" || rawThemeColor === "hsl(0,0%,0%)"
+      ? "#f97316"
+      : rawThemeColor;
+
+  const firstLetter = companyName.charAt(0).toUpperCase();
 
   return (
-    <Sidebar className={cn("border-none bg-background py-4", collapsed ? "w-20" : "w-64")} collapsible="icon">
-      <SidebarContent className="bg-background">
-        <div className={cn("mb-6 px-6", collapsed && "px-4")}>
-          {!collapsed ? (
-            <div className="flex items-baseline gap-1 mt-2">
-              <span className="text-4xl font-black tracking-tighter text-foreground italic">bolten</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-            </div>
-          ) : (
-            <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center italic font-black text-white text-xl">
-              b
-            </div>
-          )}
-        </div>
+    <aside
+      className={cn(
+        "flex flex-col h-full",
+        "w-[220px] py-4 px-3 gap-2",
+        "bg-background",
+        "border-r border-border/60"
+      )}
+    >
+      {/* Logo */}
+      <div className="mb-3 flex items-center gap-3 px-1">
+        {logoCollapsed ? (
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm ring-2 ring-orange-200 flex-shrink-0"
+            style={{ backgroundColor: themeColor }}
+          >
+            <img
+              src={logoCollapsed}
+              alt={companyName}
+              style={{ height: `${logoCollapsedSize}px`, width: `${logoCollapsedSize}px` }}
+              className="object-contain"
+            />
+          </div>
+        ) : (
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center italic font-black text-white text-xl shadow-sm ring-2 ring-orange-200 flex-shrink-0"
+            style={{ backgroundColor: themeColor }}
+          >
+            {firstLetter}
+          </div>
+        )}
+        <span className="font-bold text-sm text-foreground truncate">{companyName}</span>
+      </div>
 
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu className="px-4 space-y-2">
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="h-12 rounded-full">
-                    <NavLink
-                      to={item.url}
-                      end
-                      className={({ isActive }) => cn(
-                        "flex items-center gap-4 px-4 py-3 rounded-full transition-all duration-300",
-                        "text-base font-medium",
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-none"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                      )}
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <item.icon
-                            className={cn("h-5 w-5 flex-shrink-0 transition-colors", isActive ? "text-accent" : "text-sidebar-foreground")}
-                          />
-                          {!collapsed && (
-                            <span className="truncate">
-                              {item.title}
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+      {/* Divider */}
+      <div className="w-full h-px bg-border mb-1" />
+
+      {/* Nav Items Grouped */}
+      <nav className="flex flex-col gap-6 flex-1 w-full overflow-y-auto pr-1">
+        {menuSections.map((section) => (
+          <div key={section.group} className="flex flex-col gap-1.5">
+            <h3 className="px-3 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/70">
+              {section.group}
+            </h3>
+            <div className="flex flex-col gap-0.5">
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.title}
+                  to={item.url}
+                  end
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group",
+                      isActive
+                        ? "bg-orange-50 shadow-sm ring-1 ring-orange-200/50"
+                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <item.icon
+                        className={cn(
+                          "h-4 w-4 flex-shrink-0 transition-colors",
+                          isActive ? "" : "text-muted-foreground group-hover:text-foreground"
+                        )}
+                        style={isActive ? { color: themeColor } : {}}
+                      />
+                      <span
+                        className={cn(
+                          "text-sm font-medium truncate transition-colors",
+                          isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                        )}
+                        style={isActive ? { color: themeColor } : {}}
+                      >
+                        {item.title}
+                      </span>
+                    </>
+                  )}
+                </NavLink>
               ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+            </div>
+          </div>
+        ))}
+      </nav>
+    </aside>
   );
 }

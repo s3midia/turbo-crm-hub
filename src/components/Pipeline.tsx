@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import './Pipeline.css';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MoreHorizontal, User, DollarSign, Calendar, Phone, Mail, FileText, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, MoreHorizontal, User, DollarSign, Calendar, Phone, Mail, FileText, Loader2, Filter, Search, Settings, BarChart3, MoreVertical, AlertCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +14,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OpportunityModal } from "./whatsapp/OpportunityModal";
-import { getOpportunities, initializeDemoData, type Opportunity as DbOpportunity } from "@/hooks/useOpportunities";
+import { getOpportunities, initializeDemoData, updateOpportunityStage, type Opportunity as DbOpportunity } from "@/hooks/useOpportunities";
+import { VendedorSelector } from "./pipeline/VendedorSelector";
+import { useProfiles } from "@/hooks/useProfiles";
+import { useUser } from "@/contexts/UserContext";
 
 interface Opportunity {
   id: string;
@@ -23,18 +30,30 @@ interface Opportunity {
   created_at: string;
   stage: string;
   observation?: string;
+  responsible_id?: string;
 }
 
 export default function Pipeline() {
+  const navigate = useNavigate();
+  const { currentUser, isAdmin: isAdminFromContext } = useUser();
+  const { data: profiles } = useProfiles();
+
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Estados do vendedor
+  const [selectedVendedorId, setSelectedVendedorId] = useState<string>("todos");
+
   // Modal states
   const [opportunityModalOpen, setOpportunityModalOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>('new_contact');
   const [editingOpportunityId, setEditingOpportunityId] = useState<string | undefined>(undefined);
+
+  // Determinar se o usuário é admin - fallback para UserContext se não encontrar perfil
+  const currentUserProfile = profiles?.find(p => p.email === currentUser?.email);
+  const isAdmin = currentUserProfile?.role === 'admin' || isAdminFromContext;
 
   // Load opportunities from localStorage
   useEffect(() => {
@@ -59,6 +78,7 @@ export default function Pipeline() {
         created_at: opp.created_at!,
         stage: opp.stage,
         observation: opp.observation,
+        responsible_id: opp.responsible_id,
       }));
 
       setOpportunities(transformed);
@@ -103,11 +123,14 @@ export default function Pipeline() {
   };
 
   const handleCardClick = (opportunity: Opportunity) => {
+    setSelectedOpportunity(opportunity);
     setEditingOpportunityId(opportunity.id);
+    setSelectedStage(opportunity.stage as 'new_contact' | 'in_contact' | 'presentation' | 'negotiation');
     setOpportunityModalOpen(true);
   };
 
   const handleNewOpportunity = (stage?: string) => {
+    setSelectedOpportunity(null);
     setSelectedStage(stage || 'new_contact');
     setEditingOpportunityId(undefined);
     setOpportunityModalOpen(true);
@@ -117,26 +140,108 @@ export default function Pipeline() {
     loadOpportunities(); // Reload after saving
   };
 
+  // Drag & Drop handler
+  const handleDragEnd = (result: DropResult) => {
+    const { draggableId, destination, source } = result;
+
+    // Dropped outside a valid column or same position
+    if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
+      return;
+    }
+
+    const newStage = destination.droppableId as Opportunity['stage'];
+
+    // Optimistic update — instantly move card in state
+    setOpportunities(prev =>
+      prev.map(opp =>
+        opp.id === draggableId ? { ...opp, stage: newStage } : opp
+      )
+    );
+
+    // Persist to localStorage
+    updateOpportunityStage(draggableId, newStage);
+  };
+
+  // Filtrar oportunidades baseado no vendedor selecionado e role do usuário
+  const filteredOpportunities = opportunities.filter(opp => {
+    // Se não é admin, mostra apenas as próprias oportunidades
+    if (!isAdmin && currentUserProfile) {
+      return opp.responsible_id === currentUserProfile.id;
+    }
+
+    // Admin selecionou "todos"
+    if (selectedVendedorId === "todos") {
+      return true;
+    }
+
+    // Admin selecionou um vendedor específico
+    return opp.responsible_id === selectedVendedorId;
+  });
+
+  // Buscar perfil do vendedor selecionado
+  const selectedVendedor = profiles?.find(p => p.id === selectedVendedorId);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">Funil de Vendas</h2>
-          <p className="text-muted-foreground">
-            Gerencie suas oportunidades em cada etapa do funil
-          </p>
+    <div className="space-y-4">
+      {/* Filter Bar - matches reference design */}
+      <div className="flex items-center justify-between gap-4 pb-4 border-b">
+        {/* Left side - Filtro and Buscar */}
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" className="gap-2">
+            <Plus className="h-4 w-4" style={{ color: 'hsl(var(--accent))' }} />
+            <span>Filtro</span>
+          </Button>
+
+          {/* Vendedor Selector - only for admin */}
+          {isAdmin && (
+            <div className="border-l border-border pl-3">
+              <VendedorSelector
+                value={selectedVendedorId}
+                onChange={setSelectedVendedorId}
+              />
+            </div>
+          )}
+
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar"
+              className="pl-9 h-9"
+            />
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" disabled title="Em breve">
-            <FileText className="mr-2 h-4 w-4" />
-            Relatório
+
+        {/* Center - Sort controls */}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            <span>Data de criação</span>
+          </Button>
+          <Button variant="outline" size="sm">
+            Desc
+          </Button>
+        </div>
+
+        {/* Right side - Action buttons */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate('/pipeline/relatorio')}>
+            <BarChart3 className="h-4 w-4" />
+            <span>Relatório</span>
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-2">
+            <Settings className="h-4 w-4" />
+            <span>Configurar</span>
           </Button>
           <Button
             onClick={() => handleNewOpportunity()}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+            size="sm"
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Oportunidade
+            <Plus className="h-4 w-4" />
+            <span>Adicionar</span>
+          </Button>
+          <Button variant="ghost" size="sm" className="px-2">
+            <MoreVertical className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -148,124 +253,130 @@ export default function Pipeline() {
           <span className="ml-3 text-muted-foreground">Carregando oportunidades...</span>
         </div>
       ) : (
-        <div className="relative">
-          <div className="flex gap-4 overflow-x-auto pb-4 px-2">{" "}
-            {stages.map((stage) => {
-              const stageOpportunities = opportunities.filter((opp) => opp.stage === stage.id);
-              const stageValue = stageOpportunities.reduce((sum, opp) => sum + opp.value, 0);
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="relative">
+            <div className="flex gap-4 overflow-x-auto pb-4 px-2">
+              {stages.map((stage) => {
+                const stageOpportunities = filteredOpportunities.filter((opp) => opp.stage === stage.id);
+                const stageValue = stageOpportunities.reduce((sum, opp) => sum + opp.value, 0);
 
-              return (
-                <div key={stage.id} className="flex-shrink-0 w-80 space-y-4">
-                  {/* Stage Header */}
-                  <Card className="bg-muted/50">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base font-semibold">{stage.title}</CardTitle>
-                        <Badge className={stage.color}>
-                          {stageOpportunities.length}
-                        </Badge>
+                return (
+                  <div key={stage.id} className="bolten-pipeline-column">
+                    {/* Stage Header */}
+                    <div className="bolten-stage-header">
+                      <div className="bolten-stage-header-top">
+                        <div className="bolten-stage-title-area">
+                          <h3 className="bolten-stage-title">{stage.title}</h3>
+                          <span className="bolten-stage-count">{stageOpportunities.length}</span>
+                        </div>
+                        <button
+                          className="bolten-stage-add-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNewOpportunity(stage.id);
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
                       </div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        R$ {stageValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                    </CardHeader>
-                  </Card>
+                      <div className="bolten-stage-value">
+                        R${stageValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
 
-                  {/* Opportunity Cards */}
-                  <div className="space-y-3 min-h-[200px]">
-                    {stageOpportunities.map((opportunity) => (
-                      <Card
-                        key={opportunity.id}
-                        className="hover:shadow-lg transition-all cursor-pointer border-2 hover:border-primary/50"
-                        onClick={() => handleCardClick(opportunity)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <h4 className="font-semibold text-sm leading-tight flex-1">
-                                {opportunity.title}
-                              </h4>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                    <MoreHorizontal className="h-3.5 w-3.5" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>Editar</DropdownMenuItem>
-                                  <DropdownMenuItem>Mover estágio</DropdownMenuItem>
-                                  <DropdownMenuItem className="text-red-600">Excluir</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
+                    {/* Cards */}
+                    <Droppable droppableId={stage.id}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={`bolten-cards-list ${snapshot.isDraggingOver ? 'bolten-drop-active' : ''}`}
+                        >
+                          {stageOpportunities.map((opportunity, index) => (
+                            <Draggable key={opportunity.id} draggableId={opportunity.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`bolten-card ${snapshot.isDragging ? 'bolten-card-dragging' : ''}`}
+                                  onClick={() => handleCardClick(opportunity)}
+                                >
+                                  <div className="bolten-card-body">
+                                    {/* Header: Valor + Menu */}
+                                    <div className="bolten-card-header">
+                                      <div className="bolten-card-header-value">
+                                        R${opportunity.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </div>
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                          <button className="bolten-card-menu-btn">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                          </button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem>Editar</DropdownMenuItem>
+                                          <DropdownMenuItem>Mover estágio</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-red-600">Excluir</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
 
-                            <div className="space-y-1.5">
-                              <div className="flex items-center text-xs text-muted-foreground">
-                                <User className="mr-1.5 h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{opportunity.client_name}</span>
-                              </div>
+                                    {/* Grid de Campos */}
+                                    <div className="bolten-fields-grid">
+                                      <div>
+                                        <div className="bolten-field-label">Identificação do Lead</div>
+                                        <div className="bolten-field-value">{opportunity.title || '-'}</div>
+                                      </div>
+                                      <div>
+                                        <div className="bolten-field-label">Prioridade</div>
+                                        <div className="bolten-field-value">{getPriorityText(opportunity.priority)}</div>
+                                      </div>
+                                      <div>
+                                        <div className="bolten-field-label">Contato</div>
+                                        <div className="bolten-field-value">{opportunity.client_name || '-'}</div>
+                                      </div>
+                                      <div>
+                                        <div className="bolten-field-label">Responsável</div>
+                                        <div className="bolten-field-value">{profiles?.find(p => p.id === opportunity.responsible_id)?.full_name || '-'}</div>
+                                      </div>
+                                      <div>
+                                        <div className="bolten-field-label">Observação</div>
+                                        <div className="bolten-field-value">{opportunity.observation || '-'}</div>
+                                      </div>
+                                    </div>
 
-                              {opportunity.phone && (
-                                <div className="flex items-center text-xs text-muted-foreground">
-                                  <Phone className="mr-1.5 h-3 w-3 flex-shrink-0" />
-                                  <span className="truncate">{opportunity.phone}</span>
+                                    {/* Valor Monetário Verde */}
+                                    <div className="bolten-monetary">
+                                      R${opportunity.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </div>
+                                  </div>
                                 </div>
                               )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
 
-                              {opportunity.email && (
-                                <div className="flex items-center text-xs text-muted-foreground">
-                                  <Mail className="mr-1.5 h-3 w-3 flex-shrink-0" />
-                                  <span className="truncate">{opportunity.email}</span>
-                                </div>
-                              )}
-
-                              <div className="flex items-center text-xs font-semibold text-foreground">
-                                <DollarSign className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
-                                <span>R$ {opportunity.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                              </div>
-
-                              <div className="flex items-center text-xs text-muted-foreground">
-                                <Calendar className="mr-1.5 h-3 w-3 flex-shrink-0" />
-                                {new Date(opportunity.created_at).toLocaleDateString('pt-BR')}
-                              </div>
-                            </div>
-
-                            {opportunity.observation && (
-                              <div className="pt-2 border-t border-border">
-                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                  {opportunity.observation}
-                                </p>
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between pt-1">
-                              <Badge className={getPriorityColor(opportunity.priority)} variant="secondary">
-                                {getPriorityText(opportunity.priority)}
-                              </Badge>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                    {/* Botão Adicionar */}
+                    <button
+                      className="bolten-add-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNewOpportunity(stage.id);
+                      }}
+                    >
+                      <span className="bolten-add-icon">+</span>
+                      ADICIONAR
+                    </button>
                   </div>
-
-                  {/* Add Deal Button */}
-                  <Button
-                    variant="outline"
-                    className="w-full border-dashed border-2 h-10 text-sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log("Adicionar oportunidade em", stage.title);
-                    }}
-                  >
-                    <Plus className="mr-2 h-3.5 w-3.5" />
-                    Adicionar
-                  </Button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        </DragDropContext>
       )}
 
       {/* Opportunity Modal */}
@@ -273,8 +384,10 @@ export default function Pipeline() {
         open={opportunityModalOpen}
         onClose={() => setOpportunityModalOpen(false)}
         stage={selectedStage}
-        opportunityId={editingOpportunityId}
+        contactName={selectedOpportunity?.client_name || ''}
+        contactPhone={selectedOpportunity?.phone || ''}
         onSaved={handleModalSaved}
+        opportunityId={editingOpportunityId}
       />
     </div>
   );

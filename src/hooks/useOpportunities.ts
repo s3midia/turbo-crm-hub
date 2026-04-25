@@ -27,6 +27,7 @@ export interface Opportunity {
     total_value: number;
     products: Product[];
     tasks: Task[];
+    archived?: boolean;
     created_at?: string;
     updated_at?: string;
 }
@@ -77,11 +78,11 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
     return opportunity.id ? opportunity : opportunities[opportunities.length - 1];
 };
 
-// Get all opportunities (LOCAL VERSION)
+// Get all opportunities (LOCAL VERSION) - excludes archived
 export const getOpportunities = async () => {
     // Simulate async delay
     await new Promise(resolve => setTimeout(resolve, 300));
-    return getLocalOpportunities();
+    return getLocalOpportunities().filter(o => !o.archived);
 };
 
 // Get opportunity by ID (LOCAL VERSION)
@@ -99,6 +100,29 @@ export const deleteOpportunity = async (id: string) => {
     const opportunities = getLocalOpportunities();
     const filtered = opportunities.filter(o => o.id !== id);
     localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(filtered));
+};
+
+// Archive opportunity (mark as archived, not delete)
+export const archiveOpportunity = async (id: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const opportunities = getLocalOpportunities();
+    const index = opportunities.findIndex(o => o.id === id);
+    if (index !== -1) {
+        opportunities[index].archived = true;
+        opportunities[index].updated_at = new Date().toISOString();
+        localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(opportunities));
+    }
+};
+
+// Update only the stage of an opportunity (fast, no delay — used by drag & drop)
+export const updateOpportunityStage = (id: string, newStage: Opportunity['stage']) => {
+    const opportunities = getLocalOpportunities();
+    const index = opportunities.findIndex(o => o.id === id);
+    if (index !== -1) {
+        opportunities[index].stage = newStage;
+        opportunities[index].updated_at = new Date().toISOString();
+        localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(opportunities));
+    }
 };
 
 // Add timeline entry (LOCAL VERSION)
@@ -149,12 +173,13 @@ export const initializeDemoData = () => {
                 priority: 'high',
                 stage: 'in_contact',
                 observation: 'Interessado em sistema completo de gestão',
+                responsible_id: '2',
                 total_value: 8990,
                 products: [
                     { name: 'Sistema CRM Completo', quantity: 1, price: 8990 }
                 ],
                 tasks: [
-                    { title: 'Enviar proposta comercial', scheduledFor: '2026-02-12', assignedTo: 'Vendedor 1', status: 'pending' }
+                    { title: 'Enviar proposta comercial', scheduledFor: '2026-02-12', assignedTo: '2', status: 'pending' }
                 ],
                 created_at: '2026-02-10T10:00:00Z',
                 updated_at: '2026-02-11T14:30:00Z',
@@ -167,6 +192,7 @@ export const initializeDemoData = () => {
                 priority: 'medium',
                 stage: 'new_contact',
                 observation: 'Primeiro contato via WhatsApp',
+                responsible_id: '3',
                 total_value: 0,
                 products: [],
                 tasks: [],
@@ -181,13 +207,14 @@ export const initializeDemoData = () => {
                 priority: 'medium',
                 stage: 'presentation',
                 observation: 'Agendada demonstração para amanhã',
+                responsible_id: '1',
                 total_value: 5500,
                 products: [
                     { name: 'Módulo WhatsApp', quantity: 1, price: 2500 },
                     { name: 'Módulo Pipeline', quantity: 1, price: 3000 }
                 ],
                 tasks: [
-                    { title: 'Preparar demo personalizada', scheduledFor: '2026-02-12', assignedTo: 'Vendedor 2', status: 'in_progress' }
+                    { title: 'Preparar demo personalizada', scheduledFor: '2026-02-12', assignedTo: '1', status: 'in_progress' }
                 ],
                 created_at: '2026-02-09T15:00:00Z',
                 updated_at: '2026-02-11T16:00:00Z',
@@ -200,13 +227,14 @@ export const initializeDemoData = () => {
                 priority: 'high',
                 stage: 'negotiation',
                 observation: 'Negociando desconto para contrato anual',
+                responsible_id: '2',
                 total_value: 12000,
                 products: [
                     { name: 'Pacote Empresarial', quantity: 1, price: 12000 }
                 ],
                 tasks: [
-                    { title: 'Enviar proposta com desconto', scheduledFor: '2026-02-13', assignedTo: 'Gerente', status: 'pending' },
-                    { title: 'Follow-up telefônico', scheduledFor: '2026-02-14', assignedTo: 'Vendedor 1', status: 'pending' }
+                    { title: 'Enviar proposta com desconto', scheduledFor: '2026-02-13', assignedTo: '2', status: 'pending' },
+                    { title: 'Follow-up telefônico', scheduledFor: '2026-02-14', assignedTo: '2', status: 'pending' }
                 ],
                 created_at: '2026-02-08T11:00:00Z',
                 updated_at: '2026-02-11T18:00:00Z',

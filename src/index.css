@@ -109,6 +109,17 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* WhatsApp Bolten Design Tokens - Dark Mode */
+    --wa-primary: 22 92% 55%;
+    --wa-primary-foreground: 0 0% 100%;
+    --wa-danger: 350 100% 55%;
+    --wa-bg-main: 220 15% 10%;
+    --wa-bg-subtle: 220 15% 8%;
+    --wa-surface: 220 15% 14%;
+    --wa-border: 220 15% 20%;
+    --wa-text-main: 220 8% 92%;
+    --wa-text-muted: 220 8% 55%;
   }
 }
 
