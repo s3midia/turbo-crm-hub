@@ -185,7 +185,7 @@ BEGIN
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'user')
+    'user' -- Hardcoded to user to prevent privilege escalation via metadata
   );
   RETURN NEW;
 END;
