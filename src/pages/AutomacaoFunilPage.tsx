@@ -123,7 +123,7 @@ export default function AutomacaoFunilPage() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-y-auto">
+        <div className="flex flex-col h-full bg-background">
             <div className="flex items-center justify-between px-6 py-3 border-b border-border">
                 <span className="text-base font-semibold text-foreground">Painel</span>
             </div>

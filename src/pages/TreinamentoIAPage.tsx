@@ -839,12 +839,12 @@ Passo a Passo de Execução:
   };
 
   return (
-    <div className="flex flex-col h-[100vh] bg-background overflow-hidden relative">
+    <div className="flex flex-col bg-background relative">
       <div className="px-6 py-3 border-b border-border bg-card shrink-0 shadow-sm z-10 flex items-center justify-between">
         <span className="text-base font-semibold text-foreground">Painel / Central de Treinamento Omnichannel</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-24">
+      <div className="flex-1 p-6 space-y-8 pb-24">
 
         {/* Header Section */}
         <div>

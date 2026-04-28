@@ -70,7 +70,7 @@ export default function EquipePage() {
                 </Button>
             </div>
 
-            <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+            <div className="flex-1 p-6 space-y-6">
                 {/* Search & Filters */}
                 <div className="flex items-center gap-4">
                     <div className="relative flex-1 max-w-md">

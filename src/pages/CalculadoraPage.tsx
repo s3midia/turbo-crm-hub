@@ -11,7 +11,7 @@ export default function CalculadoraMetasPage() {
     const leadsPorDia = Math.ceil(leadsNecessarios / 30);
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-y-auto">
+        <div className="flex flex-col h-full bg-background">
             <div className="px-6 py-3 border-b border-border">
                 <span className="text-base font-semibold text-foreground">Painel</span>
             </div>
