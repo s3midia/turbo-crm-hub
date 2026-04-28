@@ -45,7 +45,7 @@ const NAV_SECTIONS = [
             { label: "Visão Geral", icon: Home, to: "/" },
             { label: "Radar de Leads", icon: Scan, to: "/radar-leads" },
             { label: "Funil Kanban", icon: Columns3, to: "/pipeline" },
-            { label: "Automação Funil", icon: Bot, to: "/automacao-funil" },
+            { label: "Agenda", icon: Calendar, to: "/agenda" },
             { label: "Atendimentos", icon: MessageSquare, to: "/atendimentos" },
         ]
     },
@@ -53,8 +53,6 @@ const NAV_SECTIONS = [
         label: "Operacional",
         items: [
             { label: "Serviços", icon: Briefcase, to: "/servicos" },
-            { label: "Calculadora", icon: Calculator, to: "/calculadora" },
-            { label: "Agenda", icon: Calendar, to: "/agenda" },
         ]
     },
     {
@@ -78,7 +76,14 @@ const NAV_SECTIONS = [
                     { label: "Perfil da Empresa", icon: Building2, to: "/perfil-empresa" },
                 ]
             },
-            { label: "Modelos de Docs", icon: FileText, to: "/modelos-docs" },
+            {
+                label: "Modelos de Docs",
+                icon: FileText,
+                subItems: [
+                    { label: "Meus Modelos", icon: FileText, to: "/modelos-docs" },
+                    { label: "Calculadora", icon: Calculator, to: "/calculadora" },
+                ]
+            },
         ]
     }
 ];
@@ -151,13 +156,13 @@ export function AppSidebar() {
                 {/* Logo */}
                 {collapsed ? (
                     <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0"
+                        className="w-10 h-10 rounded-none flex items-center justify-center shadow-sm flex-shrink-0"
                         style={{ backgroundColor: themeColor }}
                     >
                         {logoCollapsed ? (
                             <img src={logoCollapsed} alt={companyName}
                                 style={{ height: `${logoCollapsedSize}px`, width: `${logoCollapsedSize}px` }}
-                                className="object-contain rounded-md" />
+                                className="object-contain rounded-none" />
                         ) : (
                             <span className="text-white font-black text-xl italic leading-none">{firstLetter}</span>
                         )}
@@ -167,7 +172,7 @@ export function AppSidebar() {
                         {logoExpanded ? (
                             <img src={logoExpanded} alt={companyName}
                                 style={{ height: `${logoExpandedSize}px`, width: "auto", maxWidth: "140px" }}
-                                className="object-contain rounded-md" />
+                                className="object-contain rounded-none" />
                         ) : (
                             <>
                                 <span className="text-[22px] font-black tracking-tight text-foreground italic truncate">

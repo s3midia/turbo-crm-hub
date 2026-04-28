@@ -19,7 +19,7 @@ export function useFavicon() {
                 link.href = settings.logo_favicon;
             } else {
                 // Fallback to default
-                link.href = '/favicon.ico';
+                link.href = '/logo.png';
             }
 
             document.getElementsByTagName('head')[0].appendChild(link);
