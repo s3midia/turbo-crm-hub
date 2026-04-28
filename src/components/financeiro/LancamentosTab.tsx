@@ -42,16 +42,24 @@ const recorrenciaLabel = { unica: "Única", mensal: "Mensal", trimestral: "Trime
 const recorrenciaColor = { unica: "bg-muted text-muted-foreground", mensal: "bg-blue-500/10 text-blue-500", trimestral: "bg-violet-500/10 text-violet-500", anual: "bg-emerald-500/10 text-emerald-500" };
 
 interface ModalProps {
+  transaction?: Transaction;
   onClose: () => void;
   onSave: (t: Transaction) => void;
 }
 
-function NovaTransacaoModal({ onClose, onSave }: ModalProps) {
+function TransacaoModal({ transaction, onClose, onSave }: ModalProps) {
   const [form, setForm] = useState({
-    tipo: "entrada" as "entrada" | "saida",
-    descricao: "", valor: "", dataLancamento: "", vencimento: "",
-    recebimento: "", lead: "", categoria: "", recorrencia: "unica" as Transaction["recorrencia"],
-    status: "pendente" as Transaction["status"], classificacao: "nao_recorrente" as "recorrente" | "nao_recorrente",
+    tipo: (transaction?.tipo ?? "entrada") as "entrada" | "saida",
+    descricao: transaction?.descricao ?? "",
+    valor: transaction?.valor?.toString() ?? "",
+    dataLancamento: transaction?.dataLancamento ?? "",
+    vencimento: transaction?.vencimento ?? "",
+    recebimento: transaction?.recebimento ?? "",
+    lead: transaction?.lead ?? "",
+    categoria: transaction?.categoria ?? "",
+    recorrencia: (transaction?.recorrencia ?? "unica") as Transaction["recorrencia"],
+    status: (transaction?.status ?? "pendente") as Transaction["status"],
+    classificacao: (transaction?.classificacao ?? "nao_recorrente") as "recorrente" | "nao_recorrente",
   });
 
   const categorias = form.tipo === "entrada" ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA;
@@ -59,7 +67,7 @@ function NovaTransacaoModal({ onClose, onSave }: ModalProps) {
   function handleSave() {
     if (!form.descricao || !form.valor || !form.vencimento) return;
     onSave({
-      id: Date.now(),
+      id: transaction?.id ?? Date.now(),
       descricao: form.descricao,
       tipo: form.tipo,
       valor: parseFloat(form.valor.replace(",", ".")),
@@ -79,7 +87,7 @@ function NovaTransacaoModal({ onClose, onSave }: ModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-lg bg-card border border-border rounded-3xl shadow-2xl p-8 mx-4 animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black">Nova Transação</h2>
+          <h2 className="text-xl font-black">{transaction ? "Editar Transação" : "Nova Transação"}</h2>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-all"><X size={18} /></button>
         </div>
 
@@ -170,7 +178,7 @@ function NovaTransacaoModal({ onClose, onSave }: ModalProps) {
             Cancelar
           </button>
           <button onClick={handleSave} className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all">
-            Salvar Transação
+            {transaction ? "Salvar Alterações" : "Salvar Transação"}
           </button>
         </div>
       </div>
@@ -184,6 +192,7 @@ export default function LancamentosTab() {
   const [filterTipo, setFilterTipo] = useState<"todos" | "entrada" | "saida">("todos");
   const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado">("todos");
   const [showModal, setShowModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
 
   const filtered = transactions.filter(t => {
     const matchSearch = t.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || t.lead.toLowerCase().includes(searchTerm.toLowerCase());
@@ -198,8 +207,11 @@ export default function LancamentosTab() {
     pendentes: transactions.filter(t => t.tipo === "entrada" && t.status === "pendente").reduce((s, t) => s + t.valor, 0),
   };
 
-  function handleAddTransaction(t: Transaction) {
-    setTransactions(prev => [t, ...prev]);
+  function handleUpsertTransaction(t: Transaction) {
+    setTransactions(prev => {
+      const exists = prev.find(x => x.id === t.id);
+      return exists ? prev.map(x => x.id === t.id ? t : x) : [t, ...prev];
+    });
   }
 
   function handleMarkPaid(id: number) {
@@ -210,9 +222,25 @@ export default function LancamentosTab() {
     setTransactions(prev => prev.filter(t => t.id !== id));
   }
 
+  function openEdit(t: Transaction) {
+    setEditingTransaction(t);
+    setShowModal(true);
+  }
+
+  function openNew() {
+    setEditingTransaction(undefined);
+    setShowModal(true);
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
-      {showModal && <NovaTransacaoModal onClose={() => setShowModal(false)} onSave={handleAddTransaction} />}
+      {showModal && (
+        <TransacaoModal
+          transaction={editingTransaction}
+          onClose={() => { setShowModal(false); setEditingTransaction(undefined); }}
+          onSave={handleUpsertTransaction}
+        />
+      )}
 
       {/* Summary Row */}
       <div className="grid grid-cols-3 gap-4">
@@ -252,7 +280,7 @@ export default function LancamentosTab() {
             <option value="pendente">Pendente</option>
             <option value="agendado">Agendado</option>
           </select>
-          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+          <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
             <Plus size={14} />
             Nova
           </button>
@@ -325,10 +353,10 @@ export default function LancamentosTab() {
                         <Check size={14} />
                       </button>
                     )}
-                    <button className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all">
+                    <button onClick={() => openEdit(t)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all" title="Editar transação">
                       <Edit3Icon size={14} />
                     </button>
-                    <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 transition-all">
+                    <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 transition-all" title="Excluir">
                       <Trash2 size={14} />
                     </button>
                   </div>
