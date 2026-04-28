@@ -1,5 +1,5 @@
-import React from "react";
-import { ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, ArrowDownRight, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
@@ -16,18 +16,17 @@ const kpis = [
 
 // ── Focus Areas ───────────────────────────────────────────────────────────────
 const focusAreas = [
-  { name: "Financeiro", status: "Pendente", trend: "→", trendUp: null },
-  { name: "Stakeholders", status: "Sucesso", trend: "↗", trendUp: true },
-  { name: "Processos Internos", status: "Pendente", trend: "→", trendUp: null },
-  { name: "Capacidade Operacional", status: "Sucesso", trend: "↗", trendUp: true },
+  { name: "Financeiro", status: "Pendente", trendUp: null },
+  { name: "Stakeholders", status: "Sucesso", trendUp: true },
+  { name: "Processos Internos", status: "Pendente", trendUp: null },
+  { name: "Capacidade Operacional", status: "Sucesso", trendUp: true },
 ];
 
-// ── Org Performance ───────────────────────────────────────────────────────────
 const orgPerf = [
-  { name: "CEO / Estratégia", status: "Sucesso", trend: "↗", trendUp: true },
-  { name: "Vendas", status: "Pendente", trend: "→", trendUp: null },
-  { name: "Operações", status: "Sucesso", trend: "↗", trendUp: true },
-  { name: "Financeiro", status: "Pendente", trend: "→", trendUp: null },
+  { name: "CEO / Estratégia", status: "Sucesso", trendUp: true },
+  { name: "Vendas", status: "Pendente", trendUp: null },
+  { name: "Operações", status: "Sucesso", trendUp: true },
+  { name: "Financeiro", status: "Pendente", trendUp: null },
 ];
 
 // ── Cash Flow Data (quarterly) ────────────────────────────────────────────────
@@ -43,13 +42,7 @@ const maxPt = Math.max(...allPoints);
 const chartW = 340;
 const chartH = 100;
 function toX(i: number, total: number) { return (i / (total - 1)) * chartW; }
-function toY(v: number) { return chartH - ((v - minPt) / (maxPt - minPt)) * chartH; }
-
-// ── Initiative Bar Data ───────────────────────────────────────────────────────
-const initiativeMonths = ["Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const overdue =   [18, 15, 19, 20, 14, 13, 15, 17];
-const budget =    [5,  4,  5,  8,  3,  2,  4,  5];
-const maxBar = Math.max(...overdue);
+function toY(v: number) { return chartH - ((v - minPt) / (maxPt - minPt + 0.5)) * chartH; }
 
 // ── Risk Area Data ────────────────────────────────────────────────────────────
 const riskMonths = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -66,19 +59,65 @@ function buildPath(data: number[], minV: number, maxV: number, w: number, h: num
 }
 function buildArea(data: number[], minV: number, maxV: number, w: number, h: number) {
   const line = buildPath(data, minV, maxV, w, h);
-  const lastX = w;
-  const lastY = h - ((data[data.length-1] - minV) / (maxV - minV + 1)) * h;
-  return `${line} L ${lastX} ${h} L 0 ${h} Z`;
+  return `${line} L ${w} ${h} L 0 ${h} Z`;
 }
-const rW = 400, rH = 120;
+const rW = 400, rH = 110;
 const rMin = 0, rMax = 28;
+
+// ── Initiative Bar Data ───────────────────────────────────────────────────────
+const initiativeMonths = ["Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const overdue = [18, 15, 19, 20, 14, 13, 15, 17];
+const budget  = [5,  4,  5,  8,  3,  2,  4,  5];
+const maxInitBar = Math.max(...overdue);
+
+// ── Animated SVG line ─────────────────────────────────────────────────────────
+function AnimatedLine({ d, stroke, strokeWidth = 1.5 }: { d: string; stroke: string; strokeWidth?: number }) {
+  const pathRef = useRef<SVGPathElement>(null);
+  const [len, setLen] = useState(0);
+  useEffect(() => {
+    if (pathRef.current) setLen(pathRef.current.getTotalLength());
+  }, [d]);
+  useEffect(() => {
+    if (len > 0 && pathRef.current) {
+      pathRef.current.style.strokeDasharray = `${len}`;
+      pathRef.current.style.strokeDashoffset = `${len}`;
+      const raf = requestAnimationFrame(() => {
+        if (pathRef.current) {
+          pathRef.current.style.transition = "stroke-dashoffset 1.4s cubic-bezier(0.4,0,0.2,1)";
+          pathRef.current.style.strokeDashoffset = "0";
+        }
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [len]);
+  return <path ref={pathRef} d={d} fill="none" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />;
+}
+
+// ── Animated bar for initiative chart ────────────────────────────────────────
+function AnimatedInitBar({ height, budgetHeight }: { height: number; budgetHeight: number }) {
+  const [h, setH] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setH(height), 100);
+    return () => clearTimeout(t);
+  }, [height]);
+  return (
+    <div className="w-full rounded-t bg-muted/40 overflow-hidden relative" style={{ height: `${h}px`, transition: "height 0.8s cubic-bezier(0.4,0,0.2,1)" }}>
+      <div
+        className="absolute bottom-0 w-full bg-primary/50 rounded-t transition-all duration-1000"
+        style={{ height: `${budgetHeight}%` }}
+      />
+    </div>
+  );
+}
 
 function StatusBadge({ status }: { status: string }) {
   const ok = status === "Sucesso";
   return (
-    <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-full border",
-      ok ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-         : "bg-amber-500/10 text-amber-600 border-amber-500/30"
+    <span className={cn(
+      "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+      ok
+        ? "bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+        : "bg-amber-500/8 text-amber-600 dark:text-amber-400 border-amber-500/20"
     )}>
       {status}
     </span>
@@ -92,26 +131,29 @@ export default function DashboardFinanceiro() {
     const y = toY(v);
     return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
   }).join(" ");
-  const areaPath = linePath + ` L ${chartW} ${chartH} L 0 ${chartH} Z`;
-
+  const areaPath = linePath + ` L ${chartW} ${chartH + 4} L 0 ${chartH + 4} Z`;
   const peakIdx = flatPoints.indexOf(Math.max(...flatPoints));
   const peakX = toX(peakIdx, flatPoints.length);
   const peakY = toY(flatPoints[peakIdx]);
 
   return (
-    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-400">
 
       {/* ── KPI STRIP ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         {kpis.map((k, i) => (
-          <div key={i} className="bg-card border border-border/50 rounded-2xl p-4 hover:shadow-md hover:border-primary/20 transition-all">
-            <p className="text-[10px] font-semibold text-muted-foreground mb-2 leading-tight">{k.label}</p>
-            <p className="text-2xl font-black text-foreground tracking-tight">{k.value}</p>
-            <div className={cn("flex items-center gap-1 mt-2 text-[10px] font-bold",
+          <div
+            key={i}
+            className="bg-card border border-border/40 rounded-xl p-4 hover:shadow-sm hover:border-primary/20 transition-all duration-200"
+          >
+            <p className="text-[10px] font-medium text-muted-foreground mb-2 leading-tight uppercase tracking-wider">{k.label}</p>
+            <p className="text-xl font-bold text-foreground tracking-tight">{k.value}</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">{k.sub}</p>
+            <div className={cn("flex items-center gap-0.5 mt-2 text-[10px] font-semibold",
               k.up === true ? "text-emerald-500" : "text-rose-500"
             )}>
-              {k.up ? <ArrowUpRight size={11}/> : <ArrowDownRight size={11}/>}
-              {k.trend} vs mês anterior
+              {k.up ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+              {k.trend}
             </div>
           </div>
         ))}
@@ -121,78 +163,74 @@ export default function DashboardFinanceiro() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Focus Areas */}
-        <div className="bg-card border border-border/50 rounded-2xl p-5">
+        <div className="bg-card border border-border/40 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-black text-foreground">Áreas de Foco</h3>
-            <button className="text-[10px] font-bold text-primary hover:underline">Ver todas &rsaquo;</button>
+            <h3 className="text-sm font-semibold text-foreground">Áreas de Foco</h3>
           </div>
-          <div className="space-y-0">
+          <div>
             <div className="grid grid-cols-3 pb-2 border-b border-border/30">
-              {["Nome","Status","Tendência"].map(h => (
-                <span key={h} className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">{h}</span>
+              {["Área", "Status", "Tendência"].map(h => (
+                <span key={h} className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{h}</span>
               ))}
             </div>
             {focusAreas.map((a, i) => (
-              <div key={i} className="grid grid-cols-3 items-center py-3 border-b border-border/20 last:border-0">
-                <span className="text-[12px] font-semibold text-foreground">{a.name}</span>
+              <div key={i} className="grid grid-cols-3 items-center py-3 border-b border-border/15 last:border-0">
+                <span className="text-[12px] font-medium text-foreground">{a.name}</span>
                 <StatusBadge status={a.status} />
-                <span className={cn("text-base font-black",
+                <span className={cn("text-base font-bold",
                   a.trendUp === true ? "text-emerald-500" : "text-amber-500"
-                )}>{a.trend}</span>
+                )}>{a.trendUp === true ? "↗" : "→"}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Org Performance */}
-        <div className="bg-card border border-border/50 rounded-2xl p-5">
+        <div className="bg-card border border-border/40 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-black text-foreground">Desempenho Organizacional</h3>
-            <button className="text-[10px] font-bold text-primary hover:underline">Ver todos &rsaquo;</button>
+            <h3 className="text-sm font-semibold text-foreground">Desempenho Organizacional</h3>
           </div>
-          <div className="space-y-0">
+          <div>
             <div className="grid grid-cols-3 pb-2 border-b border-border/30">
-              {["Nome","Status","Tendência"].map(h => (
-                <span key={h} className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">{h}</span>
+              {["Área", "Status", "Tendência"].map(h => (
+                <span key={h} className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{h}</span>
               ))}
             </div>
             {orgPerf.map((o, i) => (
-              <div key={i} className="grid grid-cols-3 items-center py-3 border-b border-border/20 last:border-0">
-                <span className="text-[12px] font-semibold text-foreground">{o.name}</span>
+              <div key={i} className="grid grid-cols-3 items-center py-3 border-b border-border/15 last:border-0">
+                <span className="text-[12px] font-medium text-foreground">{o.name}</span>
                 <StatusBadge status={o.status} />
-                <span className={cn("text-base font-black",
+                <span className={cn("text-base font-bold",
                   o.trendUp === true ? "text-emerald-500" : "text-amber-500"
-                )}>{o.trend}</span>
+                )}>{o.trendUp === true ? "↗" : "→"}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Cash Flow Chart */}
-        <div className="bg-card border border-border/50 rounded-2xl p-5">
-          <h3 className="text-sm font-black text-foreground mb-1">Fluxo de Caixa (R$ k)</h3>
-          <p className="text-[10px] text-muted-foreground mb-4">Performance trimestral</p>
+        <div className="bg-card border border-border/40 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-0.5">Fluxo de Caixa</h3>
+          <p className="text-[10px] text-muted-foreground mb-4">Performance trimestral (R$ k)</p>
           <div className="relative">
-            <svg viewBox={`0 0 ${chartW} ${chartH + 20}`} className="w-full h-28" preserveAspectRatio="none">
+            <svg viewBox={`0 0 ${chartW} ${chartH + 24}`} className="w-full h-28" preserveAspectRatio="none">
               <defs>
-                <linearGradient id="cfGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.25"/>
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.02"/>
+                <linearGradient id="cfGrad2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.01" />
                 </linearGradient>
               </defs>
-              <path d={areaPath} fill="url(#cfGrad)" />
-              <path d={linePath} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              {/* Peak dot */}
-              <circle cx={peakX} cy={peakY} r="4" fill="hsl(var(--primary))" />
-              <rect x={peakX - 28} y={peakY - 22} width="56" height="18" rx="4" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="1"/>
-              <text x={peakX} y={peakY - 9} textAnchor="middle" fontSize="9" fill="hsl(var(--foreground))" fontWeight="700">
+              <path d={areaPath} fill="url(#cfGrad2)" />
+              <AnimatedLine d={linePath} stroke="hsl(var(--primary))" strokeWidth={2} />
+              <circle cx={peakX} cy={peakY} r="3.5" fill="hsl(var(--primary))" />
+              <rect x={peakX - 25} y={peakY - 20} width="50" height="16" rx="4" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="1" />
+              <text x={peakX} y={peakY - 8} textAnchor="middle" fontSize="8" fill="hsl(var(--foreground))" fontWeight="600">
                 R$ {flatPoints[peakIdx].toFixed(1)}k
               </text>
             </svg>
-            {/* X labels */}
             <div className="flex justify-between mt-1">
               {cashFlowQ.map(q => (
-                <span key={q.label} className="text-[10px] font-bold text-muted-foreground">{q.label}</span>
+                <span key={q.label} className="text-[10px] font-medium text-muted-foreground">{q.label}</span>
               ))}
             </div>
           </div>
@@ -203,73 +241,64 @@ export default function DashboardFinanceiro() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Initiative Status Bar Chart */}
-        <div className="bg-card border border-border/50 rounded-2xl p-5">
+        <div className="bg-card border border-border/40 rounded-xl p-5">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="text-sm font-black text-foreground">Status de Iniciativas (#)</h3>
-            <div className="flex items-center gap-3 text-[10px] font-semibold text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-muted-foreground/40 inline-block"/>Vencidas</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-primary/60 inline-block"/>Orçamento</span>
+            <h3 className="text-sm font-semibold text-foreground">Status de Iniciativas</h3>
+            <div className="flex items-center gap-3 text-[10px] font-medium text-muted-foreground">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-muted-foreground/30 inline-block" />Vencidas</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-primary/50 inline-block" />Orçamento</span>
             </div>
           </div>
-          <div className="flex items-end gap-2 h-32 mt-4">
+          <div className="flex items-end gap-2 mt-4" style={{ height: "100px" }}>
             {initiativeMonths.map((m, i) => (
-              <div key={m} className="flex-1 flex flex-col items-center gap-0.5">
-                <div className="w-full flex flex-col justify-end" style={{ height: "100px" }}>
-                  <div className="relative w-full">
-                    {/* Overdue bg bar */}
-                    <div className="w-full rounded-t bg-muted/50 relative overflow-hidden"
-                      style={{ height: `${(overdue[i] / maxBar) * 80}px` }}>
-                      {/* Budget overlay */}
-                      <div className="absolute bottom-0 w-full bg-primary/50 rounded-t"
-                        style={{ height: `${(budget[i] / overdue[i]) * 100}%` }}/>
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[9px] font-bold text-muted-foreground">{m}</span>
+              <div key={m} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                <AnimatedInitBar
+                  height={(overdue[i] / maxInitBar) * 80}
+                  budgetHeight={(budget[i] / overdue[i]) * 100}
+                />
+                <span className="text-[9px] font-medium text-muted-foreground mt-1">{m}</span>
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-1 mt-2">
-            <span className="text-[10px] text-muted-foreground">Pico: Ago — Vencidas R$543 · Orçamento R$423</span>
-          </div>
+          <p className="text-[10px] text-muted-foreground mt-2">Pico: Ago — Vencidas 20 · Orçamento 8</p>
         </div>
 
-        {/* Risks By Property Area Chart */}
-        <div className="bg-card border border-border/50 rounded-2xl p-5">
+        {/* Risks Area Chart */}
+        <div className="bg-card border border-border/40 rounded-xl p-5">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="text-sm font-black text-foreground">Riscos por Categoria</h3>
-            <div className="flex items-center gap-3 text-[10px] font-semibold">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400 inline-block"/>Alto</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>Médio</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"/>Baixo</span>
+            <h3 className="text-sm font-semibold text-foreground">Riscos por Categoria</h3>
+            <div className="flex items-center gap-3 text-[10px] font-medium">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400 inline-block" />Alto</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />Médio</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />Baixo</span>
             </div>
           </div>
           <div className="mt-3">
-            <svg viewBox={`0 0 ${rW} ${rH}`} className="w-full h-32" preserveAspectRatio="none">
+            <svg viewBox={`0 0 ${rW} ${rH}`} className="w-full h-28" preserveAspectRatio="none">
               <defs>
-                <linearGradient id="lowG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#34d399" stopOpacity="0.4"/>
-                  <stop offset="100%" stopColor="#34d399" stopOpacity="0.05"/>
+                <linearGradient id="lowG2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#34d399" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#34d399" stopOpacity="0.02" />
                 </linearGradient>
-                <linearGradient id="midG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.5"/>
-                  <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.1"/>
+                <linearGradient id="midG2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.05" />
                 </linearGradient>
-                <linearGradient id="hiG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f87171" stopOpacity="0.5"/>
-                  <stop offset="100%" stopColor="#f87171" stopOpacity="0.1"/>
+                <linearGradient id="hiG2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f87171" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#f87171" stopOpacity="0.05" />
                 </linearGradient>
               </defs>
-              <path d={buildArea(low, rMin, rMax, rW, rH)} fill="url(#lowG)"/>
-              <path d={buildPath(low, rMin, rMax, rW, rH)} fill="none" stroke="#34d399" strokeWidth="1.5"/>
-              <path d={buildArea(medium, rMin, rMax, rW, rH)} fill="url(#midG)"/>
-              <path d={buildPath(medium, rMin, rMax, rW, rH)} fill="none" stroke="#fbbf24" strokeWidth="1.5"/>
-              <path d={buildArea(high, rMin, rMax, rW, rH)} fill="url(#hiG)"/>
-              <path d={buildPath(high, rMin, rMax, rW, rH)} fill="none" stroke="#f87171" strokeWidth="1.5"/>
+              <path d={buildArea(low, rMin, rMax, rW, rH)} fill="url(#lowG2)" />
+              <AnimatedLine d={buildPath(low, rMin, rMax, rW, rH)} stroke="#34d399" />
+              <path d={buildArea(medium, rMin, rMax, rW, rH)} fill="url(#midG2)" />
+              <AnimatedLine d={buildPath(medium, rMin, rMax, rW, rH)} stroke="#fbbf24" />
+              <path d={buildArea(high, rMin, rMax, rW, rH)} fill="url(#hiG2)" />
+              <AnimatedLine d={buildPath(high, rMin, rMax, rW, rH)} stroke="#f87171" />
             </svg>
             <div className="flex justify-between mt-1">
               {riskMonths.map(m => (
-                <span key={m} className="text-[9px] font-bold text-muted-foreground">{m}</span>
+                <span key={m} className="text-[9px] font-medium text-muted-foreground">{m}</span>
               ))}
             </div>
           </div>
