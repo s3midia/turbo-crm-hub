@@ -29,7 +29,6 @@ const integracoes = [
     icon: FileText,
     color: "text-blue-500",
     bg: "bg-blue-500/10",
-    status: "não configurado",
     providers: ["Asaas", "Gerencianet", "PJBank", "Inter Empresas"],
   },
   {
@@ -38,7 +37,6 @@ const integracoes = [
     icon: Receipt,
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
-    status: "não configurado",
     providers: ["Focus NFe", "Plug Notas", "eNotas", "Nuvem Fiscal"],
   },
   {
@@ -47,18 +45,66 @@ const integracoes = [
     icon: Zap,
     color: "text-amber-500",
     bg: "bg-amber-500/10",
-    status: "não configurado",
     providers: ["Focus NFe", "Nuvem Fiscal"],
   },
 ];
 
+interface IntState {
+  open: boolean;
+  provider: string;
+  apiKey: string;
+  connected: boolean;
+  connectedProvider: string;
+  error: string;
+}
+
+const defaultIntState = (): IntState => ({
+  open: false,
+  provider: "",
+  apiKey: "",
+  connected: false,
+  connectedProvider: "",
+  error: "",
+});
+
 export default function CobrancasFiscalTab() {
   const [contratos, setContratos] = useState(CONTRATOS);
-  const [activeInt, setActiveInt] = useState<number | null>(null);
-  const [apiKey, setApiKey] = useState("");
+  const [intStates, setIntStates] = useState<IntState[]>(integracoes.map(defaultIntState));
+
+  function updateInt(i: number, patch: Partial<IntState>) {
+    setIntStates(prev => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  }
+
+  function handleOpen(i: number) {
+    updateInt(i, { open: true, error: "" });
+  }
+
+  function handleCancel(i: number) {
+    setIntStates(prev =>
+      prev.map((s, idx) =>
+        idx === i
+          ? { ...defaultIntState(), connected: s.connected, connectedProvider: s.connectedProvider }
+          : s
+      )
+    );
+  }
+
+  function handleConectar(i: number) {
+    const s = intStates[i];
+    if (!s.provider) {
+      updateInt(i, { error: "Selecione o provedor antes de continuar." });
+      return;
+    }
+    if (!s.apiKey.trim()) {
+      updateInt(i, { error: "Cole sua API Key para prosseguir." });
+      return;
+    }
+    // Simulate save — swap for a Supabase upsert when ready
+    updateInt(i, { connected: true, connectedProvider: s.provider, open: false, error: "" });
+  }
 
   function toggleContrato(id: number) {
-    setContratos(prev => prev.map(c => c.id === id ? { ...c, ativo: !c.ativo } : c));
+    setContratos(prev => prev.map(c => (c.id === id ? { ...c, ativo: !c.ativo } : c)));
   }
 
   return (
@@ -70,48 +116,94 @@ export default function CobrancasFiscalTab() {
           Integrações Fiscais e de Cobrança
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {integracoes.map((int, i) => (
-            <div key={i} className={cn("p-5 rounded-2xl border transition-all", activeInt === i ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:border-primary/30")}>
-              <div className="flex items-start justify-between mb-3">
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", int.bg)}>
-                  <int.icon size={20} className={int.color} />
-                </div>
-                <span className="text-[10px] font-black px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 uppercase">
-                  Não configurado
-                </span>
-              </div>
-              <h4 className="text-sm font-black text-foreground">{int.nome}</h4>
-              <p className="text-[11px] text-muted-foreground mt-1 mb-4">{int.desc}</p>
-
-              {activeInt === i ? (
-                <div className="space-y-3">
-                  <select className="w-full px-3 py-2 rounded-xl border border-border/50 bg-background text-xs font-bold focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="">Selecione o provedor...</option>
-                    {int.providers.map(p => <option key={p}>{p}</option>)}
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Cole sua API Key aqui..."
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border/50 bg-background text-xs focus:ring-2 focus:ring-primary/20 transition-all"
-                  />
-                  <div className="flex gap-2">
-                    <button className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all">
-                      Conectar
-                    </button>
-                    <button onClick={() => setActiveInt(null)} className="flex-1 py-2 rounded-xl border border-border text-xs font-bold hover:bg-muted transition-all">
-                      Cancelar
-                    </button>
+          {integracoes.map((int, i) => {
+            const s = intStates[i];
+            return (
+              <div
+                key={i}
+                className={cn(
+                  "p-5 rounded-2xl border transition-all",
+                  s.open
+                    ? "border-primary bg-primary/5"
+                    : "border-border/50 bg-card hover:border-primary/30"
+                )}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", int.bg)}>
+                    <int.icon size={20} className={int.color} />
                   </div>
+                  {s.connected ? (
+                    <span className="text-[10px] font-black px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 uppercase flex items-center gap-1">
+                      <CheckCircle2 size={10} /> Conectado
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 uppercase">
+                      Não configurado
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <button onClick={() => setActiveInt(i)} className="w-full py-2 rounded-xl border border-border/50 bg-background hover:bg-muted text-xs font-bold transition-all flex items-center justify-center gap-1.5">
-                  <ExternalLink size={12} /> Configurar Integração
-                </button>
-              )}
-            </div>
-          ))}
+                <h4 className="text-sm font-black text-foreground">{int.nome}</h4>
+                {s.connected && s.connectedProvider && (
+                  <p className="text-[10px] text-emerald-500 font-semibold mt-0.5">
+                    Provedor: {s.connectedProvider}
+                  </p>
+                )}
+                <p className="text-[11px] text-muted-foreground mt-1 mb-4">{int.desc}</p>
+
+                {s.open ? (
+                  <div className="space-y-3">
+                    <select
+                      value={s.provider}
+                      onChange={e => updateInt(i, { provider: e.target.value, error: "" })}
+                      className="w-full px-3 py-2 rounded-xl border border-border/50 bg-background text-xs font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                    >
+                      <option value="">Selecione o provedor...</option>
+                      {int.providers.map(p => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Cole sua API Key aqui..."
+                      value={s.apiKey}
+                      onChange={e => updateInt(i, { apiKey: e.target.value, error: "" })}
+                      className="w-full px-3 py-2 rounded-xl border border-border/50 bg-background text-xs focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                    {s.error && (
+                      <p className="text-[11px] text-red-500 flex items-center gap-1">
+                        <AlertCircle size={11} />
+                        {s.error}
+                      </p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleConectar(i)}
+                        className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all"
+                      >
+                        Conectar
+                      </button>
+                      <button
+                        onClick={() => handleCancel(i)}
+                        className="flex-1 py-2 rounded-xl border border-border text-xs font-bold hover:bg-muted transition-all"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleOpen(i)}
+                    className="w-full py-2 rounded-xl border border-border/50 bg-background hover:bg-muted text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <ExternalLink size={12} />
+                    {s.connected ? "Reconfigurar" : "Configurar Integração"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -126,13 +218,21 @@ export default function CobrancasFiscalTab() {
             <thead>
               <tr className="border-b border-border/30 bg-muted/10">
                 {["Cliente", "Plano", "Valor", "Dia de Vencimento", "Recorrência", "Próx. Envio", "Último Envio", "Ativo"].map(h => (
-                  <th key={h} className="px-5 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">{h}</th>
+                  <th key={h} className="px-5 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {contratos.map((c, idx) => (
-                <tr key={c.id} className={cn("border-b border-border/20 hover:bg-muted/10 transition-all", idx === contratos.length - 1 && "border-0")}>
+                <tr
+                  key={c.id}
+                  className={cn(
+                    "border-b border-border/20 hover:bg-muted/10 transition-all",
+                    idx === contratos.length - 1 && "border-0"
+                  )}
+                >
                   <td className="px-5 py-4 text-[13px] font-bold text-foreground">{c.cliente}</td>
                   <td className="px-5 py-4 text-[11px] text-muted-foreground">{c.plano}</td>
                   <td className="px-5 py-4 font-black text-foreground">{formatBRL(c.valor)}</td>
@@ -140,16 +240,26 @@ export default function CobrancasFiscalTab() {
                     <span className="text-[12px] font-bold text-foreground">Dia {c.diaVencimento}</span>
                   </td>
                   <td className="px-5 py-4">
-                    <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-lg",
-                      c.recorrencia === "mensal" ? "bg-blue-500/10 text-blue-500" :
-                        c.recorrencia === "trimestral" ? "bg-violet-500/10 text-violet-500" :
-                          "bg-emerald-500/10 text-emerald-500"
-                    )}>
+                    <span
+                      className={cn(
+                        "text-[10px] font-black px-2.5 py-1 rounded-lg",
+                        c.recorrencia === "mensal"
+                          ? "bg-blue-500/10 text-blue-500"
+                          : c.recorrencia === "trimestral"
+                          ? "bg-violet-500/10 text-violet-500"
+                          : "bg-emerald-500/10 text-emerald-500"
+                      )}
+                    >
                       {c.recorrencia.charAt(0).toUpperCase() + c.recorrencia.slice(1)}
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <span className={cn("text-[11px] font-semibold", c.ativo ? "text-foreground" : "text-muted-foreground line-through")}>
+                    <span
+                      className={cn(
+                        "text-[11px] font-semibold",
+                        c.ativo ? "text-foreground" : "text-muted-foreground line-through"
+                      )}
+                    >
                       {c.proximoVencimento}
                     </span>
                   </td>
@@ -163,10 +273,12 @@ export default function CobrancasFiscalTab() {
                       )}
                       title={c.ativo ? "Desativar cobrança" : "Ativar cobrança"}
                     >
-                      <div className={cn(
-                        "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-300",
-                        c.ativo ? "left-6" : "left-1"
-                      )} />
+                      <div
+                        className={cn(
+                          "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-300",
+                          c.ativo ? "left-6" : "left-1"
+                        )}
+                      />
                     </button>
                   </td>
                 </tr>
