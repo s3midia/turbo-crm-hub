@@ -1,6 +1,8 @@
-import React, { useState } from "react";
-import { FileText, Receipt, RefreshCw, CheckCircle2, AlertCircle, ExternalLink, Zap } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { FileText, Receipt, RefreshCw, CheckCircle2, AlertCircle, ExternalLink, Zap, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 
@@ -56,6 +58,7 @@ interface IntState {
   connected: boolean;
   connectedProvider: string;
   error: string;
+  saving: boolean;
 }
 
 const defaultIntState = (): IntState => ({
@@ -65,11 +68,45 @@ const defaultIntState = (): IntState => ({
   connected: false,
   connectedProvider: "",
   error: "",
+  saving: false,
 });
 
 export default function CobrancasFiscalTab() {
   const [contratos, setContratos] = useState(CONTRATOS);
   const [intStates, setIntStates] = useState<IntState[]>(integracoes.map(defaultIntState));
+
+  // ── Load saved integrations from Supabase on mount ──────────────────────────
+  useEffect(() => {
+    async function loadIntegrations() {
+      const { data, error } = await (supabase as any)
+        .from("api_manager")
+        .select("*")
+        .eq("category", "cobranca");
+
+      if (error) {
+        console.error("Erro ao carregar integrações:", error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setIntStates(prev =>
+          prev.map((s, i) => {
+            const saved = data.find((d: any) => d.name === integracoes[i].nome);
+            if (saved) {
+              return {
+                ...s,
+                connected: saved.status === "stable",
+                connectedProvider: saved.url ?? "",
+                apiKey: saved.api_key ?? "",
+              };
+            }
+            return s;
+          })
+        );
+      }
+    }
+    loadIntegrations();
+  }, []);
 
   function updateInt(i: number, patch: Partial<IntState>) {
     setIntStates(prev => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
@@ -89,7 +126,7 @@ export default function CobrancasFiscalTab() {
     );
   }
 
-  function handleConectar(i: number) {
+  async function handleConectar(i: number) {
     const s = intStates[i];
     if (!s.provider) {
       updateInt(i, { error: "Selecione o provedor antes de continuar." });
@@ -99,8 +136,38 @@ export default function CobrancasFiscalTab() {
       updateInt(i, { error: "Cole sua API Key para prosseguir." });
       return;
     }
-    // Simulate save — swap for a Supabase upsert when ready
-    updateInt(i, { connected: true, connectedProvider: s.provider, open: false, error: "" });
+
+    updateInt(i, { saving: true, error: "" });
+
+    const { error } = await (supabase as any)
+      .from("api_manager")
+      .upsert(
+        {
+          name: integracoes[i].nome,
+          category: "cobranca",
+          url: s.provider,          // reusing url to store the chosen provider name
+          api_key: s.apiKey.trim(),
+          status: "stable",
+          description: integracoes[i].desc,
+        },
+        { onConflict: "name" }      // upsert by name so it overwrites on reconfigure
+      );
+
+    if (error) {
+      console.error("Erro ao salvar integração:", error);
+      updateInt(i, { saving: false, error: "Erro ao salvar. Tente novamente." });
+      toast.error("Não foi possível salvar a integração.");
+      return;
+    }
+
+    updateInt(i, {
+      connected: true,
+      connectedProvider: s.provider,
+      open: false,
+      error: "",
+      saving: false,
+    });
+    toast.success(`${integracoes[i].nome} conectado com sucesso!`);
   }
 
   function toggleContrato(id: number) {
@@ -180,13 +247,22 @@ export default function CobrancasFiscalTab() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleConectar(i)}
-                        className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all"
+                        disabled={s.saving}
+                        className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
                       >
-                        Conectar
+                        {s.saving ? (
+                          <>
+                            <Loader2 size={12} className="animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          "Conectar"
+                        )}
                       </button>
                       <button
                         onClick={() => handleCancel(i)}
-                        className="flex-1 py-2 rounded-xl border border-border text-xs font-bold hover:bg-muted transition-all"
+                        disabled={s.saving}
+                        className="flex-1 py-2 rounded-xl border border-border text-xs font-bold hover:bg-muted transition-all disabled:opacity-60"
                       >
                         Cancelar
                       </button>
