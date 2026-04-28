@@ -48,15 +48,20 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     let mounted = true;
 
     const checkSession = async () => {
+      console.log("Verificando sessão inicial...");
       try {
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         if (error) throw error;
+        
+        console.log("Sessão inicial:", currentSession ? "Encontrada" : "Não encontrada");
         
         if (mounted) {
           setSession(currentSession);
           // Only stop loading if we have a session OR there is no hash to process
           if (currentSession || !window.location.hash) {
             setLoading(false);
+          } else {
+            console.log("Hash detectado, aguardando processamento do Supabase...");
           }
         }
       } catch (err) {
@@ -66,6 +71,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      console.log("Evento Auth:", event, currentSession ? "Sessão Ativa" : "Sem Sessão");
+      
       if (mounted) {
         setSession(currentSession);
         // If we get a session or a clear sign-out event, we can stop loading
@@ -81,10 +88,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     let timeoutId: NodeJS.Timeout;
     if (window.location.hash) {
       timeoutId = setTimeout(() => {
-        if (mounted) {
+        if (mounted && loading) {
+          console.log("Timeout de processamento OAuth atingido.");
           setLoading(false);
         }
-      }, 5000); // Wait up to 5 seconds for OAuth processing
+      }, 10000); // Increase to 10 seconds for safety
     }
 
     return () => {
