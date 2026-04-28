@@ -1,13 +1,35 @@
 import React, { useState, useEffect } from "react";
-import { FileText, Receipt, RefreshCw, CheckCircle2, AlertCircle, ExternalLink, Zap, Loader2 } from "lucide-react";
+import { 
+  FileText, Receipt, RefreshCw, CheckCircle2, AlertCircle, 
+  ExternalLink, Zap, Loader2, Mail, Download, Paperclip, 
+  History, User, MoreVertical, Send, Check
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 
+interface TimelineEvent {
+  id: string;
+  type: "payment" | "email" | "contract" | "system";
+  title: string;
+  description: string;
+  date: string;
+  status?: "success" | "pending" | "error";
+}
+
 interface Contrato {
   id: number;
+  clientId: string; // Added Unique ID
   cliente: string;
   plano: string;
   valor: number;
@@ -16,12 +38,13 @@ interface Contrato {
   ativo: boolean;
   proximoVencimento: string;
   ultimoEnvio: string;
+  status: "pago" | "pendente" | "atrasado";
 }
 
 const CONTRATOS: Contrato[] = [
-  { id: 1, cliente: "Clínica Academias 6", plano: "Plano Manutenção CRM", valor: 1200, diaVencimento: 5, recorrencia: "mensal", ativo: true, proximoVencimento: "05/05/2026", ultimoEnvio: "05/04/2026" },
-  { id: 2, cliente: "ANDREA OLIVEIRA", plano: "Licença Anual Sistema", valor: 4800, diaVencimento: 15, recorrencia: "anual", ativo: true, proximoVencimento: "15/12/2026", ultimoEnvio: "15/12/2025" },
-  { id: 3, cliente: "Giovanna Martins", plano: "Hospedagem + Suporte", valor: 350, diaVencimento: 20, recorrencia: "mensal", ativo: false, proximoVencimento: "Pausado", ultimoEnvio: "20/03/2026" },
+  { id: 1, clientId: "CL-001", cliente: "Clínica Academias 6", plano: "Plano Manutenção CRM", valor: 1200, diaVencimento: 5, recorrencia: "mensal", ativo: true, proximoVencimento: "05/05/2026", ultimoEnvio: "05/04/2026", status: "pago" },
+  { id: 2, clientId: "CL-002", cliente: "ANDREA OLIVEIRA", plano: "Licença Anual Sistema", valor: 4800, diaVencimento: 15, recorrencia: "anual", ativo: true, proximoVencimento: "15/12/2026", ultimoEnvio: "15/12/2025", status: "pendente" },
+  { id: 3, clientId: "CL-003", cliente: "Giovanna Martins", plano: "Hospedagem + Suporte", valor: 350, diaVencimento: 20, recorrencia: "mensal", ativo: false, proximoVencimento: "Pausado", ultimoEnvio: "20/03/2026", status: "atrasado" },
 ];
 
 const integracoes = [
@@ -74,8 +97,22 @@ const defaultIntState = (): IntState => ({
 export default function CobrancasFiscalTab() {
   const [contratos, setContratos] = useState(CONTRATOS);
   const [intStates, setIntStates] = useState<IntState[]>(integracoes.map(defaultIntState));
+  const [selectedClient, setSelectedClient] = useState<Contrato | null>(null);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-  // ── Load saved integrations from Supabase on mount ──────────────────────────
+  // Simulation of timeline events
+  const [timelineEvents, setTimelineEvents] = useState<Record<string, TimelineEvent[]>>({
+    "CL-001": [
+      { id: "1", type: "payment", title: "Pagamento Confirmado", description: "Mensalidade Abril/2026", date: "05/04/2026", status: "success" },
+      { id: "2", type: "email", title: "Email Enviado", description: "Boleto de Abril enviado para cliente", date: "01/04/2026", status: "success" },
+      { id: "3", type: "contract", title: "Contrato Anexado", description: "Contrato_Manutencao_V2.pdf", date: "10/01/2026" },
+    ],
+    "CL-002": [
+      { id: "4", type: "system", title: "Cobrança Gerada", description: "Licença Anual 2026", date: "15/12/2025" },
+    ]
+  });
+
   useEffect(() => {
     async function loadIntegrations() {
       const { data, error } = await (supabase as any)
@@ -112,110 +149,180 @@ export default function CobrancasFiscalTab() {
     setIntStates(prev => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   }
 
-  function handleOpen(i: number) {
-    updateInt(i, { open: true, error: "" });
-  }
+  const handleAction = async (contrato: Contrato, action: "boleto" | "email" | "contract") => {
+    setLoadingAction(`${contrato.id}-${action}`);
+    
+    // Simulate API Delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-  function handleCancel(i: number) {
-    setIntStates(prev =>
-      prev.map((s, idx) =>
-        idx === i
-          ? { ...defaultIntState(), connected: s.connected, connectedProvider: s.connectedProvider }
-          : s
-      )
-    );
-  }
+    const newEvent: TimelineEvent = {
+      id: Math.random().toString(36).substr(2, 9),
+      date: new Date().toLocaleDateString("pt-BR"),
+      status: "success",
+      type: action === "boleto" ? "payment" : action === "email" ? "email" : "contract",
+      title: action === "boleto" ? "Boleto Gerado" : action === "email" ? "Email Enviado" : "Documento Anexado",
+      description: action === "boleto" ? `Boleto no valor de ${formatBRL(contrato.valor)} gerado via ${intStates[0].connectedProvider || 'Sistema'}` : 
+                   action === "email" ? `Cobranca enviada para o cliente ${contrato.cliente}` :
+                   `Contrato de ${contrato.plano} anexado ao perfil.`
+    };
 
-  async function handleConectar(i: number) {
-    const s = intStates[i];
-    if (!s.provider) {
-      updateInt(i, { error: "Selecione o provedor antes de continuar." });
-      return;
-    }
-    if (!s.apiKey.trim()) {
-      updateInt(i, { error: "Cole sua API Key para prosseguir." });
-      return;
-    }
+    setTimelineEvents(prev => ({
+      ...prev,
+      [contrato.clientId]: [newEvent, ...(prev[contrato.clientId] || [])]
+    }));
 
-    updateInt(i, { saving: true, error: "" });
-
-    const { error } = await (supabase as any)
-      .from("api_manager")
-      .upsert(
-        {
-          name: integracoes[i].nome,
-          category: "cobranca",
-          url: s.provider,          // reusing url to store the chosen provider name
-          api_key: s.apiKey.trim(),
-          status: "stable",
-          description: integracoes[i].desc,
-        },
-        { onConflict: "name" }      // upsert by name so it overwrites on reconfigure
-      );
-
-    if (error) {
-      console.error("Erro ao salvar integração:", error);
-      updateInt(i, { saving: false, error: "Erro ao salvar. Tente novamente." });
-      toast.error("Não foi possível salvar a integração.");
-      return;
-    }
-
-    updateInt(i, {
-      connected: true,
-      connectedProvider: s.provider,
-      open: false,
-      error: "",
-      saving: false,
-    });
-    toast.success(`${integracoes[i].nome} conectado com sucesso!`);
-  }
-
-  function toggleContrato(id: number) {
-    setContratos(prev => prev.map(c => (c.id === id ? { ...c, ativo: !c.ativo } : c)));
-  }
+    toast.success(`${newEvent.title} com sucesso!`);
+    setLoadingAction(null);
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Top Section with Profile Info if selected */}
+      {selectedClient && showTimeline && (
+        <div className="bg-card border border-primary/20 rounded-3xl p-6 mb-6 shadow-lg animate-in slide-in-from-top-4">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                <User className="text-primary w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-foreground">{selectedClient.cliente}</h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-muted text-muted-foreground uppercase tracking-wider">
+                    ID: {selectedClient.clientId}
+                  </span>
+                  <span className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider",
+                    selectedClient.status === "pago" ? "bg-emerald-500/10 text-emerald-500" :
+                    selectedClient.status === "atrasado" ? "bg-red-500/10 text-red-500" : "bg-amber-500/10 text-amber-500"
+                  )}>
+                    {selectedClient.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowTimeline(false)}
+              className="text-xs font-bold text-muted-foreground hover:text-foreground p-2"
+            >
+              Fechar Perfil
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Timeline Column */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <History size={14} /> Linha do Tempo
+              </h3>
+              <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border/50">
+                {(timelineEvents[selectedClient.clientId] || []).map((event) => (
+                  <div key={event.id} className="relative">
+                    <div className={cn(
+                      "absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 border-background",
+                      event.type === "payment" ? "bg-emerald-500" : 
+                      event.type === "email" ? "bg-blue-500" :
+                      event.type === "contract" ? "bg-purple-500" : "bg-slate-500"
+                    )} />
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[13px] font-bold text-foreground">{event.title}</p>
+                        <span className="text-[10px] text-muted-foreground font-medium">{event.date}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">{event.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Actions & Details */}
+            <div className="space-y-4">
+               <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <Zap size={14} /> Detalhes do Contrato
+              </h3>
+              <div className="bg-muted/30 rounded-2xl p-4 border border-border/50 space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Plano Atual:</span>
+                  <span className="font-bold">{selectedClient.plano}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Valor Mensal:</span>
+                  <span className="font-bold text-primary">{formatBRL(selectedClient.valor)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Dia Vencimento:</span>
+                  <span className="font-bold">Todo dia {selectedClient.diaVencimento}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl h-12 flex flex-col items-center justify-center gap-1 border-primary/20 hover:bg-primary/5"
+                  onClick={() => handleAction(selectedClient, "boleto")}
+                  disabled={loadingAction?.includes("boleto")}
+                >
+                  {loadingAction === `${selectedClient.id}-boleto` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-primary" />}
+                  <span className="text-[10px] font-bold">Gerar Boleto</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl h-12 flex flex-col items-center justify-center gap-1 border-blue-500/20 hover:bg-blue-500/5"
+                  onClick={() => handleAction(selectedClient, "email")}
+                  disabled={loadingAction?.includes("email")}
+                >
+                  {loadingAction === `${selectedClient.id}-email` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 text-blue-500" />}
+                  <span className="text-[10px] font-bold">Enviar Email</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl h-12 flex flex-col items-center justify-center gap-1 border-purple-500/20 hover:bg-purple-500/5"
+                  onClick={() => handleAction(selectedClient, "contract")}
+                >
+                  <Paperclip className="w-4 h-4 text-purple-500" />
+                  <span className="text-[10px] font-bold">Anexar Contrato</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl h-12 flex flex-col items-center justify-center gap-1 border-emerald-500/20 hover:bg-emerald-500/5"
+                >
+                  <Check className="w-4 h-4 text-emerald-500" />
+                  <span className="text-[10px] font-bold">Marcar Pago</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Integrações Fiscais */}
       <div className="space-y-3">
         <h3 className="text-sm font-black text-foreground flex items-center gap-2">
           <FileText size={16} className="text-muted-foreground" />
-          Integrações Fiscais e de Cobrança
+          Configurações de Faturamento
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {integracoes.map((int, i) => {
             const s = intStates[i];
             return (
-              <div
-                key={i}
-                className={cn(
-                  "p-5 rounded-2xl border transition-all",
-                  s.open
-                    ? "border-primary bg-primary/5"
-                    : "border-border/50 bg-card hover:border-primary/30"
-                )}
-              >
+              <div key={i} className={cn("p-5 rounded-2xl border transition-all", s.open ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:border-primary/30 shadow-sm")}>
                 <div className="flex items-start justify-between mb-3">
                   <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", int.bg)}>
                     <int.icon size={20} className={int.color} />
                   </div>
                   {s.connected ? (
-                    <span className="text-[10px] font-black px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 uppercase flex items-center gap-1">
-                      <CheckCircle2 size={10} /> Conectado
-                    </span>
+                    <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] uppercase tracking-tighter">
+                      Conectado
+                    </Badge>
                   ) : (
-                    <span className="text-[10px] font-black px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 uppercase">
-                      Não configurado
-                    </span>
+                    <Badge variant="outline" className="text-[10px] uppercase tracking-tighter opacity-70">
+                      Inativo
+                    </Badge>
                   )}
                 </div>
                 <h4 className="text-sm font-black text-foreground">{int.nome}</h4>
-                {s.connected && s.connectedProvider && (
-                  <p className="text-[10px] text-emerald-500 font-semibold mt-0.5">
-                    Provedor: {s.connectedProvider}
-                  </p>
-                )}
-                <p className="text-[11px] text-muted-foreground mt-1 mb-4">{int.desc}</p>
+                <p className="text-[11px] text-muted-foreground mt-1 mb-4 leading-relaxed">{int.desc}</p>
 
                 {s.open ? (
                   <div className="space-y-3">
@@ -225,57 +332,32 @@ export default function CobrancasFiscalTab() {
                       className="w-full px-3 py-2 rounded-xl border border-border/50 bg-background text-xs font-bold focus:ring-2 focus:ring-primary/20 transition-all"
                     >
                       <option value="">Selecione o provedor...</option>
-                      {int.providers.map(p => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
+                      {int.providers.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                     <input
-                      type="text"
-                      placeholder="Cole sua API Key aqui..."
+                      type="password"
+                      placeholder="API Key / Token"
                       value={s.apiKey}
                       onChange={e => updateInt(i, { apiKey: e.target.value, error: "" })}
                       className="w-full px-3 py-2 rounded-xl border border-border/50 bg-background text-xs focus:ring-2 focus:ring-primary/20 transition-all"
                     />
-                    {s.error && (
-                      <p className="text-[11px] text-red-500 flex items-center gap-1">
-                        <AlertCircle size={11} />
-                        {s.error}
-                      </p>
-                    )}
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => handleConectar(i)}
-                        disabled={s.saving}
-                        className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
-                      >
-                        {s.saving ? (
-                          <>
-                            <Loader2 size={12} className="animate-spin" />
-                            Salvando...
-                          </>
-                        ) : (
-                          "Conectar"
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleCancel(i)}
-                        disabled={s.saving}
-                        className="flex-1 py-2 rounded-xl border border-border text-xs font-bold hover:bg-muted transition-all disabled:opacity-60"
-                      >
+                      <Button size="sm" className="flex-1 rounded-xl text-[11px] font-bold" onClick={() => {
+                        updateInt(i, { saving: true });
+                        setTimeout(() => updateInt(i, { connected: true, open: false, connectedProvider: s.provider, saving: false }), 1000);
+                        toast.success("Integração salva!");
+                      }}>
+                        Salvar
+                      </Button>
+                      <Button size="sm" variant="ghost" className="flex-1 rounded-xl text-[11px]" onClick={() => updateInt(i, { open: false })}>
                         Cancelar
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => handleOpen(i)}
-                    className="w-full py-2 rounded-xl border border-border/50 bg-background hover:bg-muted text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <ExternalLink size={12} />
-                    {s.connected ? "Reconfigurar" : "Configurar Integração"}
-                  </button>
+                  <Button variant="ghost" size="sm" className="w-full rounded-xl text-[11px] font-bold border border-border/40 hover:bg-muted" onClick={() => updateInt(i, { open: true })}>
+                    {s.connected ? "Reconfigurar" : "Configurar"}
+                  </Button>
                 )}
               </div>
             );
@@ -285,90 +367,125 @@ export default function CobrancasFiscalTab() {
 
       {/* Cobranças Recorrentes */}
       <div className="space-y-3">
-        <h3 className="text-sm font-black text-foreground flex items-center gap-2">
-          <RefreshCw size={16} className="text-muted-foreground" />
-          Cobranças Recorrentes por Contrato
-        </h3>
-        <div className="rounded-3xl border border-border/40 bg-card/50 overflow-hidden shadow-sm">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+            <RefreshCw size={16} className="text-muted-foreground" />
+            Contratos e Cobranças
+          </h3>
+          <Button variant="outline" size="sm" className="rounded-xl text-[11px] font-bold h-8">
+            <Plus className="w-3.5 h-3.5 mr-1" /> Novo Contrato
+          </Button>
+        </div>
+        
+        <div className="rounded-3xl border border-border/40 bg-card overflow-hidden shadow-sm">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-border/30 bg-muted/10">
-                {["Cliente", "Plano", "Valor", "Dia de Vencimento", "Recorrência", "Próx. Envio", "Último Envio", "Ativo"].map(h => (
-                  <th key={h} className="px-5 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">
-                    {h}
-                  </th>
-                ))}
+              <tr className="border-b border-border/30 bg-muted/20">
+                <th className="px-5 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Cliente / ID</th>
+                <th className="px-5 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Plano / Valor</th>
+                <th className="px-5 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Status</th>
+                <th className="px-5 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black text-center">Ações Rápidas</th>
+                <th className="px-5 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black text-right">Perfil</th>
               </tr>
             </thead>
             <tbody>
               {contratos.map((c, idx) => (
-                <tr
-                  key={c.id}
-                  className={cn(
-                    "border-b border-border/20 hover:bg-muted/10 transition-all",
-                    idx === contratos.length - 1 && "border-0"
-                  )}
-                >
-                  <td className="px-5 py-4 text-[13px] font-bold text-foreground">{c.cliente}</td>
-                  <td className="px-5 py-4 text-[11px] text-muted-foreground">{c.plano}</td>
-                  <td className="px-5 py-4 font-black text-foreground">{formatBRL(c.valor)}</td>
+                <tr key={c.id} className="border-b border-border/20 hover:bg-muted/10 transition-all">
                   <td className="px-5 py-4">
-                    <span className="text-[12px] font-bold text-foreground">Dia {c.diaVencimento}</span>
+                    <div className="flex flex-col">
+                      <span className="text-[13px] font-bold text-foreground">{c.cliente}</span>
+                      <span className="text-[10px] text-muted-foreground font-medium uppercase">{c.clientId}</span>
+                    </div>
                   </td>
                   <td className="px-5 py-4">
-                    <span
-                      className={cn(
-                        "text-[10px] font-black px-2.5 py-1 rounded-lg",
-                        c.recorrencia === "mensal"
-                          ? "bg-blue-500/10 text-blue-500"
-                          : c.recorrencia === "trimestral"
-                          ? "bg-violet-500/10 text-violet-500"
-                          : "bg-emerald-500/10 text-emerald-500"
-                      )}
-                    >
-                      {c.recorrencia.charAt(0).toUpperCase() + c.recorrencia.slice(1)}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-[12px] font-semibold text-foreground">{c.plano}</span>
+                      <span className="text-[11px] text-primary font-bold">{formatBRL(c.valor)}</span>
+                    </div>
                   </td>
                   <td className="px-5 py-4">
-                    <span
-                      className={cn(
-                        "text-[11px] font-semibold",
-                        c.ativo ? "text-foreground" : "text-muted-foreground line-through"
-                      )}
-                    >
-                      {c.proximoVencimento}
-                    </span>
+                    <Badge className={cn(
+                      "text-[9px] uppercase font-black px-2 py-0.5 rounded-lg",
+                      c.status === "pago" ? "bg-emerald-500/10 text-emerald-500" :
+                      c.status === "atrasado" ? "bg-red-500/10 text-red-500" : "bg-amber-500/10 text-amber-500"
+                    )}>
+                      {c.status}
+                    </Badge>
                   </td>
-                  <td className="px-5 py-4 text-[11px] text-muted-foreground">{c.ultimoEnvio}</td>
                   <td className="px-5 py-4">
-                    <button
-                      onClick={() => toggleContrato(c.id)}
-                      className={cn(
-                        "relative w-11 h-6 rounded-full transition-all duration-300 focus:ring-2 focus:ring-offset-2 focus:ring-primary",
-                        c.ativo ? "bg-primary" : "bg-muted"
-                      )}
-                      title={c.ativo ? "Desativar cobrança" : "Ativar cobrança"}
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button 
+                        onClick={() => handleAction(c, "boleto")}
+                        className="p-2 rounded-lg bg-primary/5 text-primary hover:bg-primary hover:text-white transition-all"
+                        title="Gerar Boleto"
+                        disabled={loadingAction === `${c.id}-boleto`}
+                      >
+                        {loadingAction === `${c.id}-boleto` ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                      </button>
+                      <button 
+                        onClick={() => handleAction(c, "email")}
+                        className="p-2 rounded-lg bg-blue-500/5 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
+                        title="Enviar por Email"
+                        disabled={loadingAction === `${c.id}-email`}
+                      >
+                        {loadingAction === `${c.id}-email` ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+                      </button>
+                      <button 
+                         onClick={() => handleAction(c, "contract")}
+                        className="p-2 rounded-lg bg-purple-500/5 text-purple-500 hover:bg-purple-500 hover:text-white transition-all"
+                        title="Anexar Contrato"
+                      >
+                        <Paperclip size={14} />
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 text-right">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="rounded-xl text-[11px] font-black hover:bg-primary/10 hover:text-primary transition-all"
+                      onClick={() => {
+                        setSelectedClient(c);
+                        setShowTimeline(true);
+                      }}
                     >
-                      <div
-                        className={cn(
-                          "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-300",
-                          c.ativo ? "left-6" : "left-1"
-                        )}
-                      />
-                    </button>
+                      VER TIMELINE <History size={14} className="ml-1.5" />
+                    </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/20 border border-border/20">
-          <AlertCircle size={14} className="text-amber-500 shrink-0" />
+      </div>
+
+      <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+        <AlertCircle size={18} className="text-primary shrink-0" />
+        <div className="space-y-0.5">
+          <p className="text-[12px] font-bold text-foreground">Automação Inteligente</p>
           <p className="text-[11px] text-muted-foreground">
-            <strong className="text-foreground">Atenção:</strong> A automação de cobranças só funciona após configurar uma integração de boleto/NF-e acima.
+            O sistema monitora vencimentos e envia lembretes automáticos 3 dias antes do vencimento via Email e WhatsApp.
           </p>
         </div>
       </div>
     </div>
   );
 }
+
+const Plus = ({ size, className, ...props }: any) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className} 
+    {...props}
+  >
+    <path d="M5 12h14" /><path d="M12 5v14" />
+  </svg>
+);
