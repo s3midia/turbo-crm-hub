@@ -36,7 +36,7 @@ interface SlideProps {
 const S3Logo = ({ className = "", logoUrl }: { className?: string, logoUrl?: string }) => {
   if (logoUrl === "none") return null;
   if (logoUrl) {
-    return <img src={logoUrl} alt="Logo" className={`max-h-12 object-contain ${className}`} />;
+    return <img src={logoUrl} alt="Logo" className={`max-h-12 object-contain rounded-md ${className}`} />;
   }
   return (
     <div className={`flex items-center gap-2 ${className}`}>

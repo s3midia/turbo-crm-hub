@@ -99,7 +99,7 @@ export default function LogoUpload({
                             src={preview}
                             alt="Logo Preview"
                             style={{ height: `${logoSize}px`, width: 'auto' }}
-                            className="object-contain mx-auto"
+                            className="object-contain mx-auto rounded-md"
                         />
                     </div>
 

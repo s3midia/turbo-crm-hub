@@ -43,9 +43,9 @@ export default function LoginPage() {
           <div className="mx-auto w-24 h-24 mb-6 relative group perspective-1000">
             <div className="absolute inset-0 bg-primary/30 rounded-full blur-xl group-hover:bg-primary/50 transition-all duration-500" />
             <img 
-              src="/logo.png" 
+              src="/logo_s3.png" 
               alt="Logo S3 Mídia" 
-              className="w-full h-full object-contain relative z-10 drop-shadow-2xl transform transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3"
+              className="w-full h-full object-contain relative z-10 drop-shadow-2xl transform transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 rounded-xl"
             />
           </div>
           <CardTitle className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 tracking-tight">

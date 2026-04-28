@@ -157,7 +157,7 @@ export function AppSidebar() {
                         {logoCollapsed ? (
                             <img src={logoCollapsed} alt={companyName}
                                 style={{ height: `${logoCollapsedSize}px`, width: `${logoCollapsedSize}px` }}
-                                className="object-contain" />
+                                className="object-contain rounded-md" />
                         ) : (
                             <span className="text-white font-black text-xl italic leading-none">{firstLetter}</span>
                         )}
@@ -167,7 +167,7 @@ export function AppSidebar() {
                         {logoExpanded ? (
                             <img src={logoExpanded} alt={companyName}
                                 style={{ height: `${logoExpandedSize}px`, width: "auto", maxWidth: "140px" }}
-                                className="object-contain" />
+                                className="object-contain rounded-md" />
                         ) : (
                             <>
                                 <span className="text-[22px] font-black tracking-tight text-foreground italic truncate">

@@ -33,6 +33,9 @@ const INITIAL_SETTINGS: SystemSettings = {
     id: '1',
     company_name: 'S3 Mídia',
     theme_color: '#f97316',
+    logo_favicon: '/logo_s3.png',
+    logo_collapsed: '/logo_s3.png',
+    logo_expanded: '/logo_s3.png',
     logo_favicon_size: 32,
     logo_collapsed_size: 40,
     logo_expanded_size: 40,
@@ -52,6 +55,14 @@ const getSettings = (): SystemSettings => {
     if (parsed.company_name === 'Bolten CRM') {
         parsed.company_name = INITIAL_SETTINGS.company_name;
         parsed.theme_color = INITIAL_SETTINGS.theme_color;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(parsed));
+    }
+    
+    // Force update logo if not set
+    if (!parsed.logo_favicon || !parsed.logo_collapsed || !parsed.logo_expanded || parsed.logo_favicon === '/logo.png?v=2') {
+        parsed.logo_favicon = INITIAL_SETTINGS.logo_favicon;
+        parsed.logo_collapsed = INITIAL_SETTINGS.logo_collapsed;
+        parsed.logo_expanded = INITIAL_SETTINGS.logo_expanded;
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(parsed));
     }
     
