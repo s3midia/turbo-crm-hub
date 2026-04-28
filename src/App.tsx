@@ -35,6 +35,7 @@ import PerfilEmpresaPage from "./pages/PerfilEmpresaPage";
 import IntegracoesPage from "./pages/IntegracoesPage";
 import FunilKanbanPage from "./pages/FunilKanbanPage";
 import ModelosDocsPage from "./pages/ModelosDocsPage";
+import GeneratorPage from "./pages/GeneratorPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -128,37 +129,47 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <UserProvider>
-                    <div className="min-h-screen flex w-full bg-background">
+                    <div className="h-screen flex w-full bg-background overflow-hidden">
                       {/* Narrow icon-only sidebar */}
                       <AppSidebar />
                       {/* Main content */}
-                      <main className="flex-1 flex flex-col min-h-screen max-h-screen overflow-hidden">
-                        <div className="content-card mb-4 mr-4 mt-4 flex flex-col min-h-0">
+                      <main className="flex-1 flex flex-col h-full overflow-hidden">
+                        <div className="content-card mb-4 mr-4 mt-4 flex flex-col min-h-0 overflow-hidden">
                           <Routes>
-                            <Route path="/" element={<div className="p-6 h-full overflow-y-auto"><DashboardPage /></div>} />
-                            <Route path="/pipeline/relatorio" element={<div className="p-6 h-full overflow-y-auto"><PipelineReportPage /></div>} />
+                            {/* Pages that handle their own scrolling and padding */}
                             <Route path="/pipeline" element={<FunilKanbanPage />} />
-                            <Route path="/contacts" element={<div className="p-6 h-full overflow-y-auto"><ContactsPage /></div>} />
-                            <Route path="/products" element={<div className="p-6 h-full overflow-y-auto"><ProductsPage /></div>} />
-                            <Route path="/tasks" element={<div className="p-6 h-full overflow-y-auto"><TasksPage /></div>} />
                             <Route path="/whatsapp" element={<WhatsAppPage />} />
-                            <Route path="/agentes-s3" element={<div className="h-full overflow-y-auto"><AgentsPage /></div>} />
-                            <Route path="/automacao-funil" element={<div className="p-6 h-full overflow-y-auto"><AutomacaoFunilPage /></div>} />
-                            <Route path="/radar-leads" element={<RadarLeadsPage />} />
-                            <Route path="/calculadora" element={<div className="p-6 h-full overflow-y-auto"><CalculadoraPage /></div>} />
-                            <Route path="/agenda" element={<div className="p-6 h-full overflow-y-auto"><AgendaPage /></div>} />
-                            <Route path="/servicos" element={<div className="p-6 h-full overflow-y-auto"><ServicosPage /></div>} />
-                            <Route path="/treinamento-ia" element={<div className="p-6 h-full overflow-y-auto"><TreinamentoIAPage /></div>} />
                             <Route path="/atendimentos" element={<WhatsAppPage />} />
-                            <Route path="/financeiro" element={<div className="p-6 h-full overflow-y-auto"><FinanceiroPage /></div>} />
-                            <Route path="/meu-plano" element={<div className="p-6 h-full overflow-y-auto"><MeuPlanoPage /></div>} />
-                            <Route path="/painel-afiliado" element={<div className="p-6 h-full overflow-y-auto"><PainelAfiliadoPage /></div>} />
-                            <Route path="/equipe" element={<div className="p-6 h-full overflow-y-auto"><EquipePage /></div>} />
-                            <Route path="/perfil-empresa" element={<div className="p-6 h-full overflow-y-auto"><PerfilEmpresaPage /></div>} />
-                            <Route path="/integracoes" element={<div className="p-6 h-full overflow-y-auto"><IntegracoesPage /></div>} />
-                            <Route path="/settings" element={<div className="p-6 h-full overflow-y-auto"><SettingsPage /></div>} />
-                            <Route path="/modelos-docs" element={<div className="p-6 h-full overflow-y-auto"><ModelosDocsPage /></div>} />
-                            <Route path="*" element={<div className="p-6 h-full overflow-y-auto"><NotFound /></div>} />
+                            <Route path="/radar-leads" element={<RadarLeadsPage />} />
+                            <Route path="/generator" element={<GeneratorPage />} />
+                            
+                            {/* Standard pages with padding and scrolling */}
+                            <Route path="*" element={
+                              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 h-full">
+                                <Routes>
+                                  <Route path="/" element={<DashboardPage />} />
+                                  <Route path="/pipeline/relatorio" element={<PipelineReportPage />} />
+                                  <Route path="/contacts" element={<ContactsPage />} />
+                                  <Route path="/products" element={<ProductsPage />} />
+                                  <Route path="/tasks" element={<TasksPage />} />
+                                  <Route path="/agentes-s3" element={<AgentsPage />} />
+                                  <Route path="/automacao-funil" element={<AutomacaoFunilPage />} />
+                                  <Route path="/calculadora" element={<CalculadoraPage />} />
+                                  <Route path="/agenda" element={<AgendaPage />} />
+                                  <Route path="/servicos" element={<ServicosPage />} />
+                                  <Route path="/treinamento-ia" element={<TreinamentoIAPage />} />
+                                  <Route path="/financeiro" element={<FinanceiroPage />} />
+                                  <Route path="/meu-plano" element={<MeuPlanoPage />} />
+                                  <Route path="/painel-afiliado" element={<PainelAfiliadoPage />} />
+                                  <Route path="/equipe" element={<EquipePage />} />
+                                  <Route path="/perfil-empresa" element={<PerfilEmpresaPage />} />
+                                  <Route path="/integracoes" element={<IntegracoesPage />} />
+                                  <Route path="/settings" element={<SettingsPage />} />
+                                  <Route path="/modelos-docs" element={<ModelosDocsPage />} />
+                                  <Route path="*" element={<NotFound />} />
+                                </Routes>
+                              </div>
+                            } />
                           </Routes>
                         </div>
                       </main>

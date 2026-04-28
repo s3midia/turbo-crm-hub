@@ -128,8 +128,12 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  body {
+  html,
+  body,
+  #root {
     @apply bg-background text-foreground;
+    height: 100% !important;
+    overflow: hidden !important;
   }
 
   .content-card {

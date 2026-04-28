@@ -53,6 +53,7 @@ const NAV_SECTIONS = [
         label: "Operacional",
         items: [
             { label: "Serviços", icon: Briefcase, to: "/servicos" },
+            { label: "Gerador de Sites", icon: Scan, to: "/generator" },
         ]
     },
     {
