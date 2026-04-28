@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
 import {
   Table,
   TableBody,
@@ -26,7 +28,9 @@ import {
   Building,
   Star,
   User,
+  History,
 } from "lucide-react";
+
 
 interface Contact {
   id: string;
@@ -280,10 +284,4 @@ export default function Contacts() {
       </Card>
     </div>
   );
-}
-
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+}
