@@ -5,6 +5,7 @@ import { useApiManager, useApiUsageStats } from "@/hooks/useApiManager";
 import { getKeyHealthMap, testGeminiKey, type GeminiKeyStatus } from "@/lib/gemini";
 import { ApiFlowMap } from "@/components/Integrations/ApiFlowMap";
 import { ApiConsumptionDashboard } from "@/components/Integrations/ApiConsumptionDashboard";
+import BillingIntegrations from "@/components/Integrations/BillingIntegrations";
 import { toast } from "sonner";
 
 const CATEGORY_STYLES: Record<string, string> = {
@@ -207,6 +208,13 @@ export default function IntegracoesPage() {
                 
                 {/* Consumption Dashboard */}
                 <ApiConsumptionDashboard />
+
+                <hr className="border-border opacity-50" />
+
+                {/* Billing & Fiscal Integrations */}
+                <BillingIntegrations />
+
+                <hr className="border-border opacity-50" />
 
                 {/* Redundancy Map */}
                 <ApiFlowMap />

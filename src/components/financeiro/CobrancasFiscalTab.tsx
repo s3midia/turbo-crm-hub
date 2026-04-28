@@ -296,72 +296,27 @@ export default function CobrancasFiscalTab() {
         </div>
       )}
 
-      {/* Integrações Fiscais */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-black text-foreground flex items-center gap-2">
-          <FileText size={16} className="text-muted-foreground" />
-          Configurações de Faturamento
-        </h3>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {integracoes.map((int, i) => {
-            const s = intStates[i];
-            return (
-              <div key={i} className={cn("p-5 rounded-2xl border transition-all", s.open ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:border-primary/30 shadow-sm")}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", int.bg)}>
-                    <int.icon size={20} className={int.color} />
-                  </div>
-                  {s.connected ? (
-                    <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] uppercase tracking-tighter">
-                      Conectado
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] uppercase tracking-tighter opacity-70">
-                      Inativo
-                    </Badge>
-                  )}
-                </div>
-                <h4 className="text-sm font-black text-foreground">{int.nome}</h4>
-                <p className="text-[11px] text-muted-foreground mt-1 mb-4 leading-relaxed">{int.desc}</p>
-
-                {s.open ? (
-                  <div className="space-y-3">
-                    <select
-                      value={s.provider}
-                      onChange={e => updateInt(i, { provider: e.target.value, error: "" })}
-                      className="w-full px-3 py-2 rounded-xl border border-border/50 bg-background text-xs font-bold focus:ring-2 focus:ring-primary/20 transition-all"
-                    >
-                      <option value="">Selecione o provedor...</option>
-                      {int.providers.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                    <input
-                      type="password"
-                      placeholder="API Key / Token"
-                      value={s.apiKey}
-                      onChange={e => updateInt(i, { apiKey: e.target.value, error: "" })}
-                      className="w-full px-3 py-2 rounded-xl border border-border/50 bg-background text-xs focus:ring-2 focus:ring-primary/20 transition-all"
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" className="flex-1 rounded-xl text-[11px] font-bold" onClick={() => {
-                        updateInt(i, { saving: true });
-                        setTimeout(() => updateInt(i, { connected: true, open: false, connectedProvider: s.provider, saving: false }), 1000);
-                        toast.success("Integração salva!");
-                      }}>
-                        Salvar
-                      </Button>
-                      <Button size="sm" variant="ghost" className="flex-1 rounded-xl text-[11px]" onClick={() => updateInt(i, { open: false })}>
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button variant="ghost" size="sm" className="w-full rounded-xl text-[11px] font-bold border border-border/40 hover:bg-muted" onClick={() => updateInt(i, { open: true })}>
-                    {s.connected ? "Reconfigurar" : "Configurar"}
-                  </Button>
-                )}
-              </div>
-            );
-          })}
+      {/* Centralized Integrations CTA */}
+      <div className="bg-gradient-to-br from-primary/10 via-background to-blue-500/5 border border-primary/20 rounded-3xl p-6 shadow-sm overflow-hidden relative group">
+        <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+          <Zap size={120} />
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-black text-foreground flex items-center gap-2">
+              <Zap size={20} className="text-primary animate-pulse" />
+              Gestão Centralizada de Integrações
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-xl">
+              As configurações de <strong>Boleto Bancário</strong>, <strong>NF-e</strong> e <strong>Gateways de Pagamento</strong> foram movidas para o painel central de integrações para maior segurança e controle global.
+            </p>
+          </div>
+          <Button 
+            className="rounded-2xl px-8 font-black shadow-lg shadow-primary/20 h-12"
+            onClick={() => window.location.href = '/integracoes'}
+          >
+            CONFIGURAR AGORA <ExternalLink size={16} className="ml-2" />
+          </Button>
         </div>
       </div>
 
