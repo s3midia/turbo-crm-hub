@@ -31,8 +31,8 @@ const SETTINGS_KEY = 'bolten_system_settings';
 
 const INITIAL_SETTINGS: SystemSettings = {
     id: '1',
-    company_name: 'Bolten CRM',
-    theme_color: '#000000',
+    company_name: 'S3 Mídia',
+    theme_color: '#f97316',
     logo_favicon_size: 32,
     logo_collapsed_size: 40,
     logo_expanded_size: 40,
@@ -46,7 +46,16 @@ const getSettings = (): SystemSettings => {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(INITIAL_SETTINGS));
         return INITIAL_SETTINGS;
     }
-    return JSON.parse(stored);
+    const parsed = JSON.parse(stored);
+    
+    // Migration: If it's still Bolten CRM, update to S3 Mídia
+    if (parsed.company_name === 'Bolten CRM') {
+        parsed.company_name = INITIAL_SETTINGS.company_name;
+        parsed.theme_color = INITIAL_SETTINGS.theme_color;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(parsed));
+    }
+    
+    return parsed;
 };
 
 const saveSettings = (settings: SystemSettings) => {

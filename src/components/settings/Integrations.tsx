@@ -1,15 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MessageSquare, Database, Mail, Plus, Webhook } from 'lucide-react';
+import { MessageSquare, Database, Mail, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const INTEGRATIONS = [
-    {
-        id: 'apify',
-        name: 'Apify API',
-        description: 'Integração com a API do Apify para prospecção',
-        icon: Webhook,
-        status: 'configured',
-    },
     {
         id: 'whatsapp',
         name: 'WhatsApp',

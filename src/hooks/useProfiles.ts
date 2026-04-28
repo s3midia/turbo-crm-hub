@@ -13,7 +13,7 @@ export interface Profile {
     whatsapp?: string;
 }
 
-const STORAGE_KEY = 'bolten_profiles';
+const STORAGE_KEY = 's3_midia_profiles';
 
 // Dados iniciais mockados
 const INITIAL_PROFILES: Profile[] = [

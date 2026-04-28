@@ -44,8 +44,12 @@ export interface EvolutionInstance {
   };
 }
 
+const INSTANCE_STORAGE_KEY = 'whatsapp_selected_instance';
+
 export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
-  const [instanceName, setInstanceName] = useState(defaultInstanceName);
+  const [instanceName, setInstanceName] = useState(() => {
+    return localStorage.getItem(INSTANCE_STORAGE_KEY) || defaultInstanceName;
+  });
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [instances, setInstances] = useState<EvolutionInstance[]>([]);
@@ -120,14 +124,16 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
 
       setInstances(instanceList);
 
-      // Find the connected instance
-      const connectedInstance = instanceList.find(i => i.connectionStatus === 'open');
-      if (connectedInstance) {
-        setCurrentInstance(connectedInstance);
-        setInstanceName(connectedInstance.name);
-        setIsConnected(true);
-        setQrCode(null);
-        console.log('Found connected instance:', connectedInstance.name);
+      // Persistence: Trust localStorage first, then connected, then none
+      const stored = localStorage.getItem(INSTANCE_STORAGE_KEY);
+      const target = instanceList.find(i => i.name === stored) || 
+                     instanceList.find(i => i.connectionStatus === 'open');
+
+      if (target) {
+        setCurrentInstance(target);
+        setInstanceName(target.name);
+        setIsConnected(target.connectionStatus === 'open');
+        console.log('Selected focus instance:', target.name);
       } else {
         setIsConnected(false);
       }
@@ -138,6 +144,89 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       return [];
     }
   }, [callEvolutionAPI]);
+
+  // Logout/Disconnect logic
+  const disconnect = useCallback(async () => {
+    try {
+      await callEvolutionAPI('logout', currentInstance?.name);
+      setIsConnected(false);
+      setCurrentInstance(null);
+      setQrCode(null);
+      setChats([]);
+      toast({
+        title: 'Desconectado',
+        description: 'WhatsApp desconectado com sucesso',
+      });
+      await fetchInstances();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao desconectar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  }, [callEvolutionAPI, currentInstance, fetchInstances, toast]);
+
+  // Delete instance (permanent)
+  const deleteInstance = useCallback(async (name: string) => {
+    try {
+      console.log('Deleting instance:', name);
+      // Evolution API logic for deletion often uses 'logout' or a specific delete endpoint
+      // We should use 'deleteInstance' to completely remove it from Evolution API
+      await callEvolutionAPI('deleteInstance', name);
+      
+      toast({
+        title: 'Instância removida',
+        description: `Conexão ${name} foi encerrada e removida.`,
+      });
+      
+      if (instanceName === name) {
+        localStorage.removeItem(INSTANCE_STORAGE_KEY);
+      }
+      
+      await fetchInstances();
+    } catch (error: any) {
+      console.error('Delete instance error:', error);
+    }
+  }, [callEvolutionAPI, fetchInstances, instanceName, toast]);
+
+  // Create manual instance
+  const createInstance = useCallback(async (name: string) => {
+    try {
+      console.log('Creating instance:', name);
+      const response = await callEvolutionAPI('createInstance', name);
+      
+      if (response?.error) {
+        throw new Error(response.message || 'Erro ao criar instância');
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: `Instância ${name} iniciada!`,
+      });
+      
+      setInstanceName(name);
+      localStorage.setItem(INSTANCE_STORAGE_KEY, name);
+      await fetchInstances();
+      
+      // se a criação retornar um QR Code imediatamente, salva no state:
+      if (response?.qrcode?.base64) {
+        setQrCode(response.qrcode.base64);
+        setIsConnecting(true); // inicia o polling para conferir conexão
+      } else if (response?.hash?.qrcode) {
+        setQrCode(response.hash.qrcode);
+        setIsConnecting(true);
+      }
+      
+      return response;
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao criar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  }, [callEvolutionAPI, fetchInstances, toast]);
 
   // Get QR code for instance
   const getQrCode = useCallback(async (instance?: string) => {
@@ -166,6 +255,17 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
           title: 'QR Code gerado',
           description: 'Escaneie com seu WhatsApp',
         });
+      } else {
+        // If no QR code was returned, we must reset the connecting state
+        // This might happen if the instance is already connecting or stuck
+        setIsConnecting(false);
+        if (response?.instance?.state !== 'open') {
+          toast({
+            title: 'Erro ao gerar QR Code',
+            description: 'A instância pode estar travada. Tente apagá-la e recriar.',
+            variant: 'destructive',
+          });
+        }
       }
 
       return response;
@@ -188,28 +288,6 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       console.error('Connect error:', error);
     }
   }, [getQrCode]);
-
-  // Disconnect
-  const disconnect = useCallback(async () => {
-    try {
-      await callEvolutionAPI('logout', currentInstance?.name);
-      setIsConnected(false);
-      setCurrentInstance(null);
-      setQrCode(null);
-      setChats([]);
-      toast({
-        title: 'Desconectado',
-        description: 'WhatsApp desconectado com sucesso',
-      });
-      await fetchInstances();
-    } catch (error: any) {
-      toast({
-        title: 'Erro ao desconectar',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  }, [callEvolutionAPI, currentInstance, fetchInstances, toast]);
 
   // Fetch profile picture for a contact
   const fetchProfilePic = useCallback(async (remoteJid: string): Promise<string | null> => {
@@ -248,10 +326,6 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       console.log('Fetching chats for instance:', currentInstance.name);
       const response = await callEvolutionAPI('getChats', currentInstance.name);
 
-      console.log('getChats raw response type:', typeof response, Array.isArray(response));
-      console.log('getChats first item:', response?.[0] || response?.['0']);
-      console.log('getChats FULL first 2 items:', JSON.stringify(response?.slice?.(0, 2) || [response?.[0], response?.[1]], null, 2));
-
       if (response?.error) {
         console.error('Error fetching chats:', response.message);
         return [];
@@ -259,13 +333,11 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
 
       let chatList: any[] = [];
 
-      // Evolution API returns an array directly: [{id: null, lastMessage: {...}, unreadCount: 0}, ...]
       if (Array.isArray(response)) {
         chatList = response;
       } else if (response?.data && Array.isArray(response.data)) {
         chatList = response.data;
       } else if (typeof response === 'object') {
-        // Convert object with numeric keys to array
         for (const key in response) {
           if (key !== 'success' && response[key]) {
             chatList.push(response[key]);
@@ -273,205 +345,62 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
         }
       }
 
-      console.log('Parsed chat list:', chatList.length, 'chats');
-
-      let formattedChatsCount = 0;
       const formattedChats: EvolutionChat[] = chatList
         .filter((chat: any) => {
-          // Must have lastMessage with remoteJid
           const jid = chat.remoteJid || chat.lastMessage?.key?.remoteJid;
           return !!jid;
         })
-        .map((chat: any, index: number) => {
+        .map((chat: any) => {
           const lastMsg = chat.lastMessage;
           const remoteJid = chat.remoteJid || lastMsg?.key?.remoteJid;
 
-          // Get name from pushName, participant name, or extract from JID
           let name = chat.name || chat.pushName || lastMsg?.pushName;
           if (!name && remoteJid) {
-            // Extract phone number or group name from JID
             const isGroup = remoteJid.includes('@g.us');
-            if (isGroup) {
-              name = 'Grupo';
-            } else {
-              name = remoteJid.split('@')[0];
-            }
+            name = isGroup ? 'Grupo' : remoteJid.split('@')[0];
           }
 
-          // Extract last message content
           const msgContent = lastMsg?.message;
           let lastMsgText = '';
           if (msgContent?.conversation) {
             lastMsgText = msgContent.conversation;
           } else if (msgContent?.extendedTextMessage?.text) {
             lastMsgText = msgContent.extendedTextMessage.text;
-          } else if (msgContent?.imageMessage) {
-            lastMsgText = msgContent.imageMessage.caption || '📷 Imagem';
-          } else if (msgContent?.videoMessage) {
-            lastMsgText = msgContent.videoMessage.caption || '🎥 Vídeo';
-          } else if (msgContent?.audioMessage) {
-            lastMsgText = '🎵 Áudio';
-          } else if (msgContent?.documentMessage) {
-            lastMsgText = '📎 Documento';
-          } else if (msgContent?.stickerMessage) {
-            lastMsgText = '🎨 Sticker';
-          } else if (msgContent?.contactMessage) {
-            lastMsgText = '👤 Contato';
-          } else if (msgContent?.locationMessage) {
-            lastMsgText = '📍 Localização';
           } else {
             lastMsgText = '[Mídia]';
           }
-
-          const unreadCount = chat.unreadCount ?? chat.unread ?? chat.count ?? 0;
-
-          // Debug logging for first few chats
-          if (index < 3) {
-            console.log(`Chat ${index}:`, {
-              name,
-              remoteJid,
-              'chat.unreadCount': chat.unreadCount,
-              'chat.unread': chat.unread,
-              'chat.count': chat.count,
-              'final unreadCount': unreadCount,
-              'fullChat': chat
-            });
-          }
-
-          // Extract timestamp
-          const messageTimestamp = lastMsg?.messageTimestamp || 0;
-          const isFromMe = lastMsg?.key?.fromMe === true;
 
           return {
             id: remoteJid,
             remoteJid: remoteJid,
             name: name,
             profilePicUrl: chat.profilePicUrl || null,
-            lastMessage: lastMsgText.substring(0, 100), // Truncate long messages
-            lastMessageTimestamp: messageTimestamp,
-            isFromMe: isFromMe,
-            unreadCount: unreadCount,
+            lastMessage: lastMsgText.substring(0, 100),
+            lastMessageTimestamp: lastMsg?.messageTimestamp || 0,
+            isFromMe: lastMsg?.key?.fromMe === true,
+            unreadCount: chat.unreadCount ?? chat.unread ?? chat.count ?? 0,
           };
         });
 
-      console.log('Formatted chats:', formattedChats.length, formattedChats.slice(0, 3));
+      // Simple sync with local counters
+      const savedUnreadCounts = localStorage.getItem('whatsapp_unread_counts');
+      const unreadMap = savedUnreadCounts ? JSON.parse(savedUnreadCounts) : {};
 
-      // 🔥 Sistema LOCAL de unread count (usando localStorage)
-      try {
-        // Buscar unread counts salvos localmente
-        const savedUnreadCounts = localStorage.getItem('whatsapp_unread_counts');
-        let unreadMap = savedUnreadCounts ? JSON.parse(savedUnreadCounts) : {};
+      const mergedChats = formattedChats.map(chat => ({
+        ...chat,
+        unreadCount: unreadMap[chat.remoteJid] ?? chat.unreadCount ?? 0,
+      }));
 
-        // 🔥 DETECTAR NOVAS MENSAGENS RECEBIDAS
-        const lastSeenMessages = localStorage.getItem('whatsapp_last_seen_messages');
-        const lastSeenMap = lastSeenMessages ? JSON.parse(lastSeenMessages) : {};
+      const sortedChats = mergedChats.sort((a, b) => {
+        if ((a.unreadCount || 0) > 0 && (b.unreadCount || 0) === 0) return -1;
+        if ((a.unreadCount || 0) === 0 && (b.unreadCount || 0) > 0) return 1;
+        return (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0);
+      });
 
-        // Flag para detectar se é a primeira carga (não temos referências ainda)
-        const isFirstLoad = !lastSeenMessages || Object.keys(lastSeenMap).length === 0;
+      setChats(sortedChats);
 
-        formattedChats.forEach(chat => {
-          const lastMessageTimestamp = chat.lastMessageTimestamp || 0;
-          const lastSeenTimestamp = lastSeenMap[chat.remoteJid] || 0;
-
-          // Na PRIMEIRA CARGA: apenas salvar timestamps sem incrementar contador
-          if (isFirstLoad || lastSeenTimestamp === 0) {
-            lastSeenMap[chat.remoteJid] = lastMessageTimestamp;
-            // NÃO incrementar - apenas registrar a referência inicial
-            return;
-          }
-
-          // Se há uma mensagem GENUINAMENTE NOVA (timestamp maior que o registrado)
-          if (lastMessageTimestamp > lastSeenTimestamp) {
-            // Usar o isFromMe já extraído do chat formatado
-            if (!chat.isFromMe) {
-              // Incrementar contador apenas se não for mensagem do usuário
-              const currentCount = unreadMap[chat.remoteJid] || 0;
-              unreadMap[chat.remoteJid] = currentCount + 1;
-              console.log(`📩 Nova mensagem detectada em ${chat.name}: ${unreadMap[chat.remoteJid]} não lidas`);
-            }
-
-            // Atualizar timestamp para NÃO incrementar de novo na próxima verificação
-            lastSeenMap[chat.remoteJid] = lastMessageTimestamp;
-          }
-        });
-
-        // Salvar timestamps e contadores
-        localStorage.setItem('whatsapp_last_seen_messages', JSON.stringify(lastSeenMap));
-        localStorage.setItem('whatsapp_unread_counts', JSON.stringify(unreadMap));
-
-        console.log('Unread counts from localStorage:', unreadMap);
-
-        // 🔥 BUSCAR UNREAD_COUNT DO SUPABASE (fonte de verdade)
-        let supabaseUnreadMap: Record<string, number> = {};
-        try {
-          const { data: supabaseConvs, error: supabaseError } = await supabase
-            .from('whatsapp_conversations')
-            .select('remote_jid, unread_count, is_open')
-            .order('last_message_at', { ascending: false });
-
-          if (!supabaseError && supabaseConvs) {
-            supabaseUnreadMap = Object.fromEntries(
-              supabaseConvs.map(c => [c.remote_jid, c.unread_count || 0])
-            );
-            console.log('Unread counts from Supabase:', supabaseUnreadMap);
-          } else if (supabaseError) {
-            console.warn('Error fetching from Supabase, using localStorage fallback:', supabaseError);
-          }
-        } catch (supaErr) {
-          console.warn('Supabase fetch failed, using localStorage fallback:', supaErr);
-        }
-
-        // Aplicar unread counts aos chats (Supabase tem prioridade, localStorage é fallback)
-        const mergedChats = formattedChats.map(chat => {
-          // Prioridade: Supabase > localStorage > 0
-          const unreadCount = supabaseUnreadMap[chat.remoteJid] ?? unreadMap[chat.remoteJid] ?? 0;
-          return {
-            ...chat,
-            unreadCount: unreadCount,
-          };
-        });
-
-        // 🔥 ORDENAÇÃO: não lidas primeiro, depois por data (igual WhatsApp Web)
-        const sortedChats = mergedChats.sort((a, b) => {
-          const aUnread = a.unreadCount ?? 0;
-          const bUnread = b.unreadCount ?? 0;
-
-          // Primeiro: chats com mensagens não lidas vêm primeiro
-          if (aUnread > 0 && bUnread === 0) return -1;
-          if (aUnread === 0 && bUnread > 0) return 1;
-
-          // Depois: mais recentes primeiro
-          return (b.lastMessageTimestamp || 0) - (a.lastMessageTimestamp || 0);
-        });
-
-        console.log('Chats with unread counts (sorted):', sortedChats.filter(c => (c.unreadCount ?? 0) > 0).map(c => ({ name: c.name, unread: c.unreadCount })));
-
-        setChats(sortedChats);
-
-        // Fetch profile pictures in background
-        const candidates = sortedChats
-          .filter((c) => !c.profilePicUrl && !!c.remoteJid)
-          .slice(0, 80);
-
-        void mapWithConcurrency(candidates, 4, async (chat) => {
-          if (!chat.remoteJid) return;
-          const picUrl = await fetchProfilePic(chat.remoteJid);
-          if (!picUrl) return;
-          setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, profilePicUrl: picUrl } : c)));
-        });
-
-        return sortedChats;
-      } catch (error) {
-        console.error('Error with localStorage unread counts:', error);
-      }
-
-      setChats(formattedChats);
-
-      // Fetch profile pictures in background (throttled to avoid request bursts)
-      const candidates = formattedChats
-        .filter((c) => !c.profilePicUrl && !!c.remoteJid)
-        .slice(0, 80); // keep UI responsive; load the rest later on demand (future improvement)
-
+      // Fetch profile pictures in background
+      const candidates = sortedChats.filter((c) => !c.profilePicUrl && !!c.remoteJid).slice(0, 40);
       void mapWithConcurrency(candidates, 4, async (chat) => {
         if (!chat.remoteJid) return;
         const picUrl = await fetchProfilePic(chat.remoteJid);
@@ -479,7 +408,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
         setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, profilePicUrl: picUrl } : c)));
       });
 
-      return formattedChats;
+      return sortedChats;
     } catch (error) {
       console.error('Error fetching chats:', error);
       return [];
@@ -489,36 +418,15 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
   // Fetch messages
   const fetchMessages = useCallback(async (remoteJid: string) => {
     if (!isConnected || !currentInstance) return [];
-
     try {
-      console.log('Fetching messages for:', remoteJid);
       const response = await callEvolutionAPI('getMessages', currentInstance.name, { remoteJid });
-
-      console.log('getMessages response:', response);
-
-      if (response?.error) {
-        console.error('Error fetching messages:', response.message);
-        return [];
-      }
-
       let messages: any[] = [];
-
-      // Evolution API returns: { messages: { records: [...], total, pages, currentPage } }
       if (response?.messages?.records && Array.isArray(response.messages.records)) {
         messages = response.messages.records;
-      } else if (response?.messages && Array.isArray(response.messages)) {
-        messages = response.messages;
       } else if (Array.isArray(response)) {
         messages = response;
-      } else if (response?.data) {
-        messages = response.data;
       }
-
-      console.log('Parsed messages:', messages.length);
-
-      // Sort by timestamp (oldest first for display)
       messages.sort((a, b) => (a.messageTimestamp || 0) - (b.messageTimestamp || 0));
-
       return messages;
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -528,38 +436,22 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
 
   // Send message
   const sendMessage = useCallback(async (number: string, text: string) => {
-    if (!currentInstance) {
-      throw new Error('Nenhuma instância conectada');
-    }
-
+    if (!currentInstance) throw new Error('Nenhuma instância conectada');
     try {
       const response = await callEvolutionAPI('sendMessage', currentInstance.name, { number, text });
-
-      if (response?.error) {
-        throw new Error(response.message);
-      }
-
-      toast({
-        title: 'Mensagem enviada',
-        description: 'Mensagem enviada com sucesso',
-      });
+      toast({ title: 'Mensagem enviada', description: 'Mensagem enviada com sucesso' });
       return response;
     } catch (error: any) {
-      toast({
-        title: 'Erro ao enviar',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao enviar', description: error.message, variant: 'destructive' });
       throw error;
     }
   }, [currentInstance, callEvolutionAPI, toast]);
-
-
 
   // Select instance
   const selectInstance = useCallback((instance: EvolutionInstance) => {
     setCurrentInstance(instance);
     setInstanceName(instance.name);
+    localStorage.setItem(INSTANCE_STORAGE_KEY, instance.name);
     setIsConnected(instance.connectionStatus === 'open');
     if (instance.connectionStatus === 'open') {
       setQrCode(null);
@@ -596,7 +488,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
       interval = setInterval(async () => {
         pollCount++;
         const instanceList = await fetchInstances();
-        const connected = instanceList.find(i => i.connectionStatus === 'open');
+        const connected = instanceList.find(i => i.connectionStatus === 'open' && i.name === instanceName);
 
         if (connected) {
           setIsConnecting(false);
@@ -623,7 +515,7 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
         clearInterval(interval);
       }
     };
-  }, [isConnecting, qrCode, fetchInstances, toast]);
+  }, [isConnecting, qrCode, fetchInstances, toast, instanceName]);
 
   // Fetch chats when connected with simple polling
   useEffect(() => {
@@ -653,26 +545,13 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     };
   }, [isConnected, currentInstance, fetchChats]);
 
-  // 🔥 Marcar conversa como aberta (zera unread_count) - usando Supabase edge function
+  // Marcar conversa como aberta
   const markChatAsOpen = useCallback(async (remoteJid: string) => {
     try {
-      console.log('Opening chat (Supabase):', remoteJid);
-
-      // Chamar edge function para marcar chat como aberto
-      const { error } = await supabase.functions.invoke('chat-state', {
+      await supabase.functions.invoke('chat-state', {
         body: { remoteJid, isOpen: true }
       });
-
-      if (error) {
-        console.error('Error calling chat-state function:', error);
-      }
-
-      // Atualizar estado local imediatamente (otimistic update)
-      setChats(prev => prev.map(c =>
-        c.remoteJid === remoteJid ? { ...c, unreadCount: 0 } : c
-      ));
-
-      // Também atualizar localStorage como fallback
+      setChats(prev => prev.map(c => c.remoteJid === remoteJid ? { ...c, unreadCount: 0 } : c));
       const savedUnreadCounts = localStorage.getItem('whatsapp_unread_counts');
       const unreadMap = savedUnreadCounts ? JSON.parse(savedUnreadCounts) : {};
       unreadMap[remoteJid] = 0;
@@ -682,19 +561,11 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     }
   }, []);
 
-  // 🔥 Marcar conversa como fechada - usando Supabase edge function
   const markChatAsClosed = useCallback(async (remoteJid: string) => {
     try {
-      console.log('Closing chat (Supabase):', remoteJid);
-
-      // Chamar edge function para marcar chat como fechado
-      const { error } = await supabase.functions.invoke('chat-state', {
+      await supabase.functions.invoke('chat-state', {
         body: { remoteJid, isOpen: false }
       });
-
-      if (error) {
-        console.error('Error calling chat-state function:', error);
-      }
     } catch (error) {
       console.error('Error marking chat as closed:', error);
     }
@@ -713,6 +584,8 @@ export const useEvolutionAPI = (defaultInstanceName = 'crm-turbo') => {
     deviceLimitError,
     connect,
     disconnect,
+    deleteInstance,
+    createInstance,
     fetchChats,
     fetchMessages,
     sendMessage,

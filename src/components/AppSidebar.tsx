@@ -1,155 +1,290 @@
-import { NavLink } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Users,
-  TrendingUp,
-  Package,
-  CheckSquare,
-  MessageCircle,
-  BarChart3,
-  Settings,
-  Bot,
-  Zap,
-  DollarSign,
+    Home,
+    Scan,
+    Columns3,
+    Briefcase,
+    Calculator,
+    Calendar,
+    DollarSign,
+    FileText,
+    Bot,
+    Brain,
+    Building2,
+    Plug,
+    CreditCard,
+    Star,
+    LogOut,
+    MessageSquare,
+    Users,
+    Moon,
+    Sun,
+    Settings,
+    PanelLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
+import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useEffect, useState } from "react";
 
-
-const menuSections = [
-  {
-    group: "CRM & Vendas",
-    items: [
-      { title: "Painel", url: "/", icon: LayoutDashboard },
-      { title: "Funil de Vendas", url: "/pipeline", icon: TrendingUp },
-      { title: "Contatos", url: "/contacts", icon: Users },
-      { title: "WhatsApp", url: "/whatsapp", icon: MessageCircle },
-    ],
-  },
-  {
-    group: "Inteligência S3",
-    items: [
-      { title: "Agentes S3", url: "/agents", icon: Bot },
-      { title: "Automação Funil", url: "/automacao-funil", icon: Zap },
-    ],
-  },
-  {
-    group: "Gestão",
-    items: [
-      { title: "Financeiro", url: "/financeiro", icon: DollarSign },
-      { title: "Produtos", url: "/products", icon: Package },
-      { title: "Tarefas", url: "/tasks", icon: CheckSquare },
-    ],
-  },
-  {
-    group: "Sistema",
-    items: [
-      { title: "Relatórios", url: "/reports", icon: BarChart3 },
-      { title: "Configurações", url: "/settings", icon: Settings },
-    ],
-  },
+const NAV_SECTIONS = [
+    {
+        label: "Inteligência",
+        items: [
+            { label: "Agentes S3", icon: Bot, to: "/agentes-s3" },
+            { label: "Treinamento IA", icon: Brain, to: "/treinamento-ia" },
+        ]
+    },
+    {
+        label: "Vendas & Leads",
+        items: [
+            { label: "Visão Geral", icon: Home, to: "/" },
+            { label: "Radar de Leads", icon: Scan, to: "/radar-leads" },
+            { label: "Funil Kanban", icon: Columns3, to: "/pipeline" },
+            { label: "Automação Funil", icon: Bot, to: "/automacao-funil" },
+            { label: "Atendimentos", icon: MessageSquare, to: "/atendimentos" },
+        ]
+    },
+    {
+        label: "Operacional",
+        items: [
+            { label: "Serviços", icon: Briefcase, to: "/servicos" },
+            { label: "Calculadora", icon: Calculator, to: "/calculadora" },
+            { label: "Agenda", icon: Calendar, to: "/agenda" },
+        ]
+    },
+    {
+        label: "Financeiro",
+        items: [
+            { label: "Financeiro", icon: DollarSign, to: "/financeiro" },
+            { label: "Meu Plano", icon: CreditCard, to: "/meu-plano" },
+            { label: "Painel Afiliado", icon: Star, to: "/painel-afiliado" },
+        ]
+    },
+    {
+        label: "Empresa",
+        items: [
+            { label: "Equipe", icon: Users, to: "/equipe" },
+            { label: "Perfil da Empresa", icon: Building2, to: "/perfil-empresa" },
+            { label: "Integrações", icon: Plug, to: "/integracoes" },
+            { label: "Configurações", icon: Settings, to: "/settings" },
+            { label: "Modelos de Docs", icon: FileText, to: "/modelos-docs" },
+        ]
+    }
 ];
 
 export function AppSidebar() {
-  const { data: settings } = useSystemSettings();
+    const { data: settings } = useSystemSettings();
+    const navigate = useNavigate();
+    const location = useLocation();
 
-  const companyName = settings?.company_name || "Bolten";
-  const logoCollapsed = settings?.logo_collapsed;
-  const logoCollapsedSize = settings?.logo_collapsed_size || 36;
-  // Use theme color from settings; default to orange if not set or if set to black
-  const rawThemeColor = settings?.theme_color;
-  const themeColor =
-    !rawThemeColor || rawThemeColor === "#000000" || rawThemeColor === "hsl(0,0%,0%)"
-      ? "#f97316"
-      : rawThemeColor;
+    // Sidebar collapsed state — persisted in localStorage
+    const [collapsed, setCollapsed] = useState(
+        () => localStorage.getItem("sidebar_collapsed") === "true"
+    );
 
-  const firstLetter = companyName.charAt(0).toUpperCase();
+    // Theme state — default light
+    const [theme, setTheme] = useState<"light" | "dark">(
+        (localStorage.getItem("theme") as "light" | "dark") || "light"
+    );
 
-  return (
-    <aside
-      className={cn(
-        "flex flex-col h-full",
-        "w-[220px] py-4 px-3 gap-2",
-        "bg-background",
-        "border-r border-border/60"
-      )}
-    >
-      {/* Logo */}
-      <div className="mb-3 flex items-center gap-3 px-1">
-        {logoCollapsed ? (
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm ring-2 ring-orange-200 flex-shrink-0"
-            style={{ backgroundColor: themeColor }}
-          >
-            <img
-              src={logoCollapsed}
-              alt={companyName}
-              style={{ height: `${logoCollapsedSize}px`, width: `${logoCollapsedSize}px` }}
-              className="object-contain"
-            />
-          </div>
-        ) : (
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center italic font-black text-white text-xl shadow-sm ring-2 ring-orange-200 flex-shrink-0"
-            style={{ backgroundColor: themeColor }}
-          >
-            {firstLetter}
-          </div>
-        )}
-        <span className="font-bold text-sm text-foreground truncate">{companyName}</span>
-      </div>
+    const companyName = settings?.company_name || "S3 Mídia";
+    const logoExpanded = settings?.logo_expanded;
+    const logoCollapsed = settings?.logo_collapsed;
+    const logoExpandedSize = settings?.logo_expanded_size || 32;
+    const logoCollapsedSize = settings?.logo_collapsed_size || 32;
 
-      {/* Divider */}
-      <div className="w-full h-px bg-border mb-1" />
+    const rawThemeColor = settings?.theme_color;
+    const themeColor =
+        !rawThemeColor || rawThemeColor === "#000000" || rawThemeColor === "hsl(0,0%,0%)"
+            ? "#f97316"
+            : rawThemeColor;
 
-      {/* Nav Items Grouped */}
-      <nav className="flex flex-col gap-6 flex-1 w-full overflow-y-auto pr-1">
-        {menuSections.map((section) => (
-          <div key={section.group} className="flex flex-col gap-1.5">
-            <h3 className="px-3 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/70">
-              {section.group}
-            </h3>
-            <div className="flex flex-col gap-0.5">
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.title}
-                  to={item.url}
-                  end
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group",
-                      isActive
-                        ? "bg-orange-50 shadow-sm ring-1 ring-orange-200/50"
-                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <item.icon
-                        className={cn(
-                          "h-4 w-4 flex-shrink-0 transition-colors",
-                          isActive ? "" : "text-muted-foreground group-hover:text-foreground"
+    const firstLetter = companyName.charAt(0).toUpperCase();
+
+    // Apply theme to document
+    useEffect(() => {
+        const root = window.document.documentElement;
+        if (theme === "dark") {
+            root.classList.add("dark");
+        } else {
+            root.classList.remove("dark");
+        }
+        localStorage.setItem("theme", theme);
+    }, [theme]);
+
+    // Persist collapsed state
+    const toggleCollapsed = () => {
+        setCollapsed((c) => {
+            const next = !c;
+            localStorage.setItem("sidebar_collapsed", String(next));
+            return next;
+        });
+    };
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        navigate("/login");
+    };
+
+    return (
+        <aside
+            className={cn(
+                "flex flex-col h-full bg-background border-r border-border/60 flex-shrink-0 transition-all duration-300",
+                collapsed ? "w-[64px] items-center px-2 py-3" : "w-[200px] px-3 py-4"
+            )}
+        >
+            {/* Header: Logo + PanelLeft toggle */}
+            <div className={cn("flex items-center mb-4 flex-shrink-0", collapsed ? "flex-col gap-2 w-full" : "justify-between gap-2")}>
+                {/* Logo */}
+                {collapsed ? (
+                    <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0"
+                        style={{ backgroundColor: themeColor }}
+                    >
+                        {logoCollapsed ? (
+                            <img src={logoCollapsed} alt={companyName}
+                                style={{ height: `${logoCollapsedSize}px`, width: `${logoCollapsedSize}px` }}
+                                className="object-contain" />
+                        ) : (
+                            <span className="text-white font-black text-xl italic leading-none">{firstLetter}</span>
                         )}
-                        style={isActive ? { color: themeColor } : {}}
-                      />
-                      <span
-                        className={cn(
-                          "text-sm font-medium truncate transition-colors",
-                          isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                    </div>
+                ) : (
+                    <div className="flex items-baseline gap-0.5 min-w-0 flex-1">
+                        {logoExpanded ? (
+                            <img src={logoExpanded} alt={companyName}
+                                style={{ height: `${logoExpandedSize}px`, width: "auto", maxWidth: "140px" }}
+                                className="object-contain" />
+                        ) : (
+                            <>
+                                <span className="text-[22px] font-black tracking-tight text-foreground italic truncate">
+                                    {companyName}
+                                </span>
+                                <div className="w-1.5 h-1.5 rounded-full mb-0.5 flex-shrink-0"
+                                    style={{ backgroundColor: themeColor }} />
+                            </>
                         )}
-                        style={isActive ? { color: themeColor } : {}}
-                      >
-                        {item.title}
-                      </span>
-                    </>
-                  )}
-                </NavLink>
-              ))}
+                    </div>
+                )}
+
+                {/* PanelLeft toggle */}
+                <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                        <button
+                            onClick={toggleCollapsed}
+                            className="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex-shrink-0"
+                        >
+                            <PanelLeft className={cn("h-4 w-4 transition-transform duration-300", collapsed && "rotate-180")} />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="text-xs font-medium">
+                        {collapsed ? "Expandir" : "Recolher"}
+                    </TooltipContent>
+                </Tooltip>
             </div>
-          </div>
-        ))}
-      </nav>
-    </aside>
-  );
+
+            {/* Nav Items */}
+            <nav className={cn(
+                "flex flex-col flex-1 w-full overflow-y-auto overflow-x-hidden gap-6",
+                "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]",
+                collapsed && "items-center gap-4"
+            )}>
+                {NAV_SECTIONS.map((section) => (
+                    <div key={section.label} className={cn("flex flex-col gap-1", collapsed && "items-center")}>
+                        {!collapsed && (
+                            <h3 className="px-3 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/70 mb-1">
+                                {section.label}
+                            </h3>
+                        )}
+                        <div className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
+                            {section.items.map((item) => (
+                                <Tooltip key={item.to} delayDuration={0}>
+                                    <TooltipTrigger asChild>
+                                        <Link
+                                            to={item.to}
+                                            className={cn(
+                                                "flex flex-row items-center transition-all duration-200 group rounded-xl",
+                                                collapsed
+                                                    ? "justify-center w-10 h-10"
+                                                    : "gap-3 px-3 py-2 w-full",
+                                                location.pathname.startsWith(item.to)
+                                                    ? "bg-accent/10"
+                                                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                                            )}
+                                        >
+                                            <item.icon
+                                                className={cn(
+                                                    "h-[18px] w-[18px] flex-shrink-0 transition-colors",
+                                                    !location.pathname.startsWith(item.to) && "text-muted-foreground group-hover:text-foreground"
+                                                )}
+                                                style={location.pathname.startsWith(item.to) ? { color: themeColor } : {}}
+                                            />
+                                            {!collapsed && (
+                                                <span className={cn("text-[13px] font-medium whitespace-nowrap", location.pathname.startsWith(item.to) ? "text-foreground" : "")}>
+                                                    {item.label}
+                                                </span>
+                                            )}
+                                        </Link>
+                                    </TooltipTrigger>
+                                    {collapsed && (
+                                        <TooltipContent side="right" className="text-xs font-medium">
+                                            {item.label}
+                                        </TooltipContent>
+                                    )}
+                                </Tooltip>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </nav>
+
+            {/* Footer */}
+            <div className={cn(
+                "mt-auto pt-2 border-t border-border/40 flex flex-col gap-0.5",
+                collapsed ? "w-full items-center" : "w-full"
+            )}>
+                {/* Theme toggle */}
+                <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                        <button
+                            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                            className={cn(
+                                "flex flex-row items-center rounded-xl transition-all duration-200 text-muted-foreground hover:bg-muted hover:text-foreground",
+                                collapsed ? "justify-center w-10 h-10" : "gap-3 px-3 py-2.5 w-full"
+                            )}
+                        >
+                            {theme === "light" ? <Moon className="h-[18px] w-[18px] flex-shrink-0" /> : <Sun className="h-[18px] w-[18px] flex-shrink-0" />}
+                            {!collapsed && <span className="text-[13px] font-medium whitespace-nowrap">{theme === "light" ? "Modo Escuro" : "Modo Claro"}</span>}
+                        </button>
+                    </TooltipTrigger>
+                    {collapsed && (
+                        <TooltipContent side="right" className="text-xs font-medium">
+                            {theme === "light" ? "Modo Escuro" : "Modo Claro"}
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+
+                {/* Logout */}
+                <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                        <button
+                            onClick={handleLogout}
+                            className={cn(
+                                "flex flex-row items-center rounded-xl transition-all duration-200 text-red-400 hover:bg-red-50 hover:text-red-500",
+                                collapsed ? "justify-center w-10 h-10" : "gap-3 px-3 py-2.5 w-full"
+                            )}
+                        >
+                            <LogOut className="h-[18px] w-[18px] flex-shrink-0" />
+                            {!collapsed && <span className="text-[13px] font-medium whitespace-nowrap">Sair</span>}
+                        </button>
+                    </TooltipTrigger>
+                    {collapsed && (
+                        <TooltipContent side="right" className="text-xs font-medium">Sair</TooltipContent>
+                    )}
+                </Tooltip>
+            </div>
+        </aside>
+    );
 }

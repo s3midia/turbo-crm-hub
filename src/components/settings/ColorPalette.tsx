@@ -32,7 +32,7 @@ const CRM_CURRENT_PALETTE: ThemePalette = {
     sidebar: '#FFFFFF',
 };
 
-// Palettes inspired by the Bolten logo (orange, dark navy, neutrals)
+// Palettes inspired by the S3 Mídia logo (orange, dark navy, neutrals)
 const COLOR_PALETTES: PaletteOption[] = [
     {
         name: 'CRM Atual',
@@ -41,7 +41,7 @@ const COLOR_PALETTES: PaletteOption[] = [
         colors: ['#222838', '#3B4463', '#F07A28', '#F5A623', '#F0F1F3'],
     },
     {
-        name: 'Bolten Original',
+        name: 'S3 Mídia Original',
         description: 'A paleta oficial da marca',
         palette: {
             primary: '#222838',
@@ -53,7 +53,7 @@ const COLOR_PALETTES: PaletteOption[] = [
         colors: ['#222838', '#3B4463', '#F07A28', '#F5A623', '#F0F1F3'],
     },
     {
-        name: 'Bolten Profissional',
+        name: 'S3 Mídia Profissional',
         description: 'Tom executivo e refinado',
         palette: {
             primary: '#1E293B',
@@ -65,7 +65,7 @@ const COLOR_PALETTES: PaletteOption[] = [
         colors: ['#0F172A', '#1E293B', '#3B82F6', '#93C5FD', '#F8FAFC'],
     },
     {
-        name: 'Bolten Energia',
+        name: 'S3 Mídia Energia',
         description: 'Vibrante e dinâmico',
         palette: {
             primary: '#1C1917',
@@ -77,7 +77,7 @@ const COLOR_PALETTES: PaletteOption[] = [
         colors: ['#1C1917', '#EA580C', '#FB923C', '#FED7AA', '#FFF7ED'],
     },
     {
-        name: 'Bolten Oceano',
+        name: 'S3 Mídia Oceano',
         description: 'Confiança e estabilidade',
         palette: {
             primary: '#0C1D36',
@@ -89,7 +89,7 @@ const COLOR_PALETTES: PaletteOption[] = [
         colors: ['#0C1D36', '#0066CC', '#3B82F6', '#93C5FD', '#EFF6FF'],
     },
     {
-        name: 'Bolten Floresta',
+        name: 'S3 Mídia Floresta',
         description: 'Crescimento e sucesso',
         palette: {
             primary: '#022C22',
@@ -101,7 +101,7 @@ const COLOR_PALETTES: PaletteOption[] = [
         colors: ['#022C22', '#059669', '#34D399', '#A7F3D0', '#ECFDF5'],
     },
     {
-        name: 'Bolten Clássico',
+        name: 'S3 Mídia Clássico',
         description: 'Elegante e atemporal',
         palette: {
             primary: '#1E1039',
@@ -113,7 +113,7 @@ const COLOR_PALETTES: PaletteOption[] = [
         colors: ['#1E1039', '#7C3AED', '#A78BFA', '#DDD6FE', '#F5F3FF'],
     },
     {
-        name: 'Bolten Rose',
+        name: 'S3 Mídia Rose',
         description: 'Moderno e sofisticado',
         palette: {
             primary: '#1A0512',
@@ -125,7 +125,7 @@ const COLOR_PALETTES: PaletteOption[] = [
         colors: ['#1A0512', '#E11D48', '#FB7185', '#FECDD3', '#FFF1F2'],
     },
     {
-        name: 'Bolten Sunset',
+        name: 'S3 Mídia Sunset',
         description: 'Caloroso e acolhedor',
         palette: {
             primary: '#1C1306',

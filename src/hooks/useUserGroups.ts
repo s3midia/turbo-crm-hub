@@ -26,8 +26,8 @@ export interface GroupWithMembers extends UserGroup {
     }>;
 }
 
-const GROUPS_KEY = 'bolten_user_groups';
-const MEMBERS_KEY = 'bolten_group_members';
+const GROUPS_KEY = 's3_midia_user_groups';
+const MEMBERS_KEY = 's3_midia_group_members';
 
 // Dados iniciais
 const INITIAL_GROUPS: UserGroup[] = [
@@ -147,7 +147,7 @@ export const useGroupMembers = (groupId: string | undefined) => {
         }
 
         const membersData = getMembers();
-        const profilesData = JSON.parse(localStorage.getItem('bolten_profiles') || '[]');
+        const profilesData = JSON.parse(localStorage.getItem('s3_midia_profiles') || '[]');
 
         const groupMembers = membersData
             .filter(m => m.group_id === groupId)

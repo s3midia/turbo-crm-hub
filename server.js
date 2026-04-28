@@ -62,6 +62,6 @@ app.post('/webhook/connection', async (req, res) => {
     }
 });
 
-app.listen(3000, () => {
-    console.log('Servidor rodando na porta 3000');
-});
+app.listen(3001, () => {
+    console.log('Servidor de webhooks rodando na porta 3001');
+});

@@ -80,50 +80,22 @@ function isLightColor(hex: string): boolean {
 export function applyPaletteToCSS(palette: ThemePalette) {
     const root = document.documentElement;
 
-    // Primary color
+    // Primary color (Brand)
     root.style.setProperty('--primary', hexToHsl(palette.primary));
     root.style.setProperty('--primary-foreground', isLightColor(palette.primary) ? '220 14% 15%' : '0 0% 100%');
     root.style.setProperty('--primary-hover', hexToHsl(darkenHex(palette.primary, 20)));
 
-    // Foreground (text color)
-    root.style.setProperty('--foreground', hexToHsl(palette.foreground));
-
-    // Background
-    root.style.setProperty('--background', hexToHsl(palette.background));
-
-    // Card & Popover (use sidebar color = white typically)
-    root.style.setProperty('--card', hexToHsl(palette.sidebar));
-    root.style.setProperty('--card-foreground', hexToHsl(palette.foreground));
-    root.style.setProperty('--popover', hexToHsl(palette.sidebar));
-    root.style.setProperty('--popover-foreground', hexToHsl(palette.foreground));
-
-    // Secondary - derive from background (slightly darker)
-    root.style.setProperty('--secondary', hexToHsl(darkenHex(palette.background, 15)));
-    root.style.setProperty('--secondary-foreground', hexToHsl(palette.primary));
-
-    // Muted - derive from background
-    root.style.setProperty('--muted', hexToHsl(darkenHex(palette.background, 8)));
-    root.style.setProperty('--muted-foreground', hexToHsl(lightenHex(palette.foreground, 80)));
-
-    // Accent color
+    // Accent color (Brand)
     root.style.setProperty('--accent', hexToHsl(palette.accent));
     root.style.setProperty('--accent-foreground', isLightColor(palette.accent) ? '220 14% 15%' : '0 0% 100%');
 
     // Ring / Focus
     root.style.setProperty('--ring', hexToHsl(palette.accent));
 
-    // Borders & Inputs - derive from background
-    root.style.setProperty('--border', hexToHsl(darkenHex(palette.background, 20)));
-    root.style.setProperty('--input', hexToHsl(darkenHex(palette.background, 20)));
-
-    // Sidebar
-    root.style.setProperty('--sidebar-background', hexToHsl(palette.sidebar));
-    root.style.setProperty('--sidebar-foreground', hexToHsl(lightenHex(palette.foreground, 80)));
+    // Sidebar Branding
     root.style.setProperty('--sidebar-primary', hexToHsl(palette.accent));
     root.style.setProperty('--sidebar-primary-foreground', isLightColor(palette.accent) ? '220 14% 15%' : '0 0% 100%');
-    root.style.setProperty('--sidebar-accent', hexToHsl(darkenHex(palette.background, 8)));
     root.style.setProperty('--sidebar-accent-foreground', hexToHsl(palette.primary));
-    root.style.setProperty('--sidebar-border', hexToHsl(palette.background));
 
     // WhatsApp tokens
     root.style.setProperty('--wa-primary', hexToHsl(palette.accent));

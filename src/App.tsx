@@ -22,6 +22,19 @@ import LoginPage from "./pages/LoginPage";
 import AgentsPage from "./pages/AgentsPage";
 import FinanceiroPage from "./pages/FinanceiroPage";
 import AutomacaoFunilPage from "./pages/AutomacaoFunilPage";
+import RadarLeadsPage from "./pages/RadarLeadsPage";
+import CalculadoraPage from "./pages/CalculadoraPage";
+import AgendaPage from "./pages/AgendaPage";
+import ServicosPage from "./pages/ServicosPage";
+import TreinamentoIAPage from "./pages/TreinamentoIAPage";
+import AtendimentosPage from "./pages/AtendimentosPage";
+import MeuPlanoPage from "./pages/MeuPlanoPage";
+import PainelAfiliadoPage from "./pages/PainelAfiliadoPage";
+import EquipePage from "./pages/EquipePage";
+import PerfilEmpresaPage from "./pages/PerfilEmpresaPage";
+import IntegracoesPage from "./pages/IntegracoesPage";
+import FunilKanbanPage from "./pages/FunilKanbanPage";
+import ModelosDocsPage from "./pages/ModelosDocsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,24 +44,62 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
+    let mounted = true;
+
+    const checkSession = async () => {
+      try {
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        if (mounted) {
+          setSession(currentSession);
+          // Only stop loading if we have a session OR there is no hash to process
+          if (currentSession || !window.location.hash) {
+            setLoading(false);
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao verificar sessão:", err);
+        if (mounted) setLoading(false);
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (mounted) {
+        setSession(currentSession);
+        // If we get a session or a clear sign-out event, we can stop loading
+        if (currentSession || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+          setLoading(false);
+        }
+      }
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    checkSession();
 
-    return () => subscription.unsubscribe();
+    // Se houver um hash na URL, damos um tempo para o Supabase processar antes de desistir
+    let timeoutId: NodeJS.Timeout;
+    if (window.location.hash) {
+      timeoutId = setTimeout(() => {
+        if (mounted) {
+          setLoading(false);
+        }
+      }, 5000); // Wait up to 5 seconds for OAuth processing
+    }
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Carregando...</p>
+      <div className="flex items-center justify-center min-h-screen bg-background text-primary">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-current border-t-transparent" />
+          <p className="text-sm font-medium">Autenticando...</p>
+        </div>
       </div>
     );
   }
@@ -84,17 +135,29 @@ const App = () => {
                       <main className="flex-1 flex flex-col min-h-screen max-h-screen overflow-hidden">
                         <div className="content-card mb-4 mr-4 mt-4 flex flex-col min-h-0">
                           <Routes>
-                            <Route path="/" element={<div className="p-6 h-full overflow-y-auto"><Index /></div>} />
+                            <Route path="/" element={<div className="p-6 h-full overflow-y-auto"><DashboardPage /></div>} />
                             <Route path="/pipeline/relatorio" element={<div className="p-6 h-full overflow-y-auto"><PipelineReportPage /></div>} />
-                            <Route path="/pipeline" element={<div className="p-6 h-full overflow-y-auto"><PipelinePage /></div>} />
+                            <Route path="/pipeline" element={<FunilKanbanPage />} />
                             <Route path="/contacts" element={<div className="p-6 h-full overflow-y-auto"><ContactsPage /></div>} />
                             <Route path="/products" element={<div className="p-6 h-full overflow-y-auto"><ProductsPage /></div>} />
                             <Route path="/tasks" element={<div className="p-6 h-full overflow-y-auto"><TasksPage /></div>} />
                             <Route path="/whatsapp" element={<WhatsAppPage />} />
-                            <Route path="/agents" element={<div className="p-6 h-full overflow-y-auto"><AgentsPage /></div>} />
+                            <Route path="/agentes-s3" element={<div className="h-full overflow-y-auto"><AgentsPage /></div>} />
                             <Route path="/automacao-funil" element={<div className="p-6 h-full overflow-y-auto"><AutomacaoFunilPage /></div>} />
+                            <Route path="/radar-leads" element={<RadarLeadsPage />} />
+                            <Route path="/calculadora" element={<div className="p-6 h-full overflow-y-auto"><CalculadoraPage /></div>} />
+                            <Route path="/agenda" element={<div className="p-6 h-full overflow-y-auto"><AgendaPage /></div>} />
+                            <Route path="/servicos" element={<div className="p-6 h-full overflow-y-auto"><ServicosPage /></div>} />
+                            <Route path="/treinamento-ia" element={<div className="p-6 h-full overflow-y-auto"><TreinamentoIAPage /></div>} />
+                            <Route path="/atendimentos" element={<WhatsAppPage />} />
                             <Route path="/financeiro" element={<div className="p-6 h-full overflow-y-auto"><FinanceiroPage /></div>} />
+                            <Route path="/meu-plano" element={<div className="p-6 h-full overflow-y-auto"><MeuPlanoPage /></div>} />
+                            <Route path="/painel-afiliado" element={<div className="p-6 h-full overflow-y-auto"><PainelAfiliadoPage /></div>} />
+                            <Route path="/equipe" element={<div className="p-6 h-full overflow-y-auto"><EquipePage /></div>} />
+                            <Route path="/perfil-empresa" element={<div className="p-6 h-full overflow-y-auto"><PerfilEmpresaPage /></div>} />
+                            <Route path="/integracoes" element={<div className="p-6 h-full overflow-y-auto"><IntegracoesPage /></div>} />
                             <Route path="/settings" element={<div className="p-6 h-full overflow-y-auto"><SettingsPage /></div>} />
+                            <Route path="/modelos-docs" element={<div className="p-6 h-full overflow-y-auto"><ModelosDocsPage /></div>} />
                             <Route path="*" element={<div className="p-6 h-full overflow-y-auto"><NotFound /></div>} />
                           </Routes>
                         </div>

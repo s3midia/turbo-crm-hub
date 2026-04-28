@@ -21,226 +21,163 @@ export interface Opportunity {
     contact_name?: string;
     contact_email?: string;
     priority?: 'low' | 'medium' | 'high';
-    stage: 'new_contact' | 'in_contact' | 'presentation' | 'negotiation';
+    stage: string;
     observation?: string;
     responsible_id?: string;
     total_value: number;
-    products: Product[];
-    tasks: Task[];
+    products?: Product[];
+    tasks?: Task[];
     archived?: boolean;
+    niche?: string;
+    site_url?: string;
     created_at?: string;
     updated_at?: string;
 }
 
 export interface TimelineEntry {
-    id?: string;
-    opportunity_id: string;
-    user_id?: string;
-    comment: string;
-    created_at?: string;
+    id: string;
+    type: 'comment' | 'agent' | 'whatsapp';
+    content: string;
+    agent_id?: string;
+    created_at: string;
 }
 
-// LocalStorage keys
-const OPPORTUNITIES_KEY = 'crm_opportunities';
-const TIMELINE_KEY = 'crm_timeline';
-
-// Helper to generate IDs
-const generateId = () => Math.random().toString(36).substr(2, 9);
-
-// Create or update opportunity (LOCAL VERSION - no Supabase)
+// Create or update opportunity (SUPABASE VERSION)
 export const saveOpportunity = async (opportunity: Opportunity) => {
-    // Simulate async delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const opportunities = getLocalOpportunities();
+    const { data: userData } = await supabase.auth.getUser();
+    
+    const leadData = {
+        company_name: opportunity.lead_identification,
+        phone: opportunity.contact_phone,
+        status: opportunity.stage,
+        // Map other fields to metadata or new columns if they exist
+        // For now, we use existing columns in 'leads' table
+    };
 
     if (opportunity.id) {
-        // Update existing
-        const index = opportunities.findIndex(o => o.id === opportunity.id);
-        if (index !== -1) {
-            opportunities[index] = {
-                ...opportunity,
+        const { data, error } = await supabase
+            .from('leads')
+            .update({
+                company_name: opportunity.lead_identification,
+                phone: opportunity.contact_phone,
+                status: opportunity.stage,
+                niche: opportunity.niche,
+                site_url: opportunity.site_url,
                 updated_at: new Date().toISOString(),
-            };
-        }
+            })
+            .eq('id', opportunity.id)
+            .select()
+            .single();
+        
+        if (error) throw error;
+        return data;
     } else {
-        // Create new
-        const newOpp = {
-            ...opportunity,
-            id: generateId(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        };
-        opportunities.push(newOpp);
+        const { data, error } = await supabase
+            .from('leads')
+            .insert([{
+                company_name: opportunity.lead_identification,
+                phone: opportunity.contact_phone,
+                status: opportunity.stage,
+                niche: opportunity.niche,
+                site_url: opportunity.site_url,
+            }])
+            .select()
+            .single();
+        
+        if (error) throw error;
+        return data;
     }
-
-    localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(opportunities));
-    return opportunity.id ? opportunity : opportunities[opportunities.length - 1];
 };
 
-// Get all opportunities (LOCAL VERSION) - excludes archived
-export const getOpportunities = async () => {
-    // Simulate async delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return getLocalOpportunities().filter(o => !o.archived);
-};
-
-// Get opportunity by ID (LOCAL VERSION)
 export const getOpportunityById = async (id: string) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const opportunities = getLocalOpportunities();
-    const opp = opportunities.find(o => o.id === id);
-    if (!opp) throw new Error('Opportunity not found');
-    return opp;
+    const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', id)
+        .single();
+    
+    if (error) throw error;
+    
+    // Map database lead to Opportunity interface
+    return {
+        id: data.id,
+        lead_identification: data.company_name,
+        contact_phone: data.phone,
+        stage: data.status,
+        niche: data.niche,
+        site_url: data.site_url,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        total_value: 0, 
+        products: [],
+        tasks: []
+    } as Opportunity;
 };
 
-// Delete opportunity (LOCAL VERSION)
-export const deleteOpportunity = async (id: string) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const opportunities = getLocalOpportunities();
-    const filtered = opportunities.filter(o => o.id !== id);
-    localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(filtered));
-};
-
-// Archive opportunity (mark as archived, not delete)
 export const archiveOpportunity = async (id: string) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const opportunities = getLocalOpportunities();
-    const index = opportunities.findIndex(o => o.id === id);
-    if (index !== -1) {
-        opportunities[index].archived = true;
-        opportunities[index].updated_at = new Date().toISOString();
-        localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(opportunities));
-    }
+    const { error } = await supabase
+        .from('leads')
+        .update({ status: 'arquivado' }) // Using status as archive flag for now
+        .eq('id', id);
+    if (error) throw error;
 };
 
-// Update only the stage of an opportunity (fast, no delay — used by drag & drop)
-export const updateOpportunityStage = (id: string, newStage: Opportunity['stage']) => {
-    const opportunities = getLocalOpportunities();
-    const index = opportunities.findIndex(o => o.id === id);
-    if (index !== -1) {
-        opportunities[index].stage = newStage;
-        opportunities[index].updated_at = new Date().toISOString();
-        localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(opportunities));
-    }
+export const getTimelineEntries = async (opportunityId: string): Promise<TimelineEntry[]> => {
+    // 1. Fetch manual comments (if we had a comments table, but we'll use agent_logs for now)
+    // 2. Fetch agent logs for this lead
+    const { data: logs, error: logsError } = await supabase
+        .from('agent_logs')
+        .select('*')
+        .or(`message.ilike.%[Lead:${opportunityId}]%,message.ilike.%[AÇÃO][Lead:${opportunityId}]%`)
+        .order('created_at', { ascending: false });
+
+    if (logsError) throw logsError;
+
+    const timeline: TimelineEntry[] = logs.map(log => ({
+        id: log.id,
+        type: log.message.includes('[AÇÃO]') ? 'agent' : 'comment',
+        content: log.message.replace(/\[Lead:.*?\]\s*/, '').replace(/\[AÇÃO\]\s*/, ''),
+        agent_id: log.agent_id,
+        created_at: log.created_at
+    }));
+
+    return timeline;
 };
 
-// Add timeline entry (LOCAL VERSION)
-export const addTimelineEntry = async (entry: TimelineEntry) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const timeline = getLocalTimeline();
-    const newEntry = {
-        ...entry,
-        id: generateId(),
-        created_at: new Date().toISOString(),
-    };
-    timeline.push(newEntry);
-    localStorage.setItem(TIMELINE_KEY, JSON.stringify(timeline));
-    return newEntry;
+export const addTimelineComment = async (opportunityId: string, comment: string) => {
+    const { error } = await supabase.from('agent_logs').insert({
+        agent_id: 'user',
+        message: `[Lead:${opportunityId}] ${comment}`,
+        type: 'info'
+    });
+    if (error) throw error;
 };
 
-// Get timeline for opportunity (LOCAL VERSION)
-export const getTimelineEntries = async (opportunityId: string) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const timeline = getLocalTimeline();
-    return timeline
-        .filter(t => t.opportunity_id === opportunityId)
-        .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
+export const getOpportunities = async (): Promise<Opportunity[]> => {
+    const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return data.map(lead => ({
+        id: lead.id,
+        lead_identification: lead.company_name,
+        contact_phone: lead.phone,
+        stage: lead.status,
+        niche: lead.niche,
+        site_url: lead.site_url,
+        created_at: lead.created_at,
+        updated_at: lead.updated_at,
+        total_value: 0, 
+        products: [],
+        tasks: []
+    }));
 };
 
-// Helper functions
-function getLocalOpportunities(): Opportunity[] {
-    const stored = localStorage.getItem(OPPORTUNITIES_KEY);
-    return stored ? JSON.parse(stored) : [];
-}
-
-function getLocalTimeline(): TimelineEntry[] {
-    const stored = localStorage.getItem(TIMELINE_KEY);
-    return stored ? JSON.parse(stored) : [];
-}
-
-// Initialize with demo data if empty
-export const initializeDemoData = () => {
-    const opportunities = getLocalOpportunities();
-    if (opportunities.length === 0) {
-        const demoData: Opportunity[] = [
-            {
-                id: '1',
-                lead_identification: 'Gleidson de Souza',
-                contact_name: 'Gleidson de Souza',
-                contact_phone: '+55 77 9 9821268',
-                priority: 'high',
-                stage: 'in_contact',
-                observation: 'Interessado em sistema completo de gestão',
-                responsible_id: '2',
-                total_value: 8990,
-                products: [
-                    { name: 'Sistema CRM Completo', quantity: 1, price: 8990 }
-                ],
-                tasks: [
-                    { title: 'Enviar proposta comercial', scheduledFor: '2026-02-12', assignedTo: '2', status: 'pending' }
-                ],
-                created_at: '2026-02-10T10:00:00Z',
-                updated_at: '2026-02-11T14:30:00Z',
-            },
-            {
-                id: '2',
-                lead_identification: 'Ingryd Vitória',
-                contact_name: 'Ingryd Vitória',
-                contact_phone: '+55 77 9 8765432',
-                priority: 'medium',
-                stage: 'new_contact',
-                observation: 'Primeiro contato via WhatsApp',
-                responsible_id: '3',
-                total_value: 0,
-                products: [],
-                tasks: [],
-                created_at: '2026-02-11T09:00:00Z',
-                updated_at: '2026-02-11T09:00:00Z',
-            },
-            {
-                id: '3',
-                lead_identification: 'Kelly Ribas',
-                contact_name: 'Kelly Ribas',
-                contact_phone: '+55 77 9 9988776',
-                priority: 'medium',
-                stage: 'presentation',
-                observation: 'Agendada demonstração para amanhã',
-                responsible_id: '1',
-                total_value: 5500,
-                products: [
-                    { name: 'Módulo WhatsApp', quantity: 1, price: 2500 },
-                    { name: 'Módulo Pipeline', quantity: 1, price: 3000 }
-                ],
-                tasks: [
-                    { title: 'Preparar demo personalizada', scheduledFor: '2026-02-12', assignedTo: '1', status: 'in_progress' }
-                ],
-                created_at: '2026-02-09T15:00:00Z',
-                updated_at: '2026-02-11T16:00:00Z',
-            },
-            {
-                id: '4',
-                lead_identification: 'Mateus Silva',
-                contact_name: 'Mateus Silva',
-                contact_phone: '+55 77 9 7654321',
-                priority: 'high',
-                stage: 'negotiation',
-                observation: 'Negociando desconto para contrato anual',
-                responsible_id: '2',
-                total_value: 12000,
-                products: [
-                    { name: 'Pacote Empresarial', quantity: 1, price: 12000 }
-                ],
-                tasks: [
-                    { title: 'Enviar proposta com desconto', scheduledFor: '2026-02-13', assignedTo: '2', status: 'pending' },
-                    { title: 'Follow-up telefônico', scheduledFor: '2026-02-14', assignedTo: '2', status: 'pending' }
-                ],
-                created_at: '2026-02-08T11:00:00Z',
-                updated_at: '2026-02-11T18:00:00Z',
-            },
-        ];
-
-        localStorage.setItem(OPPORTUNITIES_KEY, JSON.stringify(demoData));
-    }
+export const initializeDemoData = async () => {
+    // Função placeholder: no Supabase não inserimos dados fake via frontend por padrão.
+    // Se for necessário mockar, adicione a lógica aqui futuramente.
+    return Promise.resolve();
 };

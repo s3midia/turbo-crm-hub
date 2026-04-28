@@ -1,191 +1,118 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, DollarSign, TrendingUp, Target, Award, BarChart3 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getOpportunities } from "@/hooks/useOpportunities";
-import { getVendedores, User } from "@/data/mockUsers";
-import { Badge } from "@/components/ui/badge";
+import React from "react";
+import { TrendingUp, Users, Globe, MessageSquare, ArrowRight, Scan, DollarSign } from "lucide-react";
+import { Link } from "react-router-dom";
+
+const metrics = {
+    leadsRadar: 87,
+    leadsKanban: 34,
+    atendimento: 12,
+    agendado: 8,
+    vendido: 6,
+    mrr: 19736,
+};
+
+function KPICard({ label, value, icon: Icon, change }: { label: string; value: string | number; icon: React.ElementType; change?: string }) {
+    return (
+        <div className="bg-card border border-border rounded-[var(--radius)] p-5 flex flex-col gap-2 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-muted-foreground">{label}</p>
+                <Icon className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <p className="text-2xl font-bold text-foreground">{value}</p>
+            {change && (
+                <p className="text-xs text-muted-foreground">
+                    <span className="text-green-600 font-semibold">{change}</span> em relação ao mês anterior
+                </p>
+            )}
+        </div>
+    );
+}
+
+function FunnelRow({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+    const pct = total === 0 ? 0 : Math.round((value / total) * 100);
+    return (
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-[var(--radius)]">
+            <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full" style={{ background: color }} />
+                <div>
+                    <p className="font-medium text-foreground text-sm">{label}</p>
+                    <p className="text-xs text-muted-foreground">{value} oportunidades</p>
+                </div>
+            </div>
+            <div className="text-right">
+                <p className="font-semibold text-foreground text-sm">{pct}%</p>
+            </div>
+        </div>
+    );
+}
 
 export default function DashboardPage() {
-    const [loading, setLoading] = useState(true);
-    const [totalOportunidades, setTotalOportunidades] = useState(0);
-    const [valorTotal, setValorTotal] = useState(0);
-    const [ticketMedio, setTicketMedio] = useState(0);
-    const [vendedoresStats, setVendedoresStats] = useState<any[]>([]);
-
-    useEffect(() => {
-        loadDashboardData();
-    }, []);
-
-    const loadDashboardData = async () => {
-        try {
-            setLoading(true);
-            const opportunities = await getOpportunities();
-            const vendedores = getVendedores();
-
-            // Métricas gerais
-            setTotalOportunidades(opportunities.length);
-            const total = opportunities.reduce((sum, opp) => sum + (opp.total_value || 0), 0);
-            setValorTotal(total);
-            setTicketMedio(opportunities.length > 0 ? total / opportunities.length : 0);
-
-            // Stats por vendedor
-            const stats = vendedores.map((vendedor: User) => {
-                const oppsByVendedor = opportunities.filter(opp => opp.responsible_id === vendedor.id);
-                const valorVendedor = oppsByVendedor.reduce((sum, opp) => sum + (opp.total_value || 0), 0);
-                const oppsFechadas = oppsByVendedor.filter(opp => opp.stage === 'negotiation').length;
-                const conversao = oppsByVendedor.length > 0 ? (oppsFechadas / oppsByVendedor.length) * 100 : 0;
-
-                return {
-                    vendedor,
-                    total: oppsByVendedor.length,
-                    valor: valorVendedor,
-                    conversao: conversao.toFixed(0),
-                };
-            });
-
-            // Ordenar por valor (maior primeiro)
-            stats.sort((a, b) => b.valor - a.valor);
-            setVendedoresStats(stats);
-        } catch (error) {
-            console.error('Error loading dashboard:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <p>Carregando dashboard...</p>
-            </div>
-        );
-    }
+    const convRate = metrics.vendido > 0 ? ((metrics.vendido / metrics.leadsKanban) * 100).toFixed(1) : "0.0";
 
     return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-6">
+            {/* Title */}
             <div>
-                <h1 className="text-3xl font-bold">Dashboard Geral</h1>
-                <p className="text-muted-foreground">Visão consolidada de toda a equipe</p>
+                <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
+                <p className="text-muted-foreground">Visão geral da sua gestão comercial</p>
             </div>
 
-            {/* Métricas Superiores */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Oportunidades</CardTitle>
-                        <Target className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{totalOportunidades}</div>
-                        <p className="text-xs text-muted-foreground">Em todo o pipeline</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Valor Pipeline</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{formatCurrency(valorTotal)}</div>
-                        <p className="text-xs text-muted-foreground">Valor total potencial</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{formatCurrency(ticketMedio)}</div>
-                        <p className="text-xs text-muted-foreground">Por oportunidade</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Vendedores Ativos</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{vendedoresStats.length}</div>
-                        <p className="text-xs text-muted-foreground">Equipe comercial</p>
-                    </CardContent>
-                </Card>
+            {/* KPIs Grid */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <KPICard label="Receita Total" value={`R$ ${metrics.mrr.toLocaleString("pt-BR")}`} icon={DollarSign} change="+20.1%" />
+                <KPICard label="Novos Leads" value={metrics.leadsRadar} icon={Scan} change="+180.1%" />
+                <KPICard label="Taxa de Conversão" value={`${convRate}%`} icon={TrendingUp} change="+19%" />
+                <KPICard label="Negócios Ativos" value={metrics.leadsKanban} icon={Users} change={`+${metrics.atendimento}`} />
             </div>
 
-            {/* Ranking de Vendedores */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Award className="h-5 w-5" />
-                        Ranking de Vendedores
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {vendedoresStats.map((stat, index) => (
-                            <div key={stat.vendedor.id} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
-                                <div className="text-2xl font-bold text-muted-foreground w-8">
-                                    #{index + 1}
-                                </div>
-                                <div className="text-3xl">{stat.vendedor.avatar}</div>
-                                <div className="flex-1">
-                                    <div className="font-semibold">{stat.vendedor.name}</div>
-                                    <div className="text-sm text-muted-foreground">{stat.vendedor.email}</div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="font-bold text-lg">{stat.total} oportunidades</div>
-                                    <div className="text-sm text-muted-foreground">{formatCurrency(stat.valor)}</div>
-                                </div>
-                                <Badge variant={index === 0 ? "default" : "secondary"}>
-                                    {stat.conversao}% conversão
-                                </Badge>
-                                {index === 0 && <Award className="h-6 w-6 text-yellow-500" />}
-                            </div>
-                        ))}
+            {/* Two col layout */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                {/* Pipeline */}
+                <div className="col-span-4 bg-card border border-border rounded-[var(--radius)] p-6">
+                    <h3 className="font-semibold text-foreground mb-1">Pipeline de Vendas</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Status atual do funil de vendas</p>
+                    <div className="space-y-3">
+                        <FunnelRow label="Leads Radar" value={metrics.leadsRadar} total={metrics.leadsRadar} color="hsl(265,85%,60%)" />
+                        <FunnelRow label="No Kanban" value={metrics.leadsKanban} total={metrics.leadsRadar} color="hsl(210,80%,55%)" />
+                        <FunnelRow label="Em Atendimento" value={metrics.atendimento} total={metrics.leadsRadar} color="hsl(38,92%,55%)" />
+                        <FunnelRow label="Agendado" value={metrics.agendado} total={metrics.leadsRadar} color="hsl(142,70%,50%)" />
+                        <FunnelRow label="Vendido" value={metrics.vendido} total={metrics.leadsRadar} color="hsl(142,76%,45%)" />
                     </div>
-                </CardContent>
-            </Card>
+                </div>
 
-            {/* Distribuição por Estágio */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <BarChart3 className="h-5 w-5" />
-                        Distribuição por Estágio do Funil
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="p-4 border rounded-lg">
-                            <div className="text-sm text-muted-foreground mb-1">Novo contato</div>
-                            <div className="text-2xl font-bold">{vendedoresStats.reduce((sum, s) => sum, 0)}</div>
-                            <div className="text-xs text-muted-foreground mt-1">Primeiros contatos</div>
-                        </div>
-                        <div className="p-4 border rounded-lg">
-                            <div className="text-sm text-muted-foreground mb-1">Em contato</div>
-                            <div className="text-2xl font-bold">{vendedoresStats.reduce((sum, s) => sum, 0)}</div>
-                            <div className="text-xs text-muted-foreground mt-1">Em qualificação</div>
-                        </div>
-                        <div className="p-4 border rounded-lg">
-                            <div className="text-sm text-muted-foreground mb-1">Apresentação</div>
-                            <div className="text-2xl font-bold">{vendedoresStats.reduce((sum, s) => sum, 0)}</div>
-                            <div className="text-xs text-muted-foreground mt-1">Demos agendadas</div>
-                        </div>
-                        <div className="p-4 border rounded-lg">
-                            <div className="text-sm text-muted-foreground mb-1">Negociação</div>
-                            <div className="text-2xl font-bold">{vendedoresStats.reduce((sum, s) => sum, 0)}</div>
-                            <div className="text-xs text-muted-foreground mt-1">Fechamento iminente</div>
-                        </div>
+                {/* Ações Rápidas */}
+                <div className="col-span-3 bg-card border border-border rounded-[var(--radius)] p-6">
+                    <h3 className="font-semibold text-foreground mb-1">Ações Rápidas</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Acesse as ferramentas principais</p>
+                    <div className="space-y-2">
+                        {[
+                            { to: "/radar-leads", icon: Scan, label: "Escanear Novos Leads", desc: "Buscar empresas por nicho" },
+                            { to: "/funil-kanban", icon: Users, label: "Gerenciar Funil", desc: "Ver e mover leads no Kanban" },
+                            { to: "/financeiro", icon: TrendingUp, label: "Fluxo de Caixa", desc: "Registrar entradas e saídas" },
+                            { to: "/automacao-funil", icon: MessageSquare, label: "Configurar Automações", desc: "Mensagens automáticas de WhatsApp" },
+                            { to: "/generator", icon: Globe, label: "Gerar Landing Page", desc: "Criar site protótipo para lead" },
+                        ].map((action) => {
+                            const Icon = action.icon;
+                            return (
+                                <Link
+                                    key={action.to}
+                                    to={action.to}
+                                    className="flex items-center gap-3 p-3 rounded-[var(--radius)] bg-muted/30 hover:bg-muted/60 border border-border/50 transition-colors group"
+                                >
+                                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                                        <Icon className="w-4 h-4 text-primary" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-foreground">{action.label}</p>
+                                        <p className="text-xs text-muted-foreground">{action.desc}</p>
+                                    </div>
+                                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground shrink-0 transition-colors" />
+                                </Link>
+                            );
+                        })}
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         </div>
     );
 }
