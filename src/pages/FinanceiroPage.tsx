@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FinanceiroDashboard from "@/components/financeiro/FinanceiroDashboard";
+import DashboardFinanceiro from "@/components/financeiro/DashboardFinanceiro";
 import LancamentosTab from "@/components/financeiro/LancamentosTab";
 import ConciliacaoTab from "@/components/financeiro/ConciliacaoTab";
 import RelatoriosTab from "@/components/financeiro/RelatoriosTab";
@@ -15,6 +16,7 @@ import CobrancasFiscalTab from "@/components/financeiro/CobrancasFiscalTab";
 import ConfiguracoesFinanceiroTab from "@/components/financeiro/ConfiguracoesFinanceiroTab";
 
 type TabId =
+  | "painel"
   | "dashboard"
   | "lancamentos"
   | "conciliacao"
@@ -33,6 +35,7 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
+  { id: "painel", label: "Dashboard", icon: LayoutDashboard, badge: "NEW" },
   { id: "dashboard", label: "Saúde Financeira", icon: LayoutDashboard },
   { id: "lancamentos", label: "Receitas & Despesas", icon: List },
   { id: "conciliacao", label: "Conciliação", icon: GitMerge },
@@ -45,7 +48,7 @@ const TABS: Tab[] = [
 ];
 
 export default function FinanceiroPage() {
-  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+  const [activeTab, setActiveTab] = useState<TabId>("painel");
 
   return (
     <div className="flex flex-col h-full bg-background animate-in fade-in duration-300">
@@ -100,6 +103,7 @@ export default function FinanceiroPage() {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+        {activeTab === "painel" && <DashboardFinanceiro />}
         {activeTab === "dashboard" && <FinanceiroDashboard />}
         {activeTab === "lancamentos" && <LancamentosTab />}
         {activeTab === "conciliacao" && <ConciliacaoTab />}
