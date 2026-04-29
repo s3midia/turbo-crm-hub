@@ -613,10 +613,8 @@ export default function CobrancasFiscalTab({
               </div>
             </div>
 
-          </div>
-
-          {/* Right Column: Cards & Insights */}
-          <div className="lg:col-span-5 p-8 space-y-6">
+            {/* Right Column: Cards & Insights */}
+            <div className="lg:col-span-5 p-8 space-y-6">
               {/* Kanban Integration Card: Robust Pipeline Progress */}
               <div className="bg-gradient-to-br from-indigo-500/10 to-blue-500/5 rounded-3xl p-6 border border-indigo-500/20">
                 <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center justify-between">
