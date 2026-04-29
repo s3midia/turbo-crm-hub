@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { saveOpportunity, archiveOpportunity, getTimelineEntries, addTimelineComment, getOpportunityById, type Product, type Task, type TimelineEntry } from '@/hooks/useOpportunities';
 import { useToast } from '@/hooks/use-toast';
 import { useProfiles } from '@/hooks/useProfiles';
+import { LeadFinanceTab } from '@/components/financeiro/LeadFinanceTab';
 
 interface OpportunityModalProps {
     open: boolean;
@@ -302,6 +303,9 @@ export const OpportunityModal = ({
                                 </TabsTrigger>
                                 <TabsTrigger value="timeline" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 font-bold transition-all">
                                     Linha do tempo
+                                </TabsTrigger>
+                                <TabsTrigger value="financeiro" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 font-bold transition-all">
+                                    Financeiro
                                 </TabsTrigger>
                             </TabsList>
                         </div>
@@ -770,6 +774,22 @@ export const OpportunityModal = ({
                                     </div>
                                 )}
                             </div>
+                        </TabsContent>
+
+                        <TabsContent value="financeiro" className="p-6 space-y-4 mt-0">
+                            {opportunityId ? (
+                                <LeadFinanceTab 
+                                    leadId={opportunityId} 
+                                    leadName={formData.leadIdentification} 
+                                />
+                            ) : (
+                                <div className="h-64 flex flex-col items-center justify-center opacity-40">
+                                    <DollarSign className="h-12 w-12 mb-4" />
+                                    <p className="text-xs font-black uppercase tracking-widest text-center">
+                                        Ative o negócio primeiro para<br />acessar os recursos financeiros
+                                    </p>
+                                </div>
+                            )}
                         </TabsContent>
                     </Tabs>
                 </Card>

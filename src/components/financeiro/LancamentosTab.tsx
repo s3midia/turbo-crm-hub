@@ -1,29 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Plus, Search, Filter, FileSpreadsheet, Trash2, Check, Users, Calendar,
-  ChevronDown, X, RefreshCw, Tag, ArrowUpCircle, ArrowDownCircle, Edit3 as Edit3Icon
+  RefreshCw, Tag, ArrowUpCircle, ArrowDownCircle, Edit3 as Edit3Icon, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface Transaction {
-  id: number;
-  descricao: string;
-  tipo: "entrada" | "saida";
-  valor: number;
-  dataLancamento: string;
-  vencimento: string;
-  recebimento?: string;
-  lead: string;
-  status: "pago" | "pendente" | "agendado";
-  categoria: string;
-  recorrencia: "unica" | "mensal" | "trimestral" | "anual";
-  classificacao?: "recorrente" | "nao_recorrente";
-}
+import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
+import { supabase } from "@/integrations/supabase/client";
 
 const CATEGORIAS_ENTRADA = ["Software", "Web Design", "Consultoria", "Manutenção", "Licença", "Outros"];
 const CATEGORIAS_SAIDA = ["Infraestrutura", "Marketing", "Salários", "Impostos", "Escritório", "Ferramentas", "Outros"];
-
-const INITIAL_TRANSACTIONS: Transaction[] = [];
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -33,9 +18,9 @@ const recorrenciaLabel = { unica: "Única", mensal: "Mensal", trimestral: "Trime
 const recorrenciaColor = { unica: "bg-muted text-muted-foreground", mensal: "bg-blue-500/10 text-blue-500", trimestral: "bg-violet-500/10 text-violet-500", anual: "bg-emerald-500/10 text-emerald-500" };
 
 interface ModalProps {
-  transaction?: Transaction;
+  transaction?: FinancialTransaction;
   onClose: () => void;
-  onSave: (t: Transaction) => void;
+  onSave: (t: Partial<FinancialTransaction>) => void;
 }
 
 function TransacaoModal({ transaction, onClose, onSave }: ModalProps) {
@@ -43,29 +28,67 @@ function TransacaoModal({ transaction, onClose, onSave }: ModalProps) {
     tipo: (transaction?.tipo ?? "entrada") as "entrada" | "saida",
     descricao: transaction?.descricao ?? "",
     valor: transaction?.valor?.toString() ?? "",
-    dataLancamento: transaction?.dataLancamento ?? "",
+    data_lancamento: transaction?.data_lancamento ?? "",
     vencimento: transaction?.vencimento ?? "",
     recebimento: transaction?.recebimento ?? "",
-    lead: transaction?.lead ?? "",
+    lead_nome: transaction?.lead_nome ?? "",
+    lead_id: transaction?.lead_id ?? "",
     categoria: transaction?.categoria ?? "",
-    recorrencia: (transaction?.recorrencia ?? "unica") as Transaction["recorrencia"],
-    status: (transaction?.status ?? "pendente") as Transaction["status"],
+    recorrencia: (transaction?.recorrencia ?? "unica") as FinancialTransaction["recorrencia"],
+    status: (transaction?.status ?? "pendente") as FinancialTransaction["status"],
     classificacao: (transaction?.classificacao ?? "nao_recorrente") as "recorrente" | "nao_recorrente",
   });
+
+  const [searchLead, setSearchLead] = useState("");
+  const [leadsResults, setLeadsResults] = useState<any[]>([]);
+  const [isSearchingLeads, setIsSearchingLeads] = useState(false);
+  const [showLeadResults, setShowLeadResults] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchLead.length >= 2) {
+        searchLeads(searchLead);
+      } else {
+        setLeadsResults([]);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchLead]);
+
+  async function searchLeads(term: string) {
+    setIsSearchingLeads(true);
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, company_name')
+        .ilike('company_name', `%${term}%`)
+        .limit(5);
+
+      if (!error && data) {
+        setLeadsResults(data);
+        setShowLeadResults(true);
+      }
+    } catch (e) {
+      console.error("Search error", e);
+    } finally {
+      setIsSearchingLeads(false);
+    }
+  }
 
   const categorias = form.tipo === "entrada" ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA;
 
   function handleSave() {
     if (!form.descricao || !form.valor || !form.vencimento) return;
     onSave({
-      id: transaction?.id ?? Date.now(),
+      id: transaction?.id,
       descricao: form.descricao,
       tipo: form.tipo,
       valor: parseFloat(form.valor.replace(",", ".")),
-      dataLancamento: form.dataLancamento || new Date().toLocaleDateString("pt-BR"),
+      data_lancamento: form.data_lancamento || new Date().toISOString().split('T')[0],
       vencimento: form.vencimento,
       recebimento: form.recebimento || undefined,
-      lead: form.lead || "N/A",
+      lead_nome: form.lead_nome || "N/A",
+      lead_id: form.lead_id || undefined,
       status: form.status,
       categoria: form.categoria || categorias[0],
       recorrencia: form.recorrencia,
@@ -156,11 +179,59 @@ function TransacaoModal({ transaction, onClose, onSave }: ModalProps) {
             </select>
           </div>
 
-          <div className="col-span-2 space-y-1">
-            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Cliente / Lead</label>
-            <input value={form.lead} onChange={e => setForm(f => ({ ...f, lead: e.target.value }))}
-              className="w-full px-4 py-3 bg-muted/30 border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-              placeholder="Nome do cliente" />
+          <div className="col-span-2 space-y-1 relative">
+            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+              <span>Cliente / Lead</span>
+              {form.lead_id && <span className="text-[9px] font-mono text-primary/60">ID: {form.lead_id}</span>}
+            </label>
+            <div className="relative">
+              <input 
+                value={form.lead_nome || searchLead} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (form.lead_nome) {
+                    setForm(f => ({ ...f, lead_nome: "", lead_id: "" }));
+                  }
+                  setSearchLead(val);
+                }}
+                onFocus={() => setShowLeadResults(true)}
+                className="w-full px-4 py-3 bg-muted/30 border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all pr-10"
+                placeholder="Pesquisar lead existente..." />
+              
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {isSearchingLeads ? (
+                  <RefreshCw className="w-4 h-4 text-primary animate-spin" />
+                ) : form.lead_id ? (
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <Check size={12} className="text-emerald-500" />
+                  </div>
+                ) : (
+                  <Search size={16} className="text-muted-foreground" />
+                )}
+              </div>
+
+              {showLeadResults && leadsResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                  {leadsResults.map(lead => (
+                    <button
+                      key={lead.id}
+                      onClick={() => {
+                        setForm(f => ({ ...f, lead_nome: lead.company_name, lead_id: lead.id }));
+                        setSearchLead("");
+                        setShowLeadResults(false);
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-muted transition-colors border-b border-border/50 last:border-0 flex items-center justify-between group"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-bold">{lead.company_name}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{lead.id}</span>
+                      </div>
+                      <Plus size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -182,15 +253,15 @@ interface LancamentosTabProps {
 }
 
 export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
-  const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
+  const { transactions, loading, saveTransaction, deleteTransaction } = useFinance();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTipo, setFilterTipo] = useState<"todos" | "entrada" | "saida">("todos");
   const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado">("todos");
   const [showModal, setShowModal] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
+  const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
 
   const filtered = transactions.filter(t => {
-    const matchSearch = t.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || t.lead.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = t.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || (t.lead_nome || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchTipo = filterTipo === "todos" || t.tipo === filterTipo;
     const matchStatus = filterStatus === "todos" || t.status === filterStatus;
     return matchSearch && matchTipo && matchStatus;
@@ -202,22 +273,22 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     pendentes: transactions.filter(t => t.tipo === "entrada" && t.status === "pendente").reduce((s, t) => s + t.valor, 0),
   };
 
-  function handleUpsertTransaction(t: Transaction) {
-    setTransactions(prev => {
-      const exists = prev.find(x => x.id === t.id);
-      return exists ? prev.map(x => x.id === t.id ? t : x) : [t, ...prev];
-    });
+  function handleUpsertTransaction(t: Partial<FinancialTransaction>) {
+    saveTransaction(t);
   }
 
-  function handleMarkPaid(id: number) {
-    setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: "pago" } : t));
+  function handleMarkPaid(id: string) {
+    const t = transactions.find(x => x.id === id);
+    if (t) {
+      saveTransaction({ ...t, status: "pago" });
+    }
   }
 
-  function handleDelete(id: number) {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+  function handleDelete(id: string) {
+    deleteTransaction(id);
   }
 
-  function openEdit(t: Transaction) {
+  function openEdit(t: FinancialTransaction) {
     setEditingTransaction(t);
     setShowModal(true);
   }
@@ -304,34 +375,21 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
               >
                 <td className="px-5 py-4">
                   <div className="flex items-start gap-2">
-                    <div className={cn("mt-0.5 w-2 h-2 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500" : "bg-rose-500")} />
+                    <div className={cn("mt-1.5 w-2 h-2 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500" : "bg-rose-500")} />
                     <div>
                       <p className="text-[13px] font-bold text-foreground">{t.descricao}</p>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onOpenProfile) {
-                            // Find the lead or create a mock lead from the name
-                            onOpenProfile({ 
-                              cliente: t.lead, 
-                              clientId: `CL-${t.id + 100}`,
-                              empresa: t.lead,
-                              email: "contato@empresa.com",
-                              status: "pago",
-                              plano: "Plano Standard",
-                              valor: t.valor
-                            });
-                          }
-                        }}
-                        className="text-[10px] text-primary hover:underline flex items-center gap-1 mt-0.5 font-bold"
-                      >
-                        <Users size={10} /> {t.lead}
-                        {t.classificacao && (
-                          <span className={cn("ml-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase", t.classificacao === "recorrente" ? "bg-blue-500/10 text-blue-500" : "bg-muted text-muted-foreground")}>
-                            {t.classificacao === "recorrente" ? "Recorrente" : "Não Recorrente"}
-                          </span>
-                        )}
-                      </button>
+                      {t.lead_nome && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenProfile) onOpenProfile({ id: t.lead_id, cliente: t.lead_nome });
+                          }}
+                          className="text-[10px] text-primary hover:underline font-medium mt-0.5 flex items-center gap-1"
+                        >
+                          <Users size={10} />
+                          {t.lead_nome} {t.lead_id && <span className="opacity-50 text-[8px] font-mono">({t.lead_id})</span>}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -367,16 +425,28 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                 </td>
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {t.status === "pendente" && (
-                      <button onClick={(e) => { e.stopPropagation(); handleMarkPaid(t.id); }} className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-600 transition-all" title="Marcar como Pago">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); t.id && handleDelete(t.id); }}
+                      className="p-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all text-muted-foreground"
+                      title="Excluir"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    {t.status !== "pago" && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); t.id && handleMarkPaid(t.id); }}
+                        className="p-1.5 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 transition-all text-muted-foreground"
+                        title="Marcar como Pago"
+                      >
                         <Check size={14} />
                       </button>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); openEdit(t); }} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all" title="Editar transação">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); openEdit(t); }}
+                      className="p-1.5 rounded-lg hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground"
+                      title="Editar"
+                    >
                       <Edit3Icon size={14} />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 transition-all" title="Excluir">
-                      <Trash2 size={14} />
                     </button>
                   </div>
                 </td>

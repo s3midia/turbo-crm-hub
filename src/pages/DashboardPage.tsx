@@ -8,7 +8,7 @@ const metrics = {
     atendimento: 12,
     agendado: 8,
     vendido: 6,
-    mrr: 19736,
+    mrr: 0,
 };
 
 function KPICard({ label, value, icon: Icon, change }: { label: string; value: string | number; icon: React.ElementType; change?: string }) {

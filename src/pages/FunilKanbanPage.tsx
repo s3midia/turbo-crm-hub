@@ -19,6 +19,7 @@ export interface Lead {
         | "site_pronto" | "atendimento" | "qualificacao" | "agendado"
         | "reuniao" | "apresentacao" | "fechamento" | "ganhou" | "perdeu";
     site_url?: string;
+    value?: number;
 }
 
 const STAGES = [
@@ -288,7 +289,9 @@ function LeadCard({
 
             {/* Value + Date row */}
             <div className="flex items-center justify-between mt-2.5">
-                <span className="text-[13px] font-black text-foreground tracking-tight">R$ 240,00</span>
+                <span className="text-[13px] font-black text-foreground tracking-tight">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lead.value || 0)}
+                </span>
                 <div className="flex items-center gap-1">
                     {isAtrasado ? (
                         <span className="flex items-center gap-1 text-[10px] font-bold text-red-500">
@@ -389,7 +392,7 @@ export default function FunilKanbanPage() {
           )
         : leads;
 
-    const totalValue = leads.length * 240;
+    const totalValue = leads.reduce((acc, l) => acc + (l.value || 0), 0);
     const wonLeads   = leads.filter(l => l.status === "ganhou").length;
 
     return (
@@ -465,7 +468,7 @@ export default function FunilKanbanPage() {
                                 if (stage.key === "novo") return l.status === "novo" || !l.status;
                                 return l.status === stage.key;
                             });
-                            const stageValue = stageLeads.length * 240;
+                            const stageValue = stageLeads.reduce((acc, l) => acc + (l.value || 0), 0);
                             const sc = STAGE_COLORS[stage.tw];
 
                             return (
