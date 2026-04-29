@@ -1,15 +1,21 @@
 import React, { useState } from "react";
-import { Building2, TrendingUp, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info } from "lucide-react";
+import { Building2, TrendingUp, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 
 type MetodoValuation = "multiplos" | "fcd" | "patrimonial";
 
+interface Bem {
+  id: string;
+  nome: string;
+  valor: number;
+}
+
 interface ValuationInput {
   faturamento12m: number;
   lucroLiquido: number;
-  ativos: number;
+  ativosCirculantes: number;
   passivos: number;
   taxaCrescimento: number;
   setor: string;
@@ -33,8 +39,10 @@ const historico = [
   { mes: "Jun/25", multiplos: 502920, fcd: 471300, patrimonial: 305000 },
 ];
 
-function calcularValuation(inputs: ValuationInput, metodo: MetodoValuation): { valor: number; min: number; max: number } {
+function calcularValuation(inputs: ValuationInput, bens: Bem[], metodo: MetodoValuation): { valor: number; min: number; max: number } {
   const setor = SETORES.find(s => s.nome === inputs.setor) || SETORES[0];
+  const totalBens = bens.reduce((acc, b) => acc + b.valor, 0);
+  const totalAtivos = inputs.ativosCirculantes + totalBens;
 
   if (metodo === "multiplos") {
     const base = inputs.faturamento12m * setor.multiplo;
@@ -57,7 +65,7 @@ function calcularValuation(inputs: ValuationInput, metodo: MetodoValuation): { v
   }
 
   // Patrimonial
-  const pl = inputs.ativos - inputs.passivos;
+  const pl = totalAtivos - inputs.passivos;
   return { valor: pl, min: pl * 0.9, max: pl * 1.1 };
 }
 
@@ -72,14 +80,33 @@ export default function ValuationTab() {
   const [inputs, setInputs] = useState<ValuationInput>({
     faturamento12m: 281712,
     lucroLiquido: 225690,
-    ativos: 113143,
+    ativosCirculantes: 42143,
     passivos: 6079,
     taxaCrescimento: 25,
     setor: "Tecnologia / SaaS",
     wacc: 18,
   });
 
-  const resultado = calcularValuation(inputs, metodo);
+  const [bens, setBens] = useState<Bem[]>([
+    { id: "1", nome: "Maquinário de Produção", valor: 45000 },
+    { id: "2", nome: "Frota de Veículos", valor: 38000 },
+    { id: "3", nome: "Móveis e Utensílios", valor: 12500 },
+  ]);
+
+  const [novoBem, setNovoBem] = useState({ nome: "", valor: "" });
+
+  const totalBens = bens.reduce((acc, b) => acc + b.valor, 0);
+  const resultado = calcularValuation(inputs, bens, metodo);
+
+  const addBem = () => {
+    if (!novoBem.nome || !novoBem.valor) return;
+    setBens([...bens, { id: Date.now().toString(), nome: novoBem.nome, valor: parseFloat(novoBem.valor) }]);
+    setNovoBem({ nome: "", valor: "" });
+  };
+
+  const removeBem = (id: string) => {
+    setBens(bens.filter(b => b.id !== id));
+  };
   const maxHistorico = Math.max(...historico.map(h => Math.max(h.multiplos, h.fcd, h.patrimonial)));
 
   function updateInput(key: keyof ValuationInput, val: string) {
@@ -110,7 +137,7 @@ export default function ValuationTab() {
           {[
             { key: "faturamento12m", label: "Faturamento Últimos 12m (R$)", show: true },
             { key: "lucroLiquido", label: "Lucro Líquido Anual (R$)", show: metodo === "fcd" || metodo === "patrimonial" },
-            { key: "ativos", label: "Total de Ativos (R$)", show: metodo === "patrimonial" },
+            { key: "ativosCirculantes", label: "Ativos Circulantes (Dinheiro/Estoque) (R$)", show: metodo === "patrimonial" },
             { key: "passivos", label: "Total de Passivos (R$)", show: metodo === "patrimonial" },
             { key: "taxaCrescimento", label: "Taxa de Crescimento Anual (%)", show: metodo === "fcd" },
             { key: "wacc", label: "WACC — Custo de Capital (%)", show: metodo === "fcd" },
@@ -198,6 +225,116 @@ export default function ValuationTab() {
                 <ArrowUpRight size={14} />
                 +{(((historico[5][metodo] - historico[0][metodo]) / historico[0][metodo]) * 100).toFixed(1)}%
               </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bens da Empresa Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-2 p-6 rounded-3xl border border-border/50 bg-card shadow-sm space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-black flex items-center gap-2">
+              <Package size={16} className="text-primary" />
+              Bens da Empresa (Ativos Imobilizados)
+            </h3>
+            <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+              {formatBRL(totalBens)}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-5 gap-2">
+              <div className="col-span-3 space-y-1">
+                <label className="text-[9px] font-black text-muted-foreground uppercase">Descrição do Bem</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Veículo..."
+                  value={novoBem.nome}
+                  onChange={e => setNovoBem({ ...novoBem, nome: e.target.value })}
+                  className="w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                />
+              </div>
+              <div className="col-span-2 space-y-1">
+                <label className="text-[9px] font-black text-muted-foreground uppercase">Valor (R$)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="0,00"
+                    value={novoBem.valor}
+                    onChange={e => setNovoBem({ ...novoBem, valor: e.target.value })}
+                    className="w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                  />
+                  <button
+                    onClick={addBem}
+                    className="p-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar text-left">
+              {bens.map(bem => (
+                <div key={bem.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/20 border border-border/30 group hover:border-primary/30 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-card border border-border/50">
+                      <HardDrive size={14} className="text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold">{bem.nome}</p>
+                      <p className="text-[10px] text-muted-foreground font-medium">Ativo Fixo</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black">{formatBRL(bem.valor)}</span>
+                    <button
+                      onClick={() => removeBem(bem.id)}
+                      className="p-1.5 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {bens.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package size={24} className="mx-auto mb-2 opacity-20" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest">Nenhum bem cadastrado</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-3 p-6 rounded-3xl border border-border/50 bg-card shadow-sm flex flex-col justify-center">
+          <div className="flex items-start gap-4 p-5 rounded-2xl bg-primary/5 border border-primary/10">
+            <div className="p-3 rounded-full bg-primary/10">
+              <Sparkles size={24} className="text-primary" />
+            </div>
+            <div className="space-y-1 text-left">
+              <h4 className="text-sm font-black text-primary">Impacto no Patrimônio</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Os bens da empresa (imobilizado) são fundamentais para o cálculo do <strong>Valor Patrimonial</strong>. 
+                Atualmente, seus bens somam <span className="font-black text-foreground">{formatBRL(totalBens)}</span>, 
+                o que representa <span className="font-black text-foreground">
+                  {inputs.ativosCirculantes + totalBens > 0 
+                    ? ((totalBens / (inputs.ativosCirculantes + totalBens)) * 100).toFixed(1) 
+                    : 0}%
+                </span> do seu ativo total estimado.
+              </p>
+              <div className="pt-2 flex gap-4">
+                <div className="text-center">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase">Total Ativos</p>
+                  <p className="text-sm font-black">{formatBRL(inputs.ativosCirculantes + totalBens)}</p>
+                </div>
+                <div className="w-px h-8 bg-border/50" />
+                <div className="text-center">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase">Capital Próprio</p>
+                  <p className="text-sm font-black text-emerald-500">{formatBRL(inputs.ativosCirculantes + totalBens - inputs.passivos)}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

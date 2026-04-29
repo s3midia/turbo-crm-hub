@@ -295,7 +295,7 @@ export default function CobrancasFiscalTab({
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       setGeneratedBoleto({
-        url: "https://exemplo.com/boleto.pdf",
+        url: "/boleto.pdf",
         barcode: "00190.50095 40144.816069 06809.350314 3 00000000" + Math.floor(contrato.valor * 100).toString().padStart(10, '0'),
       });
       
@@ -1074,8 +1074,15 @@ export default function CobrancasFiscalTab({
 
             <div className="flex gap-3">
               <Button className="flex-1 rounded-2xl font-black h-12" onClick={() => {
-                window.open(generatedBoleto?.url, '_blank');
-                toast.info("Iniciando download...");
+                if (generatedBoleto?.url) {
+                  const link = document.createElement('a');
+                  link.href = generatedBoleto.url;
+                  link.download = `boleto_${selectedClient?.cliente.replace(/\s+/g, '_') || 'cobranca'}.pdf`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  toast.success("Download iniciado com sucesso!");
+                }
               }}>
                 <Download size={16} className="mr-2" /> BAIXAR PDF
               </Button>
