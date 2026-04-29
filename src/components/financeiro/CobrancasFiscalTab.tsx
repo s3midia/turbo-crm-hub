@@ -133,11 +133,13 @@ export default function CobrancasFiscalTab({
   
   const selectedClient = externalSelectedClient;
   const showTimeline = externalShowProfile;
-  const setShowTimeline = (show: boolean) => {
-    onProfileChange?.(show, selectedClient);
+  
+  const handleOpenProfile = (client: any) => {
+    onProfileChange?.(true, client);
   };
-  const setSelectedClient = (client: any) => {
-    onProfileChange?.(showTimeline ?? false, client);
+
+  const handleCloseProfile = () => {
+    onProfileChange?.(false, selectedClient);
   };
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -157,7 +159,7 @@ export default function CobrancasFiscalTab({
   }, [selectedClient]);
 
   const handleSaveProfile = () => {
-    setSelectedClient(editedClient);
+    handleOpenProfile(editedClient);
     setIsEditing(false);
     toast.success("Perfil atualizado com sucesso!");
   };
@@ -275,7 +277,7 @@ export default function CobrancasFiscalTab({
   }
 
   const handleAction = async (contrato: Contrato, action: "boleto" | "email" | "contract") => {
-    setSelectedClient(contrato);
+    handleOpenProfile(contrato);
     
     if (action === "email") {
       setEmailConfig({
@@ -349,18 +351,25 @@ export default function CobrancasFiscalTab({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Robust Client Profile Command Center */}
-      {selectedClient && showTimeline && (
-        <div className="bg-card border border-primary/20 rounded-[2.5rem] p-0 mb-8 shadow-2xl animate-in slide-in-from-top-6 duration-500 overflow-hidden">
+      {/* Robust Client Profile Command Center - NOW IN A MODAL */}
+      <Dialog open={showTimeline} onOpenChange={handleCloseProfile}>
+        <DialogContent className="max-w-[95vw] w-[1200px] p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl bg-card">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Perfil do Cliente: {selectedClient?.cliente}</DialogTitle>
+              <DialogDescription>Detalhes, histórico e ações para o cliente selecionado.</DialogDescription>
+            </DialogHeader>
+            {selectedClient && (
+              <div className="max-h-[90vh] overflow-y-auto custom-scrollbar">
           {/* Profile Header Banner */}
           <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-8 border-b border-border/40 relative">
             <div className="absolute top-6 right-8 flex gap-2">
-               <button 
-                onClick={() => setShowTimeline(false)}
-                className="bg-background/50 hover:bg-background border border-border/50 p-2.5 rounded-2xl transition-all shadow-sm"
-                title="Fechar Perfil"
+              <button 
+                onClick={handleCloseProfile}
+                className="bg-background/80 hover:bg-background border border-border/50 px-4 py-2 rounded-2xl transition-all shadow-sm group flex items-center gap-2"
+                title="Fechar Perfil (Esc)"
               >
-                <X className="w-4 h-4 text-muted-foreground" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground">FECHAR</span>
+                <X className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
               </button>
             </div>
 
@@ -825,8 +834,10 @@ export default function CobrancasFiscalTab({
               </div>
             </div>
           </div>
-        </div>
-      )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Centralized Integrations CTA */}
       <div className="bg-gradient-to-br from-primary/10 via-background to-blue-500/5 border border-primary/20 rounded-3xl p-6 shadow-sm overflow-hidden relative group">
@@ -893,12 +904,7 @@ export default function CobrancasFiscalTab({
                 <tr key={c.id} className="border-b border-border/20 hover:bg-muted/10 transition-all">
                   <td className="px-5 py-4">
                     <button 
-                      onClick={() => {
-                        setSelectedClient(c);
-                        setShowTimeline(true);
-                        // Smooth scroll to profile
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
+                      onClick={() => handleOpenProfile(c)}
                       className="flex flex-col items-start group/name text-left hover:opacity-80 transition-all"
                     >
                       <span className="text-[13px] font-bold text-foreground group-hover/name:text-primary transition-colors">{c.cliente}</span>
@@ -952,10 +958,7 @@ export default function CobrancasFiscalTab({
                       variant="ghost" 
                       size="sm" 
                       className="rounded-xl text-[11px] font-black hover:bg-primary/10 hover:text-primary transition-all"
-                      onClick={() => {
-                        setSelectedClient(c);
-                        setShowTimeline(true);
-                      }}
+                      onClick={() => handleOpenProfile(c)}
                     >
                       VER TIMELINE <History size={14} className="ml-1.5" />
                     </Button>
