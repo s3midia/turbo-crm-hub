@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { 
   FileText, Receipt, RefreshCw, CheckCircle2, AlertCircle, 
   ExternalLink, Zap, Loader2, Mail, Download, Paperclip, 
-  History, User, MoreVertical, Send, Check
+  History, User, MoreVertical, Send, Check, X, Building2, Calendar, Phone, DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription 
+} from "@/components/ui/dialog";
 
 function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 
@@ -29,8 +36,11 @@ interface TimelineEvent {
 
 interface Contrato {
   id: number;
-  clientId: string; // Added Unique ID
+  clientId: string;
   cliente: string;
+  email?: string;
+  telefone?: string;
+  empresa?: string;
   plano: string;
   valor: number;
   diaVencimento: number;
@@ -39,6 +49,9 @@ interface Contrato {
   proximoVencimento: string;
   ultimoEnvio: string;
   status: "pago" | "pendente" | "atrasado";
+  kanbanStage?: string;
+  totalPago?: number;
+  dataInicio?: string;
 }
 
 const CONTRATOS: Contrato[] = [
@@ -101,6 +114,16 @@ export default function CobrancasFiscalTab() {
   const [showTimeline, setShowTimeline] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
+  // Email and Boleto States
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showBoletoModal, setShowBoletoModal] = useState(false);
+  const [emailConfig, setEmailConfig] = useState({
+    subject: "",
+    content: "",
+    attachBoleto: true,
+  });
+  const [generatedBoleto, setGeneratedBoleto] = useState<{ url: string, barcode: string } | null>(null);
+
   // Simulation of timeline events
   const [timelineEvents, setTimelineEvents] = useState<Record<string, TimelineEvent[]>>({
     "CL-001": [
@@ -112,6 +135,59 @@ export default function CobrancasFiscalTab() {
       { id: "4", type: "system", title: "Cobrança Gerada", description: "Licença Anual 2026", date: "15/12/2025" },
     ]
   });
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<string | null>(null);
+
+  const fetchRealData = async () => {
+    setIsSyncing(true);
+    try {
+      // Fetch leads from Supabase to act as our contracts
+      const { data: leadsData, error: leadsError } = await (supabase as any)
+        .from("leads")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (leadsError) throw leadsError;
+
+      if (leadsData && leadsData.length > 0) {
+        const mappedContratos: Contrato[] = leadsData.map((lead: any, index: number) => ({
+          id: index + 10,
+          clientId: `CL-${lead.id.substring(0, 3).toUpperCase()}`,
+          cliente: lead.company_name || "Cliente Sem Nome",
+          email: lead.email || "contato@empresa.com",
+          telefone: lead.phone || "(11) 99999-9999",
+          empresa: lead.company_name || "N/A",
+          plano: lead.niche === "white-label" ? "Plano Enterprise" : "Plano Standard",
+          valor: lead.status === "ganhou" ? 2500 : 1200,
+          diaVencimento: 10,
+          recorrencia: "mensal",
+          ativo: lead.status !== "perdeu",
+          proximoVencimento: lead.status === "ganhou" ? "10/05/2026" : "Pendente",
+          ultimoEnvio: "N/A",
+          status: lead.status === "ganhou" ? "pago" : "pendente",
+          kanbanStage: lead.status || "novo",
+          totalPago: lead.status === "ganhou" ? 12500 : 0,
+          dataInicio: new Date(lead.created_at).toLocaleDateString("pt-BR")
+        }));
+
+        setContratos(prev => {
+          // Merge with existing static data for demo purposes, or replace
+          const existingIds = new Set(CONTRATOS.map(c => c.clientId));
+          const newOnes = mappedContratos.filter(c => !existingIds.has(c.clientId));
+          return [...CONTRATOS, ...newOnes];
+        });
+      }
+
+      setLastSync(new Date().toLocaleTimeString("pt-BR"));
+      toast.success("Dados sincronizados com o Portal de Integração (API)!");
+    } catch (err) {
+      console.error("Erro na sincronização:", err);
+      toast.error("Falha ao sincronizar dados da API.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     async function loadIntegrations() {
@@ -143,6 +219,7 @@ export default function CobrancasFiscalTab() {
       }
     }
     loadIntegrations();
+    fetchRealData(); // Initial sync
   }, []);
 
   function updateInt(i: number, patch: Partial<IntState>) {
@@ -150,145 +227,249 @@ export default function CobrancasFiscalTab() {
   }
 
   const handleAction = async (contrato: Contrato, action: "boleto" | "email" | "contract") => {
-    setLoadingAction(`${contrato.id}-${action}`);
+    setSelectedClient(contrato);
     
-    // Simulate API Delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    if (action === "email") {
+      setEmailConfig({
+        subject: `Cobrança - ${contrato.plano} - ${contrato.cliente}`,
+        content: `Olá ${contrato.cliente},\n\nSegue em anexo a cobrança referente ao seu plano ${contrato.plano} no valor de ${formatBRL(contrato.valor)}.\n\nQualquer dúvida, estamos à disposição.\n\nAtenciosamente,\nEquipe Financeira`,
+        attachBoleto: true,
+      });
+      setShowEmailModal(true);
+      return;
+    }
+
+    if (action === "boleto") {
+      setLoadingAction(`${contrato.id}-boleto`);
+      // Simulate API Delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setGeneratedBoleto({
+        url: "https://exemplo.com/boleto.pdf",
+        barcode: "00190.50095 40144.816069 06809.350314 3 00000000" + Math.floor(contrato.valor * 100).toString().padStart(10, '0'),
+      });
+      
+      const newEvent: TimelineEvent = {
+        id: Math.random().toString(36).substr(2, 9),
+        date: new Date().toLocaleDateString("pt-BR"),
+        status: "success",
+        type: "payment",
+        title: "Boleto Gerado",
+        description: `Boleto no valor de ${formatBRL(contrato.valor)} gerado via ${intStates[0].connectedProvider || 'Asaas'}`
+      };
+
+      setTimelineEvents(prev => ({
+        ...prev,
+        [contrato.clientId]: [newEvent, ...(prev[contrato.clientId] || [])]
+      }));
+
+      setShowBoletoModal(true);
+      setLoadingAction(null);
+      return;
+    }
+
+    if (action === "contract") {
+      toast.info("Funcionalidade de anexo de contrato em desenvolvimento.");
+    }
+  };
+
+  const confirmSendEmail = async () => {
+    if (!selectedClient) return;
+    setLoadingAction(`${selectedClient.id}-email`);
+    
+    // Simulate SMTP Delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     const newEvent: TimelineEvent = {
       id: Math.random().toString(36).substr(2, 9),
       date: new Date().toLocaleDateString("pt-BR"),
       status: "success",
-      type: action === "boleto" ? "payment" : action === "email" ? "email" : "contract",
-      title: action === "boleto" ? "Boleto Gerado" : action === "email" ? "Email Enviado" : "Documento Anexado",
-      description: action === "boleto" ? `Boleto no valor de ${formatBRL(contrato.valor)} gerado via ${intStates[0].connectedProvider || 'Sistema'}` : 
-                   action === "email" ? `Cobranca enviada para o cliente ${contrato.cliente}` :
-                   `Contrato de ${contrato.plano} anexado ao perfil.`
+      type: "email",
+      title: "Email Enviado",
+      description: `Cobrança enviada para o cliente ${selectedClient.cliente} com ${emailConfig.attachBoleto ? 'boleto anexo' : 'sem anexo'}.`
     };
 
     setTimelineEvents(prev => ({
       ...prev,
-      [contrato.clientId]: [newEvent, ...(prev[contrato.clientId] || [])]
+      [selectedClient.clientId]: [newEvent, ...(prev[selectedClient.clientId] || [])]
     }));
 
-    toast.success(`${newEvent.title} com sucesso!`);
+    toast.success("E-mail enviado com sucesso!");
+    setShowEmailModal(false);
     setLoadingAction(null);
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Top Section with Profile Info if selected */}
+      {/* Robust Client Profile Command Center */}
       {selectedClient && showTimeline && (
-        <div className="bg-card border border-primary/20 rounded-3xl p-6 mb-6 shadow-lg animate-in slide-in-from-top-4">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                <User className="text-primary w-6 h-6" />
+        <div className="bg-card border border-primary/20 rounded-[2.5rem] p-0 mb-8 shadow-2xl animate-in slide-in-from-top-6 duration-500 overflow-hidden">
+          {/* Profile Header Banner */}
+          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-8 border-b border-border/40 relative">
+            <div className="absolute top-6 right-8 flex gap-2">
+               <button 
+                onClick={() => setShowTimeline(false)}
+                className="bg-background/50 hover:bg-background border border-border/50 p-2.5 rounded-2xl transition-all shadow-sm"
+                title="Fechar Perfil"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+              <div className="w-20 h-20 rounded-[2rem] bg-primary flex items-center justify-center border-4 border-background shadow-xl">
+                <User className="text-white w-10 h-10" />
               </div>
-              <div>
-                <h2 className="text-lg font-black text-foreground">{selectedClient.cliente}</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-muted text-muted-foreground uppercase tracking-wider">
-                    ID: {selectedClient.clientId}
-                  </span>
-                  <span className={cn(
-                    "text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider",
-                    selectedClient.status === "pago" ? "bg-emerald-500/10 text-emerald-500" :
-                    selectedClient.status === "atrasado" ? "bg-red-500/10 text-red-500" : "bg-amber-500/10 text-amber-500"
-                  )}>
-                    {selectedClient.status}
-                  </span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h2 className="text-3xl font-black text-foreground tracking-tight">{selectedClient.cliente}</h2>
+                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                    CLIENTE ATIVO
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><Building2 size={14} className="text-primary/60" /> {selectedClient.empresa}</span>
+                  <span className="flex items-center gap-1.5"><Calendar size={14} className="text-primary/60" /> Início: {selectedClient.dataInicio}</span>
+                  <span className="bg-muted px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">ID: {selectedClient.clientId}</span>
                 </div>
               </div>
             </div>
-            <button 
-              onClick={() => setShowTimeline(false)}
-              className="text-xs font-bold text-muted-foreground hover:text-foreground p-2"
-            >
-              Fechar Perfil
-            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Timeline Column */}
-            <div className="space-y-4">
-              <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <History size={14} /> Linha do Tempo
-              </h3>
-              <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border/50">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+            {/* Left Column: Timeline (Unified History) */}
+            <div className="lg:col-span-7 p-8 border-r border-border/40 bg-muted/5">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                  <History size={16} className="text-primary" /> Histórico Unificado
+                </h3>
+                <Button variant="ghost" size="sm" className="text-[10px] font-bold text-primary hover:bg-primary/5 rounded-xl">
+                  FILTRAR EVENTOS
+                </Button>
+              </div>
+
+              <div className="relative pl-8 space-y-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary/50 before:via-border before:to-border/20">
                 {(timelineEvents[selectedClient.clientId] || []).map((event) => (
-                  <div key={event.id} className="relative">
+                  <div key={event.id} className="relative group/item">
                     <div className={cn(
-                      "absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 border-background",
+                      "absolute -left-[25px] top-1 w-5 h-5 rounded-full border-4 border-card z-10 transition-transform group-hover/item:scale-125 shadow-sm",
                       event.type === "payment" ? "bg-emerald-500" : 
                       event.type === "email" ? "bg-blue-500" :
                       event.type === "contract" ? "bg-purple-500" : "bg-slate-500"
                     )} />
-                    <div className="space-y-1">
+                    <div className="space-y-2 bg-background/50 p-4 rounded-2xl border border-border/30 group-hover/item:border-primary/20 transition-all">
                       <div className="flex items-center justify-between">
-                        <p className="text-[13px] font-bold text-foreground">{event.title}</p>
-                        <span className="text-[10px] text-muted-foreground font-medium">{event.date}</span>
+                        <p className="text-[14px] font-black text-foreground">{event.title}</p>
+                        <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{event.date}</span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground">{event.description}</p>
+                      <p className="text-[12px] text-muted-foreground leading-relaxed font-medium">{event.description}</p>
+                      {event.status && (
+                        <div className="flex items-center gap-1.5 mt-2">
+                           <CheckCircle2 size={12} className="text-emerald-500" />
+                           <span className="text-[9px] font-black text-emerald-600 uppercase">Processado com sucesso</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
+                
+                {/* Simulated CRM Integration Events */}
+                <div className="relative group/item opacity-60">
+                   <div className="absolute -left-[25px] top-1 w-5 h-5 rounded-full border-4 border-card z-10 bg-indigo-500" />
+                   <div className="space-y-2 bg-background/50 p-4 rounded-2xl border border-border/30">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[14px] font-black text-foreground">Kanban: Movido para Fechamento</p>
+                        <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">10/04/2026</span>
+                      </div>
+                      <p className="text-[12px] text-muted-foreground leading-relaxed font-medium">Lead qualificado pela Malu e movido para etapa final do funil.</p>
+                    </div>
+                </div>
               </div>
             </div>
 
-            {/* Quick Actions & Details */}
-            <div className="space-y-4">
-               <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <Zap size={14} /> Detalhes do Contrato
-              </h3>
-              <div className="bg-muted/30 rounded-2xl p-4 border border-border/50 space-y-3">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Plano Atual:</span>
-                  <span className="font-bold">{selectedClient.plano}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Valor Mensal:</span>
-                  <span className="font-bold text-primary">{formatBRL(selectedClient.valor)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Dia Vencimento:</span>
-                  <span className="font-bold">Todo dia {selectedClient.diaVencimento}</span>
+            {/* Right Column: Cards & Insights */}
+            <div className="lg:col-span-5 p-8 space-y-6">
+              {/* Kanban Integration Card */}
+              <div className="bg-gradient-to-br from-indigo-500/10 to-blue-500/5 rounded-3xl p-6 border border-indigo-500/20">
+                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Zap size={14} /> Status no Pipeline CRM
+                </h4>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-black text-foreground capitalize">{selectedClient.kanbanStage?.replace('_', ' ')}</p>
+                    <p className="text-[11px] font-bold text-muted-foreground">Responsável: Daniela S.</p>
+                  </div>
+                  <Badge className="bg-indigo-500 text-white border-none font-black text-[9px] px-3">
+                    FUNIL DE VENDAS
+                  </Badge>
                 </div>
               </div>
 
+              {/* Financial Dashboard Card */}
+              <div className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
+                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <DollarSign size={14} className="text-primary" /> Resumo Financeiro
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="bg-muted/20 p-3 rounded-2xl border border-border/20">
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Total Pago</p>
+                      <p className="text-lg font-black text-emerald-600">{formatBRL(selectedClient.totalPago || 0)}</p>
+                   </div>
+                   <div className="bg-muted/20 p-3 rounded-2xl border border-border/20">
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">MRR Atual</p>
+                      <p className="text-lg font-black text-primary">{formatBRL(selectedClient.valor)}</p>
+                   </div>
+                </div>
+                <div className="pt-2 border-t border-border/40 space-y-2">
+                   <div className="flex justify-between text-[11px]">
+                      <span className="text-muted-foreground font-medium">Próximo Faturamento:</span>
+                      <span className="font-bold text-foreground">{selectedClient.proximoVencimento}</span>
+                   </div>
+                   <div className="flex justify-between text-[11px]">
+                      <span className="text-muted-foreground font-medium">Método Preferencial:</span>
+                      <span className="font-bold text-foreground">Boleto Bancário (Asaas)</span>
+                   </div>
+                </div>
+              </div>
+
+              {/* Contact Card */}
+              <div className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
+                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <Mail size={14} className="text-blue-500" /> Dados de Contato
+                </h4>
+                <div className="space-y-3">
+                   <div className="flex items-center gap-3 text-sm">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                        <Mail size={16} />
+                      </div>
+                      <span className="font-bold text-foreground">{selectedClient.email}</span>
+                   </div>
+                   <div className="flex items-center gap-3 text-sm">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                        <Phone size={16} />
+                      </div>
+                      <span className="font-bold text-foreground">{selectedClient.telefone}</span>
+                   </div>
+                </div>
+              </div>
+
+              {/* Quick Actions Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <Button 
                   variant="outline" 
-                  className="rounded-xl h-12 flex flex-col items-center justify-center gap-1 border-primary/20 hover:bg-primary/5"
+                  className="rounded-2xl h-14 flex flex-col items-center justify-center gap-0.5 border-primary/20 hover:bg-primary/5 group"
                   onClick={() => handleAction(selectedClient, "boleto")}
-                  disabled={loadingAction?.includes("boleto")}
                 >
-                  {loadingAction === `${selectedClient.id}-boleto` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-primary" />}
-                  <span className="text-[10px] font-bold">Gerar Boleto</span>
+                  <Download className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-black uppercase tracking-tighter">Gerar Boleto</span>
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="rounded-xl h-12 flex flex-col items-center justify-center gap-1 border-blue-500/20 hover:bg-blue-500/5"
+                  className="rounded-2xl h-14 flex flex-col items-center justify-center gap-0.5 border-blue-500/20 hover:bg-blue-500/5 group"
                   onClick={() => handleAction(selectedClient, "email")}
-                  disabled={loadingAction?.includes("email")}
                 >
-                  {loadingAction === `${selectedClient.id}-email` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 text-blue-500" />}
-                  <span className="text-[10px] font-bold">Enviar Email</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="rounded-xl h-12 flex flex-col items-center justify-center gap-1 border-purple-500/20 hover:bg-purple-500/5"
-                  onClick={() => handleAction(selectedClient, "contract")}
-                >
-                  <Paperclip className="w-4 h-4 text-purple-500" />
-                  <span className="text-[10px] font-bold">Anexar Contrato</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="rounded-xl h-12 flex flex-col items-center justify-center gap-1 border-emerald-500/20 hover:bg-emerald-500/5"
-                >
-                  <Check className="w-4 h-4 text-emerald-500" />
-                  <span className="text-[10px] font-bold">Marcar Pago</span>
+                  <Send className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-black uppercase tracking-tighter">Enviar Email</span>
                 </Button>
               </div>
             </div>
@@ -324,12 +505,25 @@ export default function CobrancasFiscalTab() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-black text-foreground flex items-center gap-2">
-            <RefreshCw size={16} className="text-muted-foreground" />
+            <RefreshCw size={16} className={cn("text-muted-foreground", isSyncing && "animate-spin text-primary")} />
             Contratos e Cobranças
+            {lastSync && <span className="text-[10px] font-medium text-muted-foreground/60 ml-2">Último sync: {lastSync}</span>}
           </h3>
-          <Button variant="outline" size="sm" className="rounded-xl text-[11px] font-bold h-8">
-            <Plus className="w-3.5 h-3.5 mr-1" /> Novo Contrato
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-xl text-[11px] font-bold h-8 border-primary/20 hover:bg-primary/5 text-primary"
+              onClick={fetchRealData}
+              disabled={isSyncing}
+            >
+              {isSyncing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
+              Sincronizar API
+            </Button>
+            <Button variant="default" size="sm" className="rounded-xl text-[11px] font-bold h-8">
+              <Plus className="w-3.5 h-3.5 mr-1" /> Novo Contrato
+            </Button>
+          </div>
         </div>
         
         <div className="rounded-3xl border border-border/40 bg-card overflow-hidden shadow-sm">
@@ -423,6 +617,118 @@ export default function CobrancasFiscalTab() {
           </p>
         </div>
       </div>
+
+      {/* Email Modal */}
+      <Dialog open={showEmailModal} onOpenChange={setShowEmailModal}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black">Enviar Cobrança por E-mail</DialogTitle>
+            <DialogDescription className="text-xs">
+              Personalize a mensagem que será enviada para <strong>{selectedClient?.cliente}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Assunto</Label>
+              <Input 
+                id="subject" 
+                value={emailConfig.subject} 
+                onChange={(e) => setEmailConfig(prev => ({ ...prev, subject: e.target.value }))}
+                className="rounded-xl border-border/40 text-sm font-medium"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="content" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Corpo do E-mail</Label>
+              <Textarea 
+                id="content" 
+                rows={6}
+                value={emailConfig.content} 
+                onChange={(e) => setEmailConfig(prev => ({ ...prev, content: e.target.value }))}
+                className="rounded-xl border-border/40 text-sm font-medium resize-none"
+              />
+            </div>
+            <div className="flex items-center space-x-2 bg-primary/5 p-3 rounded-2xl border border-primary/10">
+              <Checkbox 
+                id="attach" 
+                checked={emailConfig.attachBoleto} 
+                onCheckedChange={(checked) => setEmailConfig(prev => ({ ...prev, attachBoleto: !!checked }))}
+              />
+              <Label htmlFor="attach" className="text-[11px] font-bold text-primary flex items-center gap-2 cursor-pointer">
+                <Paperclip size={12} /> Anexar Boleto Gerado Automaticamente
+              </Label>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-2xl font-bold" onClick={() => setShowEmailModal(false)}>Cancelar</Button>
+            <Button 
+              className="rounded-2xl font-black px-8 shadow-lg shadow-primary/20" 
+              onClick={confirmSendEmail}
+              disabled={loadingAction?.includes("email")}
+            >
+              {loadingAction?.includes("email") ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send size={16} className="mr-2" />}
+              ENVIAR AGORA
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Boleto Modal */}
+      <Dialog open={showBoletoModal} onOpenChange={setShowBoletoModal}>
+        <DialogContent className="sm:max-w-[450px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+          <div className="bg-primary p-8 text-white">
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                <FileText size={24} />
+              </div>
+              <Badge className="bg-white/20 text-white border-none text-[10px] uppercase font-black tracking-widest">BOLETO GERADO</Badge>
+            </div>
+            <h2 className="text-2xl font-black mb-1">{selectedClient?.cliente}</h2>
+            <p className="text-white/60 text-xs font-bold uppercase tracking-widest">{selectedClient?.plano}</p>
+          </div>
+          <div className="p-8 bg-card space-y-6">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Valor</p>
+                <p className="text-xl font-black text-foreground">{selectedClient && formatBRL(selectedClient.valor)}</p>
+              </div>
+              <div className="space-y-1 text-right">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Vencimento</p>
+                <p className="text-xl font-black text-primary">{selectedClient?.proximoVencimento}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Linha Digitável</p>
+              <div className="bg-muted/50 p-3 rounded-xl border border-border/40 font-mono text-[11px] break-all leading-relaxed">
+                {generatedBoleto?.barcode}
+              </div>
+              <Button variant="ghost" size="sm" className="w-full text-[10px] font-black h-8 gap-2" onClick={() => {
+                navigator.clipboard.writeText(generatedBoleto?.barcode || "");
+                toast.success("Código copiado!");
+              }}>
+                COPIAR CÓDIGO DE BARRAS
+              </Button>
+            </div>
+
+            <div className="flex gap-3">
+              <Button className="flex-1 rounded-2xl font-black h-12" onClick={() => {
+                window.open(generatedBoleto?.url, '_blank');
+                toast.info("Iniciando download...");
+              }}>
+                <Download size={16} className="mr-2" /> BAIXAR PDF
+              </Button>
+              <Button variant="outline" className="flex-1 rounded-2xl font-black h-12" onClick={() => {
+                setShowBoletoModal(false);
+                if (selectedClient) {
+                  handleAction(selectedClient, "email");
+                }
+              }}>
+                <Send size={16} className="mr-2" /> ENVIAR EMAIL
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

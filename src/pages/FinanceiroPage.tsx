@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import {
   DollarSign, LayoutDashboard, List, GitMerge, FileBarChart2,
-  Users, TrendingUp, Building2, FileText, Settings2, Download, Plus
+  Users, TrendingUp, Building2, FileText, Settings2, Download, Plus,
+  RefreshCw
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import FinanceiroDashboard from "@/components/financeiro/FinanceiroDashboard";
 import DashboardFinanceiro from "@/components/financeiro/DashboardFinanceiro";
@@ -81,6 +83,17 @@ export default function FinanceiroPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all text-[11px] font-bold text-primary"
+            onClick={() => {
+              toast.info("Sincronizando todos os módulos financeiros...");
+              // This is a global trigger that tabs can listen to via a shared state or just a refresh
+              window.location.reload(); 
+            }}
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Sincronizar Global
+          </button>
           <button
             onClick={handleExport}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/60 bg-card hover:bg-accent transition-all text-[11px] font-medium text-muted-foreground hover:text-foreground"
