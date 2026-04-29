@@ -541,10 +541,18 @@ export default function CobrancasFiscalTab() {
               {contratos.map((c, idx) => (
                 <tr key={c.id} className="border-b border-border/20 hover:bg-muted/10 transition-all">
                   <td className="px-5 py-4">
-                    <div className="flex flex-col">
-                      <span className="text-[13px] font-bold text-foreground">{c.cliente}</span>
-                      <span className="text-[10px] text-muted-foreground font-medium uppercase">{c.clientId}</span>
-                    </div>
+                    <button 
+                      onClick={() => {
+                        setSelectedClient(c);
+                        setShowTimeline(true);
+                        // Smooth scroll to profile
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="flex flex-col items-start group/name text-left hover:opacity-80 transition-all"
+                    >
+                      <span className="text-[13px] font-bold text-foreground group-hover/name:text-primary transition-colors">{c.cliente}</span>
+                      <span className="text-[10px] text-muted-foreground font-medium uppercase group-hover/name:text-primary/70 transition-colors">{c.clientId}</span>
+                    </button>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex flex-col">
