@@ -13,6 +13,8 @@ interface Funcionario {
   fgts: number;
   status: "pago" | "pendente";
   vencimento: string;
+  relatedClientId?: string;
+  relatedClientName?: string;
 }
 
 interface Despesa {
@@ -26,9 +28,9 @@ interface Despesa {
 }
 
 const FUNCIONARIOS: Funcionario[] = [
-  { id: 1, nome: "Carlos Mendes", cargo: "Dev Full-Stack", salario: 6500, inss: 715, fgts: 520, status: "pago", vencimento: "05/05/2026" },
-  { id: 2, nome: "Ana Lima", cargo: "Designer UX/UI", salario: 4800, inss: 528, fgts: 384, status: "pago", vencimento: "05/05/2026" },
-  { id: 3, nome: "Pedro Souza", cargo: "Vendas", salario: 3200, inss: 352, fgts: 256, status: "pendente", vencimento: "05/05/2026" },
+  { id: 1, nome: "Carlos Mendes", cargo: "Dev Full-Stack", salario: 6500, inss: 715, fgts: 520, status: "pago", vencimento: "05/05/2026", relatedClientId: "CL-001", relatedClientName: "Clínica Academias 6" },
+  { id: 2, nome: "Ana Lima", cargo: "Designer UX/UI", salario: 4800, inss: 528, fgts: 384, status: "pago", vencimento: "05/05/2026", relatedClientId: "CL-002", relatedClientName: "Giovanna" },
+  { id: 3, nome: "Pedro Souza", cargo: "Vendas", salario: 3200, inss: 352, fgts: 256, status: "pendente", vencimento: "05/05/2026", relatedClientId: "CL-003", relatedClientName: "ANDREA OLIVEIRA LIMA" },
 ];
 
 const DESPESAS: Despesa[] = [
@@ -45,7 +47,11 @@ const despesasVariaveis = DESPESAS.filter(d => d.tipo === "variavel").reduce((s,
 const receitaRef = 23476;
 const comprometimento = ((totalFolha + despesasFixas) / receitaRef) * 100;
 
-export default function EquipeFinanceiroTab() {
+interface EquipeFinanceiroTabProps {
+  onOpenProfile?: (client: any) => void;
+}
+
+export default function EquipeFinanceiroTab({ onOpenProfile }: EquipeFinanceiroTabProps) {
   const [funcionarios, setFuncionarios] = useState(FUNCIONARIOS);
   const [despesas, setDespesas] = useState(DESPESAS);
 
@@ -112,7 +118,25 @@ export default function EquipeFinanceiroTab() {
                     {f.status === "pago" ? "✓ Pago" : "Pendente"}
                   </span>
                 </div>
-                <div className="grid grid-cols-3 gap-2 mt-3">
+                
+                {f.relatedClientId && (
+                  <button 
+                    onClick={() => onOpenProfile?.({
+                      cliente: f.relatedClientName,
+                      clientId: f.relatedClientId,
+                      empresa: f.relatedClientName,
+                      email: "contato@empresa.com",
+                      status: "pago",
+                      plano: "Plano Custom",
+                      valor: 0 // Mock value
+                    })}
+                    className="mb-3 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/5 text-[9px] font-black text-primary hover:bg-primary/10 transition-all border border-primary/10"
+                  >
+                    <Users size={10} /> CLIENTE: {f.relatedClientName} ({f.relatedClientId})
+                  </button>
+                )}
+
+                <div className="grid grid-cols-3 gap-2 mt-1">
                   {[
                     { label: "Salário", value: f.salario },
                     { label: "INSS", value: f.inss },

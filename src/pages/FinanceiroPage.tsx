@@ -69,6 +69,12 @@ export default function FinanceiroPage() {
     setActiveTab("lancamentos");
   }
 
+  function handleOpenProfile(client: any) {
+    setSelectedClient(client);
+    setShowProfile(true);
+    setActiveTab("cobrancas");
+  }
+
   return (
     <div className="flex flex-col h-full bg-background animate-in fade-in duration-300">
       {/* Top Header */}
@@ -150,7 +156,11 @@ export default function FinanceiroPage() {
         )}
         {activeTab === "conciliacao" && <ConciliacaoTab />}
         {activeTab === "relatorios" && <RelatoriosTab />}
-        {activeTab === "equipe" && <EquipeFinanceiroTab />}
+        {activeTab === "equipe" && (
+          <EquipeFinanceiroTab 
+            onOpenProfile={handleOpenProfile} 
+          />
+        )}
         {activeTab === "investimentos" && <InvestimentosTab />}
         {activeTab === "valuation" && <ValuationTab />}
         {activeTab === "cobrancas" && (

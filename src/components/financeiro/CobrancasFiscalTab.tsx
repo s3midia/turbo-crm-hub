@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { 
   FileText, Receipt, RefreshCw, CheckCircle2, AlertCircle, 
   ExternalLink, Zap, Loader2, Mail, Download, Paperclip, 
-  History, User, MoreVertical, Send, Check, X, Building2, Calendar, Phone, DollarSign
+  History, User, MoreVertical, Send, Check, X, Building2, Calendar, Phone, DollarSign,
+  MessageSquare, Edit2, FilePlus, ChevronRight, MessageCircle
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -134,6 +136,23 @@ export default function CobrancasFiscalTab({
   const setShowTimeline = (show: boolean) => onProfileChange?.(show);
   const setSelectedClient = (client: any) => onProfileChange?.(showTimeline ?? false, client);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  // Editing State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedClient, setEditedClient] = useState<any>(null);
+
+  useEffect(() => {
+    if (selectedClient) {
+      setEditedClient(selectedClient);
+    }
+  }, [selectedClient]);
+
+  const handleSaveProfile = () => {
+    setSelectedClient(editedClient);
+    setIsEditing(false);
+    toast.success("Perfil atualizado com sucesso!");
+  };
 
   // Email and Boleto States
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -349,27 +368,116 @@ export default function CobrancasFiscalTab({
                   </Badge>
                 </div>
                 <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground">
-                  <span className="flex items-center gap-1.5"><Building2 size={14} className="text-primary/60" /> {selectedClient.empresa}</span>
-                  <span className="flex items-center gap-1.5"><Calendar size={14} className="text-primary/60" /> Início: {selectedClient.dataInicio}</span>
-                  <span className="bg-muted px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">ID: {selectedClient.clientId}</span>
+                  {isEditing ? (
+                    <div className="flex flex-col gap-2 w-full max-w-md mt-2">
+                      <Input 
+                        value={editedClient?.empresa} 
+                        onChange={(e) => setEditedClient({...editedClient, empresa: e.target.value})}
+                        className="bg-background border-primary/20 h-8 text-xs font-bold"
+                        placeholder="Nome da Empresa"
+                      />
+                      <div className="flex gap-2">
+                        <Input 
+                          value={editedClient?.email} 
+                          onChange={(e) => setEditedClient({...editedClient, email: e.target.value})}
+                          className="bg-background border-primary/20 h-8 text-xs font-bold"
+                          placeholder="E-mail"
+                        />
+                        <Input 
+                          value={editedClient?.telefone} 
+                          onChange={(e) => setEditedClient({...editedClient, telefone: e.target.value})}
+                          className="bg-background border-primary/20 h-8 text-xs font-bold"
+                          placeholder="Telefone"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" className="h-7 text-[10px] font-black" onClick={handleSaveProfile}>SALVAR</Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-[10px] font-black" onClick={() => setIsEditing(false)}>CANCELAR</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="flex items-center gap-1.5"><Building2 size={14} className="text-primary/60" /> {selectedClient.empresa}</span>
+                      <span className="flex items-center gap-1.5"><Calendar size={14} className="text-primary/60" /> Início: {selectedClient.dataInicio}</span>
+                      <span className="bg-muted px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">ID: {selectedClient.clientId}</span>
+                      <button 
+                        onClick={() => setIsEditing(true)}
+                        className="flex items-center gap-1 text-primary hover:underline ml-2"
+                      >
+                        <Edit2 size={12} /> Editar
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-            {/* Left Column: Timeline (Unified History) */}
-            <div className="lg:col-span-7 p-8 border-r border-border/40 bg-muted/5">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                  <History size={16} className="text-primary" /> Histórico Unificado
-                </h3>
-                <Button variant="ghost" size="sm" className="text-[10px] font-bold text-primary hover:bg-primary/5 rounded-xl">
-                  FILTRAR EVENTOS
-                </Button>
-              </div>
+            {/* Left Column: Timeline & WhatsApp */}
+            <div className="lg:col-span-7 border-r border-border/40 bg-muted/5">
+              <div className="p-8 pb-4">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                    <History size={16} className="text-primary" /> Histórico Unificado
+                  </h3>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="sm" className="text-[10px] font-bold text-primary hover:bg-primary/5 rounded-xl border border-primary/10">
+                      WHATSAPP INTEGRADO
+                    </Button>
+                  </div>
+                </div>
 
-              <div className="relative pl-8 space-y-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary/50 before:via-border before:to-border/20">
+                {/* WhatsApp Chat Preview Section */}
+                <div className="mb-10 bg-background/80 rounded-3xl border border-emerald-500/20 overflow-hidden shadow-sm">
+                  <div className="bg-emerald-500/10 p-3 flex items-center justify-between border-b border-emerald-500/20">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white">
+                        <MessageSquare size={14} />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-black text-emerald-700 uppercase tracking-wider">Conversa WhatsApp</p>
+                        <p className="text-[9px] text-emerald-600/80 font-bold">Online · Sincronizado com Rafa S3</p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 text-[9px] font-black text-emerald-700 hover:bg-emerald-500/10"
+                      onClick={() => navigate('/whatsapp')}
+                    >
+                      ABRIR CHAT COMPLETO <ExternalLink size={10} className="ml-1" />
+                    </Button>
+                  </div>
+                  <div className="p-4 space-y-3 max-h-[200px] overflow-y-auto custom-scrollbar">
+                    <div className="flex flex-col items-start max-w-[80%]">
+                      <div className="bg-muted p-2.5 rounded-2xl rounded-tl-none text-[12px] font-medium text-foreground">
+                        Olá {selectedClient.cliente}, tudo bem? Aqui é o Rafa da Torre S3. Vi que o contrato foi assinado!
+                      </div>
+                      <span className="text-[8px] text-muted-foreground mt-1 ml-1">10:45</span>
+                    </div>
+                    <div className="flex flex-col items-end w-full">
+                      <div className="bg-emerald-500 text-white p-2.5 rounded-2xl rounded-tr-none text-[12px] font-medium max-w-[80%]">
+                        Olá Rafa! Sim, acabamos de assinar. Muito animados com o novo site!
+                      </div>
+                      <span className="text-[8px] text-muted-foreground mt-1 mr-1">10:48 · Lida</span>
+                    </div>
+                    <div className="flex flex-col items-start max-w-[80%]">
+                      <div className="bg-muted p-2.5 rounded-2xl rounded-tl-none text-[12px] font-medium text-foreground">
+                        Show! Já estamos iniciando o setup aqui. Vou te enviar o primeiro boleto por e-mail agora.
+                      </div>
+                      <span className="text-[8px] text-muted-foreground mt-1 ml-1">10:50</span>
+                    </div>
+                  </div>
+                  <div className="p-2 bg-muted/30 border-t border-border/40 flex gap-2">
+                    <Input className="h-8 text-[11px] bg-background border-none shadow-none focus-visible:ring-0" placeholder="Enviar mensagem rápida..." />
+                    <Button size="sm" className="h-8 w-8 p-0 bg-emerald-500 hover:bg-emerald-600 rounded-xl">
+                      <Send size={14} className="text-white" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="relative pl-8 space-y-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary/50 before:via-border before:to-border/20">
                 {(timelineEvents[selectedClient.clientId] || []).map((event) => (
                   <div key={event.id} className="relative group/item">
                     <div className={cn(
@@ -425,10 +533,18 @@ export default function CobrancasFiscalTab({
                       <p className="text-xl font-black text-foreground capitalize">{selectedClient.kanbanStage?.replace('_', ' ')}</p>
                       <p className="text-[11px] font-bold text-muted-foreground">Etapa atual do fechamento</p>
                     </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-[9px] font-black text-indigo-600 hover:bg-indigo-500/10 h-7"
+                      onClick={() => navigate('/pipeline')}
+                    >
+                      IR PARA KANBAN <ChevronRight size={12} className="ml-0.5" />
+                    </Button>
                   </div>
                   
                   {/* Stepper Component */}
-                  <div className="relative pt-2 pb-6">
+                  <div className="relative pt-2 pb-6 cursor-pointer hover:opacity-80 transition-all" onClick={() => navigate('/pipeline')}>
                      <div className="absolute top-[1.15rem] left-0 right-0 h-1 bg-muted rounded-full" />
                      <div className="relative flex justify-between">
                         {PIPELINE_STAGES.map((step, idx) => {
@@ -458,15 +574,88 @@ export default function CobrancasFiscalTab({
                 </h4>
                 <div className="space-y-2">
                    {[
-                     { name: "Criação de Site Institucional", status: "Entregue" },
-                     { name: "Licença de Software (SaaS)", status: "Ativo" },
-                     { name: "Hospedagem & Manutenção", status: "Ativo" }
+                     { name: "Criação de Site Institucional", status: "Entregue", tab: "site" },
+                     { name: "Licença de Software (SaaS)", status: "Ativo", tab: "saas" },
+                     { name: "Hospedagem & Manutenção", status: "Ativo", tab: "hosting" }
                    ].map((s, i) => (
-                     <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/10">
-                        <span className="text-[12px] font-bold text-foreground">{s.name}</span>
-                        <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[9px] font-black">{s.status}</Badge>
-                     </div>
+                     <button 
+                       key={i} 
+                       className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/10 hover:bg-primary/5 hover:border-primary/20 transition-all group/svc text-left"
+                       onClick={() => navigate('/servicos')}
+                     >
+                        <span className="text-[12px] font-bold text-foreground group-hover/svc:text-primary transition-colors">{s.name}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[9px] font-black">{s.status}</Badge>
+                          <ChevronRight size={12} className="text-muted-foreground group-hover/svc:text-primary" />
+                        </div>
+                     </button>
                    ))}
+                </div>
+              </div>
+
+              {/* Monthly Payment Grid - NEW */}
+              <div className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                    <Calendar size={14} className="text-emerald-500" /> Fluxo de Mensalidades
+                  </h4>
+                  <Badge variant="outline" className="text-[8px] font-black uppercase border-emerald-500/20 text-emerald-600">2026</Badge>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO'].map((mes, idx) => {
+                    const status = idx < 3 ? 'pago' : idx === 3 ? 'pago' : 'pendente';
+                    return (
+                      <div 
+                        key={mes} 
+                        className={cn(
+                          "flex flex-col items-center justify-center p-2 rounded-xl border transition-all",
+                          status === 'pago' ? "bg-emerald-500/5 border-emerald-500/20" : "bg-muted/30 border-border/40"
+                        )}
+                      >
+                        <span className="text-[9px] font-black mb-1">{mes}</span>
+                        <div className={cn(
+                          "w-2 h-2 rounded-full",
+                          status === 'pago' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-muted-foreground/30"
+                        )} />
+                        <span className={cn("text-[7px] font-bold mt-1 uppercase", status === 'pago' ? "text-emerald-600" : "text-muted-foreground")}>
+                          {status === 'pago' ? 'PAGO' : 'AGUARD.'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Contracts & Proposals - NEW */}
+              <div className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
+                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <FilePlus size={14} className="text-purple-500" /> Documentos & Propostas
+                </h4>
+                <div className="space-y-3">
+                   <div className="flex items-center justify-between p-3 rounded-xl border border-dashed border-border/60 hover:border-primary/40 transition-all cursor-pointer group/doc">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
+                          <Paperclip size={16} />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-foreground">Anexar Novo Contrato</p>
+                          <p className="text-[9px] text-muted-foreground">PDF, DOCX até 10MB</p>
+                        </div>
+                      </div>
+                      <Plus size={16} className="text-muted-foreground group-hover/doc:text-primary" />
+                   </div>
+                   <div className="flex items-center justify-between p-3 rounded-xl border border-dashed border-border/60 hover:border-primary/40 transition-all cursor-pointer group/doc">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                          <FileText size={16} />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-foreground">Vincular Proposta</p>
+                          <p className="text-[9px] text-muted-foreground">Importar do Módulo de Docs</p>
+                        </div>
+                      </div>
+                      <Plus size={16} className="text-muted-foreground group-hover/doc:text-primary" />
+                   </div>
                 </div>
               </div>
 
