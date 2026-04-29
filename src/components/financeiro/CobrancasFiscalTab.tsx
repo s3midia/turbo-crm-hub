@@ -7,6 +7,7 @@ import {
   History, User, MoreVertical, Send, Check, X, Building2, Calendar, Phone, DollarSign,
   MessageSquare, Edit2, FilePlus, ChevronRight, MessageCircle
 } from "lucide-react";
+import { AsaasService } from "@/services/asaasService";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -254,6 +255,7 @@ export default function CobrancasFiscalTab({
                 ...s,
                 connected: saved.status === "stable",
                 connectedProvider: saved.url ?? "",
+                provider: saved.url ?? "",
                 apiKey: saved.api_key ?? "",
               };
             }
@@ -1097,38 +1099,76 @@ export default function CobrancasFiscalTab({
                   <Button 
                     className="flex-1 rounded-2xl font-black h-12 shadow-lg shadow-primary/30" 
                     onClick={async () => {
-                      setLoadingAction("generating-final");
-                      await new Promise(r => setTimeout(r, 1200));
-                      
-                      setGeneratedBoleto(prev => prev ? {
-                        ...prev,
-                        barcode: "00190.50095 40144.816069 06809.350314 3 00000000" + Math.floor(prev.value * 100).toString().padStart(10, '0')
-                      } : null);
-                      
-                      const newEvent: TimelineEvent = {
-                        id: Math.random().toString(36).substr(2, 9),
-                        date: new Date().toLocaleDateString("pt-BR"),
-                        status: "success",
-                        type: "payment",
-                        title: "Boleto Gerado",
-                        description: `Boleto no valor de ${formatBRL(generatedBoleto?.value || 0)} gerado após revisão.`
-                      };
+                      try {
+                        setLoadingAction("generating-final");
+                        
+                        // 1. Check if Asaas is connected
+                        const asaasConfig = intStates.find(s => s.connected && (s.connectedProvider === "Asaas" || s.connectedProvider === "Asaas Sandbox"));
+                        
+                        if (!asaasConfig || !asaasConfig.apiKey) {
+                          toast.error("Integração com Asaas não configurada ou sem API Key.");
+                          setLoadingAction(null);
+                          return;
+                        }
 
-                      if (selectedClient) {
-                        setTimelineEvents(prev => ({
+                        toast.loading("Comunicando com Asaas...");
+                        
+                        // 2. Initialize Service
+                        const isProduction = asaasConfig.connectedProvider === "Asaas";
+                        const asaas = new AsaasService(asaasConfig.apiKey, isProduction);
+
+                        // 3. Find or Create Customer
+                        const customerId = await asaas.findOrCreateCustomer(
+                          generatedBoleto?.client || selectedClient?.cliente,
+                          selectedClient?.email || "contato@cliente.com",
+                          selectedClient?.telefone
+                        );
+
+                        // 4. Create Payment
+                        const payment = await asaas.createBoleto(
+                          customerId,
+                          generatedBoleto?.value || 0,
+                          generatedBoleto?.date || "",
+                          `Fatura Turbo CRM - ${selectedClient?.plano}`
+                        );
+
+                        setGeneratedBoleto(prev => prev ? {
                           ...prev,
-                          [selectedClient.clientId]: [newEvent, ...(prev[selectedClient.clientId] || [])]
-                        }));
-                      }
+                          url: payment.bankSlipUrl,
+                          barcode: payment.identificationField
+                        } : null);
+                        
+                        const newEvent: TimelineEvent = {
+                          id: payment.id,
+                          date: new Date().toLocaleDateString("pt-BR"),
+                          status: "success",
+                          type: "payment",
+                          title: "Boleto Real Gerado (Asaas)",
+                          description: `Boleto ID ${payment.id} no valor de ${formatBRL(generatedBoleto?.value || 0)} gerado via API.`
+                        };
 
-                      setIsReviewingBoleto(false);
-                      setLoadingAction(null);
-                      toast.success("Boleto gerado com sucesso!");
+                        if (selectedClient) {
+                          setTimelineEvents(prev => ({
+                            ...prev,
+                            [selectedClient.clientId]: [newEvent, ...(prev[selectedClient.clientId] || [])]
+                          }));
+                        }
+
+                        setIsReviewingBoleto(false);
+                        toast.dismiss();
+                        toast.success("Boleto gerado com sucesso via Asaas!");
+                      } catch (error: any) {
+                        console.error("Erro Asaas:", error);
+                        toast.dismiss();
+                        toast.error(`Falha na API Asaas: ${error.message}`);
+                      } finally {
+                        setLoadingAction(null);
+                      }
                     }}
                     disabled={loadingAction === "generating-final"}
                   >
                     {loadingAction === "generating-final" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap size={16} className="mr-2" />}
-                    GERAR BOLETO AGORA
+                    GERAR BOLETO REAL
                   </Button>
                 </div>
               </div>

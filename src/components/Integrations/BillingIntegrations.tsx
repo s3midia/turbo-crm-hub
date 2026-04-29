@@ -77,6 +77,7 @@ export default function BillingIntegrations() {
                 ...s,
                 connected: saved.status === "stable",
                 connectedProvider: saved.url ?? "",
+                provider: saved.url ?? "", // Crucial: set the provider field for the select input
                 apiKey: saved.api_key ?? "",
               };
             }
