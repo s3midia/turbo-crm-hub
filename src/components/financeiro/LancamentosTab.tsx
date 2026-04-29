@@ -23,16 +23,7 @@ interface Transaction {
 const CATEGORIAS_ENTRADA = ["Software", "Web Design", "Consultoria", "Manutenção", "Licença", "Outros"];
 const CATEGORIAS_SAIDA = ["Infraestrutura", "Marketing", "Salários", "Impostos", "Escritório", "Ferramentas", "Outros"];
 
-const INITIAL_TRANSACTIONS: Transaction[] = [
-  { id: 1, descricao: "Sistema personalizado para academia", tipo: "entrada", valor: 9979, dataLancamento: "20/12/2025", vencimento: "30/12/2025", recebimento: "30/12/2025", lead: "Clínica Academias 6", status: "pago", categoria: "Software", recorrencia: "unica", classificacao: "nao_recorrente" },
-  { id: 2, descricao: "Criação de site", tipo: "entrada", valor: 3520, dataLancamento: "15/12/2025", vencimento: "24/12/2025", lead: "N/A", status: "pendente", categoria: "Web Design", recorrencia: "unica", classificacao: "nao_recorrente" },
-  { id: 3, descricao: "Criação de sistema", tipo: "entrada", valor: 7400, dataLancamento: "10/12/2025", vencimento: "23/12/2025", recebimento: "23/12/2025", lead: "ANDREA OLIVEIRA LIMA", status: "pago", categoria: "Software", recorrencia: "unica", classificacao: "nao_recorrente" },
-  { id: 4, descricao: "Criação de Site", tipo: "entrada", valor: 2577, dataLancamento: "12/12/2025", vencimento: "20/12/2025", recebimento: "20/12/2025", lead: "Giovanna", status: "pago", categoria: "Web Design", recorrencia: "unica", classificacao: "nao_recorrente" },
-  { id: 5, descricao: "Plano Manutenção CRM", tipo: "entrada", valor: 1200, dataLancamento: "01/04/2026", vencimento: "05/04/2026", lead: "Clínica Academias 6", status: "pago", categoria: "Manutenção", recorrencia: "mensal", classificacao: "recorrente" },
-  { id: 6, descricao: "API OpenAI - Usage", tipo: "saida", valor: 220, dataLancamento: "15/12/2025", vencimento: "19/12/2025", lead: "N/A", status: "pago", categoria: "Infraestrutura", recorrencia: "mensal" },
-  { id: 7, descricao: "Hospedagem AWS", tipo: "saida", valor: 1450, dataLancamento: "10/12/2025", vencimento: "15/12/2025", lead: "N/A", status: "pago", categoria: "Infraestrutura", recorrencia: "mensal" },
-  { id: 8, descricao: "Consultoria Marketing", tipo: "saida", valor: 3000, dataLancamento: "05/12/2025", vencimento: "10/12/2025", lead: "N/A", status: "pago", categoria: "Marketing", recorrencia: "mensal" },
-];
+const INITIAL_TRANSACTIONS: Transaction[] = [];
 
 function formatBRL(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
