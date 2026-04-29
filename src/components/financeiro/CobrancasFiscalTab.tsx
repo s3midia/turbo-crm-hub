@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import { 
   FileText, Receipt, RefreshCw, CheckCircle2, AlertCircle, 
   ExternalLink, Zap, Loader2, Mail, Download, Paperclip, 
@@ -167,12 +169,14 @@ export default function CobrancasFiscalTab({
   // Email and Boleto States
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showBoletoModal, setShowBoletoModal] = useState(false);
+  const [isReviewingBoleto, setIsReviewingBoleto] = useState(false);
   const [emailConfig, setEmailConfig] = useState({
     subject: "",
     content: "",
     attachBoleto: true,
   });
-  const [generatedBoleto, setGeneratedBoleto] = useState<{ url: string, barcode: string } | null>(null);
+  const [generatedBoleto, setGeneratedBoleto] = useState<{ url: string, barcode: string, date: string, value: number, client: string } | null>(null);
+  const invoiceRef = useRef<HTMLDivElement>(null);
 
   const [timelineEvents, setTimelineEvents] = useState<Record<string, TimelineEvent[]>>({});
 
@@ -280,31 +284,15 @@ export default function CobrancasFiscalTab({
     }
 
     if (action === "boleto") {
-      setLoadingAction(`${contrato.id}-boleto`);
-      // Simulate API Delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
       setGeneratedBoleto({
-        url: "/boleto.pdf",
-        barcode: "00190.50095 40144.816069 06809.350314 3 00000000" + Math.floor(contrato.valor * 100).toString().padStart(10, '0'),
+        url: "#",
+        barcode: "", 
+        date: contrato.proximoVencimento || new Date().toLocaleDateString("pt-BR"),
+        value: contrato.valor,
+        client: contrato.cliente
       });
-      
-      const newEvent: TimelineEvent = {
-        id: Math.random().toString(36).substr(2, 9),
-        date: new Date().toLocaleDateString("pt-BR"),
-        status: "success",
-        type: "payment",
-        title: "Boleto Gerado",
-        description: `Boleto no valor de ${formatBRL(contrato.valor)} gerado via ${intStates[0].connectedProvider || 'Asaas'}`
-      };
-
-      setTimelineEvents(prev => ({
-        ...prev,
-        [contrato.clientId]: [newEvent, ...(prev[contrato.clientId] || [])]
-      }));
-
+      setIsReviewingBoleto(true);
       setShowBoletoModal(true);
-      setLoadingAction(null);
       return;
     }
 
@@ -1039,68 +1027,262 @@ export default function CobrancasFiscalTab({
         </DialogContent>
       </Dialog>
 
-      {/* Boleto Modal */}
+      {/* Boleto Modal with Review Step */}
       <Dialog open={showBoletoModal} onOpenChange={setShowBoletoModal}>
-        <DialogContent className="sm:max-w-[450px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
-          <div className="bg-primary p-8 text-white">
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                <FileText size={24} />
+        <DialogContent className="sm:max-w-[500px] rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl bg-card">
+          {isReviewingBoleto ? (
+            <div className="flex flex-col h-full">
+              <div className="bg-primary/10 p-8 border-b border-primary/20">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+                    <Receipt size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-foreground uppercase tracking-tight">Conferir Dados</h2>
+                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Passo 1 de 2: Revisão</p>
+                  </div>
+                </div>
               </div>
-              <Badge className="bg-white/20 text-white border-none text-[10px] uppercase font-black tracking-widest">BOLETO GERADO</Badge>
-            </div>
-            <h2 className="text-2xl font-black mb-1">{selectedClient?.cliente}</h2>
-            <p className="text-white/60 text-xs font-bold uppercase tracking-widest">{selectedClient?.plano}</p>
-          </div>
-          <div className="p-8 bg-card space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Valor</p>
-                <p className="text-xl font-black text-foreground">{selectedClient && formatBRL(selectedClient.valor)}</p>
-              </div>
-              <div className="space-y-1 text-right">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Vencimento</p>
-                <p className="text-xl font-black text-primary">{selectedClient?.proximoVencimento}</p>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Linha Digitável</p>
-              <div className="bg-muted/50 p-3 rounded-xl border border-border/40 font-mono text-[11px] break-all leading-relaxed">
-                {generatedBoleto?.barcode}
-              </div>
-              <Button variant="ghost" size="sm" className="w-full text-[10px] font-black h-8 gap-2" onClick={() => {
-                navigator.clipboard.writeText(generatedBoleto?.barcode || "");
-                toast.success("Código copiado!");
-              }}>
-                COPIAR CÓDIGO DE BARRAS
-              </Button>
-            </div>
+              <div className="p-8 space-y-6">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Valor da Cobrança</Label>
+                      <div className="relative">
+                        <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input 
+                          type="number"
+                          value={generatedBoleto?.value}
+                          onChange={(e) => setGeneratedBoleto(prev => prev ? { ...prev, value: parseFloat(e.target.value) } : null)}
+                          className="pl-9 rounded-xl border-border/40 font-bold"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Data de Vencimento</Label>
+                      <div className="relative">
+                        <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input 
+                          value={generatedBoleto?.date}
+                          onChange={(e) => setGeneratedBoleto(prev => prev ? { ...prev, date: e.target.value } : null)}
+                          className="pl-9 rounded-xl border-border/40 font-bold"
+                          placeholder="DD/MM/AAAA"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-            <div className="flex gap-3">
-              <Button className="flex-1 rounded-2xl font-black h-12" onClick={() => {
-                if (generatedBoleto?.url) {
-                  const link = document.createElement('a');
-                  link.href = generatedBoleto.url;
-                  link.download = `boleto_${selectedClient?.cliente.replace(/\s+/g, '_') || 'cobranca'}.pdf`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  toast.success("Download iniciado com sucesso!");
-                }
-              }}>
-                <Download size={16} className="mr-2" /> BAIXAR PDF
-              </Button>
-              <Button variant="outline" className="flex-1 rounded-2xl font-black h-12" onClick={() => {
-                setShowBoletoModal(false);
-                if (selectedClient) {
-                  handleAction(selectedClient, "email");
-                }
-              }}>
-                <Send size={16} className="mr-2" /> ENVIAR EMAIL
-              </Button>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cliente / Sacado</Label>
+                    <Input 
+                      value={generatedBoleto?.client}
+                      onChange={(e) => setGeneratedBoleto(prev => prev ? { ...prev, client: e.target.value } : null)}
+                      className="rounded-xl border-border/40 font-bold"
+                    />
+                  </div>
+
+                  <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex gap-3 items-start">
+                    <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-amber-700 font-medium leading-relaxed">
+                      Ao clicar em gerar, o sistema irá processar o boleto no gateway configurado (Asaas) e criar a linha digitável para pagamento.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button variant="ghost" className="flex-1 rounded-2xl font-bold h-12" onClick={() => setShowBoletoModal(false)}>
+                    CANCELAR
+                  </Button>
+                  <Button 
+                    className="flex-1 rounded-2xl font-black h-12 shadow-lg shadow-primary/30" 
+                    onClick={async () => {
+                      setLoadingAction("generating-final");
+                      await new Promise(r => setTimeout(r, 1200));
+                      
+                      setGeneratedBoleto(prev => prev ? {
+                        ...prev,
+                        barcode: "00190.50095 40144.816069 06809.350314 3 00000000" + Math.floor(prev.value * 100).toString().padStart(10, '0')
+                      } : null);
+                      
+                      const newEvent: TimelineEvent = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        date: new Date().toLocaleDateString("pt-BR"),
+                        status: "success",
+                        type: "payment",
+                        title: "Boleto Gerado",
+                        description: `Boleto no valor de ${formatBRL(generatedBoleto?.value || 0)} gerado após revisão.`
+                      };
+
+                      if (selectedClient) {
+                        setTimelineEvents(prev => ({
+                          ...prev,
+                          [selectedClient.clientId]: [newEvent, ...(prev[selectedClient.clientId] || [])]
+                        }));
+                      }
+
+                      setIsReviewingBoleto(false);
+                      setLoadingAction(null);
+                      toast.success("Boleto gerado com sucesso!");
+                    }}
+                    disabled={loadingAction === "generating-final"}
+                  >
+                    {loadingAction === "generating-final" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Zap size={16} className="mr-2" />}
+                    GERAR BOLETO AGORA
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="bg-primary p-8 text-white">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                    <FileText size={24} />
+                  </div>
+                  <Badge className="bg-white/20 text-white border-none text-[10px] uppercase font-black tracking-widest">BOLETO PRONTO</Badge>
+                </div>
+                <h2 className="text-2xl font-black mb-1">{generatedBoleto?.client}</h2>
+                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">{selectedClient?.plano}</p>
+              </div>
+              <div className="p-8 bg-card space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Valor</p>
+                    <p className="text-xl font-black text-foreground">{generatedBoleto && formatBRL(generatedBoleto.value)}</p>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Vencimento</p>
+                    <p className="text-xl font-black text-primary">{generatedBoleto?.date}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Linha Digitável</p>
+                  <div className="bg-muted/50 p-3 rounded-xl border border-border/40 font-mono text-[11px] break-all leading-relaxed">
+                    {generatedBoleto?.barcode}
+                  </div>
+                  <Button variant="ghost" size="sm" className="w-full text-[10px] font-black h-8 gap-2" onClick={() => {
+                    navigator.clipboard.writeText(generatedBoleto?.barcode || "");
+                    toast.success("Código copiado!");
+                  }}>
+                    COPIAR CÓDIGO DE BARRAS
+                  </Button>
+                </div>
+
+                {/* Off-screen Invoice for PDF Generation (must be in DOM but not visible to user) */}
+                <div className="fixed top-0 left-[-9999px] pointer-events-none">
+                  <div ref={invoiceRef} className="p-10 bg-white text-slate-900 w-[800px] font-sans">
+                    <div className="flex justify-between items-start border-b-2 border-primary pb-8 mb-8">
+                      <div>
+                        <h1 className="text-4xl font-black text-primary tracking-tighter">TURBO CRM</h1>
+                        <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Hub de Gestão Financeira</p>
+                      </div>
+                      <div className="text-right">
+                        <h2 className="text-xl font-black uppercase">Fatura / Boleto</h2>
+                        <p className="text-sm font-medium text-slate-500">#{Math.floor(Math.random() * 1000000)}</p>
+                        <p className="text-sm font-medium text-slate-500">Emitido em: {new Date().toLocaleDateString("pt-BR")}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-12 mb-10">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Sacado (Cliente)</p>
+                        <p className="text-lg font-black text-slate-800">{generatedBoleto?.client}</p>
+                        <p className="text-sm text-slate-500 font-medium">Contrato: {selectedClient?.clientId}</p>
+                        <p className="text-sm text-slate-500 font-medium">Plano: {selectedClient?.plano}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pagamento</p>
+                        <p className="text-2xl font-black text-primary">{formatBRL(generatedBoleto?.value || 0)}</p>
+                        <p className="text-sm font-bold text-slate-800">Vencimento: {generatedBoleto?.date}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 mb-10">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Instruções de Pagamento</p>
+                      <ul className="text-xs text-slate-600 space-y-2 font-medium">
+                        <li>• Pagável em qualquer agência bancária ou casa lotérica até o vencimento.</li>
+                        <li>• Após o vencimento, cobrar multa de 2% e juros de 1% ao mês.</li>
+                        <li>• Não receber após 30 dias do vencimento.</li>
+                      </ul>
+                    </div>
+
+                    <div className="border-2 border-slate-900 p-6 rounded-2xl text-center">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Código de Barras / Linha Digitável</p>
+                      <p className="font-mono text-sm font-bold tracking-wider mb-4">{generatedBoleto?.barcode}</p>
+                      <div className="h-16 bg-slate-900 w-full rounded flex items-center justify-center">
+                        <div className="w-[90%] h-8 bg-white flex gap-1 px-2">
+                           {Array.from({length: 40}).map((_, i) => (
+                             <div key={i} className="flex-1 bg-black" style={{ width: Math.random() > 0.5 ? '2px' : '4px' }} />
+                           ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-12 pt-8 border-t border-slate-100 text-center">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Autenticação Mecânica • Turbo CRM Hub</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button 
+                    className="flex-1 rounded-2xl font-black h-12 shadow-lg shadow-primary/20" 
+                    onClick={async () => {
+                      if (invoiceRef.current && generatedBoleto) {
+                        try {
+                          setLoadingAction("downloading-pdf");
+                          toast.loading("Gerando PDF profissional...");
+                          
+                          await new Promise(r => setTimeout(r, 500));
+                          
+                          const element = invoiceRef.current;
+                          const canvas = await html2canvas(element, {
+                            scale: 2,
+                            logging: false,
+                            useCORS: true,
+                            backgroundColor: "#ffffff"
+                          });
+                          
+                          const imgData = canvas.toDataURL("image/png");
+                          const pdf = new jsPDF({
+                            orientation: "portrait",
+                            unit: "px",
+                            format: [canvas.width, canvas.height]
+                          });
+                          
+                          pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+                          pdf.save(`fatura_${generatedBoleto.client.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
+                          
+                          toast.dismiss();
+                          toast.success("Download concluído com sucesso!");
+                        } catch (error) {
+                          console.error("Erro ao gerar PDF:", error);
+                          toast.dismiss();
+                          toast.error("Falha ao gerar o arquivo PDF.");
+                        } finally {
+                          setLoadingAction(null);
+                        }
+                      }
+                    }}
+                    disabled={loadingAction === "downloading-pdf"}
+                  >
+                    {loadingAction === "downloading-pdf" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download size={16} className="mr-2" />}
+                    BAIXAR PDF REAL
+                  </Button>
+                  <Button variant="outline" className="flex-1 rounded-2xl font-black h-12" onClick={() => {
+                    setShowBoletoModal(false);
+                    if (selectedClient) {
+                      handleAction(selectedClient, "email");
+                    }
+                  }}>
+                    <Send size={16} className="mr-2" /> ENVIAR EMAIL
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
