@@ -2,21 +2,27 @@ import React, { useState } from 'react';
 import { useFinance, FinancialTransaction } from '@/hooks/useFinance';
 import { 
   DollarSign, Clock, CheckCircle2, AlertCircle, Plus, 
-  ArrowUpCircle, ArrowDownCircle, Search, Filter, Trash2
+  ArrowUpCircle, ArrowDownCircle, Search, Filter, Trash2,
+  Package, Globe, Edit3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { TransacaoModal } from './LancamentosTab';
 
 interface LeadFinanceTabProps {
   leadId: string;
   leadName: string;
+  products?: any[];
+  siteUrl?: string;
 }
 
-export const LeadFinanceTab = ({ leadId, leadName }: LeadFinanceTabProps) => {
+export const LeadFinanceTab = ({ leadId, leadName, products = [], siteUrl }: LeadFinanceTabProps) => {
   const { transactions, loading, saveTransaction, deleteTransaction } = useFinance(leadId);
+  const [showModal, setShowModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
 
   const formatBRL = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -26,6 +32,21 @@ export const LeadFinanceTab = ({ leadId, leadName }: LeadFinanceTabProps) => {
     paid: transactions.filter(t => t.tipo === 'entrada' && t.status === 'pago').reduce((acc, t) => acc + t.valor, 0),
     pending: transactions.filter(t => t.tipo === 'entrada' && t.status === 'pendente').reduce((acc, t) => acc + t.valor, 0),
     mrr: transactions.filter(t => t.tipo === 'entrada' && t.classificacao === 'recorrente').reduce((acc, t) => acc + t.valor, 0),
+  };
+
+  const handleOpenNew = () => {
+    setEditingTransaction(undefined);
+    setShowModal(true);
+  };
+
+  const handleOpenEdit = (t: FinancialTransaction) => {
+    setEditingTransaction(t);
+    setShowModal(true);
+  };
+
+  const handleSave = async (t: Partial<FinancialTransaction>) => {
+    await saveTransaction(t);
+    setShowModal(false);
   };
 
   if (loading && transactions.length === 0) {
@@ -38,6 +59,34 @@ export const LeadFinanceTab = ({ leadId, leadName }: LeadFinanceTabProps) => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {showModal && (
+        <TransacaoModal 
+          transaction={editingTransaction}
+          onClose={() => setShowModal(false)}
+          onSave={handleSave}
+          preFilledLeadId={leadId}
+          preFilledLeadName={leadName}
+        />
+      )}
+
+      {/* Info do Negócio Associado */}
+      <div className="flex flex-wrap gap-2 items-center pb-2 border-b border-border/40">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/40">
+          <Package size={12} className="text-muted-foreground" />
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
+            {products.length} {products.length === 1 ? 'Produto' : 'Produtos'} no Funil
+          </span>
+        </div>
+        {siteUrl && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/40">
+            <Globe size={12} className="text-muted-foreground" />
+            <span className="text-[10px] font-bold text-muted-foreground lowercase truncate max-w-[150px]">
+              {siteUrl}
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* Resumo Financeiro do Lead */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-emerald-500/5 border-emerald-500/10 shadow-sm">
@@ -49,7 +98,6 @@ export const LeadFinanceTab = ({ leadId, leadName }: LeadFinanceTabProps) => {
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Total Recebido</span>
             </div>
             <p className="text-2xl font-black text-emerald-700">{formatBRL(totals.paid)}</p>
-            <p className="text-[10px] text-emerald-600/70 font-bold mt-1">Sincronizado com Financeiro</p>
           </CardContent>
         </Card>
 
@@ -62,7 +110,6 @@ export const LeadFinanceTab = ({ leadId, leadName }: LeadFinanceTabProps) => {
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Pendente</span>
             </div>
             <p className="text-2xl font-black text-amber-700">{formatBRL(totals.pending)}</p>
-            <p className="text-[10px] text-amber-600/70 font-bold mt-1">Aguardando confirmação</p>
           </CardContent>
         </Card>
 
@@ -72,10 +119,9 @@ export const LeadFinanceTab = ({ leadId, leadName }: LeadFinanceTabProps) => {
               <div className="p-1.5 bg-primary/10 rounded-lg">
                 <DollarSign className="h-4 w-4 text-primary" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-primary">MRR (Recorrente)</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary">MRR</span>
             </div>
             <p className="text-2xl font-black text-primary">{formatBRL(totals.mrr)}</p>
-            <p className="text-[10px] text-primary/70 font-bold mt-1">Valor mensal recorrente</p>
           </CardContent>
         </Card>
       </div>
@@ -84,13 +130,14 @@ export const LeadFinanceTab = ({ leadId, leadName }: LeadFinanceTabProps) => {
       <Card className="bg-white/50 backdrop-blur-sm border-muted shadow-sm overflow-hidden">
         <CardHeader className="pb-4 pt-4 border-b flex flex-row items-center justify-between bg-muted/20">
           <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
-            <DollarSign className="h-4 w-4" /> Histórico Financeiro Unificado
+            <DollarSign className="h-4 w-4" /> Histórico Financeiro
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-tight">
-              <Filter className="h-3 w-3 mr-1" /> Filtrar
-            </Button>
-            <Button size="sm" className="h-8 text-[10px] font-black uppercase tracking-tight shadow-md">
+            <Button 
+              size="sm" 
+              onClick={handleOpenNew}
+              className="h-8 text-[10px] font-black uppercase tracking-tight shadow-md"
+            >
               <Plus className="h-3 w-3 mr-1" /> Nova Transação
             </Button>
           </div>
@@ -99,8 +146,7 @@ export const LeadFinanceTab = ({ leadId, leadName }: LeadFinanceTabProps) => {
           {transactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 opacity-40">
               <DollarSign className="h-12 w-12 mb-4 text-muted-foreground" />
-              <p className="text-xs font-black uppercase tracking-widest">Nenhuma transação registrada</p>
-              <p className="text-[10px] mt-2">Associe este lead a lançamentos no módulo Financeiro</p>
+              <p className="text-xs font-black uppercase tracking-widest">Nenhuma transação</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -154,14 +200,24 @@ export const LeadFinanceTab = ({ leadId, leadName }: LeadFinanceTabProps) => {
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-                          onClick={() => t.id && deleteTransaction(t.id)}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-muted-foreground hover:text-primary"
+                            onClick={() => handleOpenEdit(t)}
+                          >
+                            <Edit3 size={12} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => t.id && deleteTransaction(t.id)}
+                          >
+                            <Trash2 size={12} />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -171,24 +227,6 @@ export const LeadFinanceTab = ({ leadId, leadName }: LeadFinanceTabProps) => {
           )}
         </CardContent>
       </Card>
-      
-      {/* Botão de Sincronização e Info */}
-      <div className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl border border-primary/10 border-dashed">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-            <Clock className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sincronização Ativa</p>
-            <p className="text-[9px] text-primary/70 font-bold leading-tight">
-              Os dados acima são espelhados em tempo real do portal financeiro principal.
-            </p>
-          </div>
-        </div>
-        <Button variant="ghost" size="sm" className="h-8 text-[9px] font-black uppercase text-primary hover:bg-primary/10">
-          RECARREGAR DADOS
-        </Button>
-      </div>
     </div>
   );
 };

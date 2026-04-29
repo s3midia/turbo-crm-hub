@@ -781,6 +781,8 @@ export const OpportunityModal = ({
                                 <LeadFinanceTab 
                                     leadId={opportunityId} 
                                     leadName={formData.leadIdentification} 
+                                    products={products}
+                                    siteUrl={formData.siteUrl}
                                 />
                             ) : (
                                 <div className="h-64 flex flex-col items-center justify-center opacity-40">

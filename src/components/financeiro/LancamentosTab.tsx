@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
   Plus, Search, Filter, FileSpreadsheet, Trash2, Check, Users, Calendar,
-  RefreshCw, Tag, ArrowUpCircle, ArrowDownCircle, Edit3 as Edit3Icon, X
+  RefreshCw, Tag, ArrowUpCircle, ArrowDownCircle, Edit3 as Edit3Icon, X,
+  Phone, Mail
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
@@ -17,13 +18,15 @@ function formatBRL(value: number) {
 const recorrenciaLabel = { unica: "Única", mensal: "Mensal", trimestral: "Trimestral", anual: "Anual" };
 const recorrenciaColor = { unica: "bg-muted text-muted-foreground", mensal: "bg-blue-500/10 text-blue-500", trimestral: "bg-violet-500/10 text-violet-500", anual: "bg-emerald-500/10 text-emerald-500" };
 
-interface ModalProps {
+export interface TransacaoModalProps {
   transaction?: FinancialTransaction;
   onClose: () => void;
   onSave: (t: Partial<FinancialTransaction>) => void;
+  preFilledLeadId?: string;
+  preFilledLeadName?: string;
 }
 
-function TransacaoModal({ transaction, onClose, onSave }: ModalProps) {
+export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, preFilledLeadName }: TransacaoModalProps) {
   const [form, setForm] = useState({
     tipo: (transaction?.tipo ?? "entrada") as "entrada" | "saida",
     descricao: transaction?.descricao ?? "",
@@ -31,8 +34,8 @@ function TransacaoModal({ transaction, onClose, onSave }: ModalProps) {
     data_lancamento: transaction?.data_lancamento ?? "",
     vencimento: transaction?.vencimento ?? "",
     recebimento: transaction?.recebimento ?? "",
-    lead_nome: transaction?.lead_nome ?? "",
-    lead_id: transaction?.lead_id ?? "",
+    lead_nome: transaction?.lead_nome ?? preFilledLeadName ?? "",
+    lead_id: transaction?.lead_id ?? preFilledLeadId ?? "",
     categoria: transaction?.categoria ?? "",
     recorrencia: (transaction?.recorrencia ?? "unica") as FinancialTransaction["recorrencia"],
     status: (transaction?.status ?? "pendente") as FinancialTransaction["status"],
@@ -60,9 +63,9 @@ function TransacaoModal({ transaction, onClose, onSave }: ModalProps) {
     try {
       const { data, error } = await supabase
         .from('leads')
-        .select('id, company_name')
-        .ilike('company_name', `%${term}%`)
-        .limit(5);
+        .select('id, company_name, phone, email, niche')
+        .or(`company_name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`)
+        .limit(10);
 
       if (!error && data) {
         setLeadsResults(data);
@@ -224,7 +227,26 @@ function TransacaoModal({ transaction, onClose, onSave }: ModalProps) {
                     >
                       <div className="flex flex-col">
                         <span className="font-bold">{lead.company_name}</span>
-                        <span className="text-[10px] text-muted-foreground font-mono">{lead.id}</span>
+                        <div className="flex items-center gap-3 mt-1">
+                          {lead.phone && (
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Phone size={10} className="text-primary/60" /> {lead.phone}
+                            </span>
+                          )}
+                          {lead.email && (
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Mail size={10} className="text-primary/60" /> {lead.email}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          {lead.niche && (
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary tracking-widest">
+                              {lead.niche}
+                            </span>
+                          )}
+                          <span className="text-[9px] text-muted-foreground/60 font-mono">ID: {lead.id}</span>
+                        </div>
                       </div>
                       <Plus size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
