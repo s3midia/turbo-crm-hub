@@ -6,53 +6,53 @@ function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "curre
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 const kpis = [
-  { label: "Faturamento Total", value: "R$ 281,7k", sub: "Últimos 12 meses", trend: "+18.2%", up: true },
-  { label: "Clientes Ativos", value: "14", sub: "Com contratos vigentes", trend: "+23.9%", up: true },
-  { label: "Taxa de Crescimento", value: "18.2%", sub: "Vs. mesmo período", trend: "+5.4pp", up: true },
-  { label: "Inadimplências", value: "3", sub: "Pagamentos vencidos", trend: "-11.9%", up: false },
-  { label: "Projetos em Andamento", value: "7", sub: "Em execução agora", trend: "+19.3%", up: true },
-  { label: "Projetos Concluídos", value: "28", sub: "No ano corrente", trend: "+12.7%", up: true },
+  { label: "Faturamento Total", value: "R$ 0,00", sub: "Últimos 12 meses", trend: "0%", up: true },
+  { label: "Clientes Ativos", value: "0", sub: "Com contratos vigentes", trend: "0%", up: true },
+  { label: "Taxa de Crescimento", value: "0%", sub: "Vs. mesmo período", trend: "0pp", up: true },
+  { label: "Inadimplências", value: "0", sub: "Pagamentos vencidos", trend: "0%", up: false },
+  { label: "Projetos em Andamento", value: "0", sub: "Em execução agora", trend: "0%", up: true },
+  { label: "Projetos Concluídos", value: "0", sub: "No ano corrente", trend: "0%", up: true },
 ];
 
 // ── Focus Areas ───────────────────────────────────────────────────────────────
 const focusAreas = [
-  { name: "Financeiro", status: "Pendente", trendUp: null },
-  { name: "Stakeholders", status: "Sucesso", trendUp: true },
-  { name: "Processos Internos", status: "Pendente", trendUp: null },
-  { name: "Capacidade Operacional", status: "Sucesso", trendUp: true },
+  { name: "Financeiro", status: "Pendente", trendUp: null, tab: "dashboard" },
+  { name: "Stakeholders", status: "Pendente", trendUp: null, tab: "cobrancas" },
+  { name: "Processos Internos", status: "Pendente", trendUp: null, tab: "lancamentos" },
+  { name: "Capacidade Operacional", status: "Pendente", trendUp: null, tab: "equipe" },
 ];
 
 const orgPerf = [
-  { name: "CEO / Estratégia", status: "Sucesso", trendUp: true },
+  { name: "CEO / Estratégia", status: "Pendente", trendUp: null },
   { name: "Vendas", status: "Pendente", trendUp: null },
-  { name: "Operações", status: "Sucesso", trendUp: true },
+  { name: "Operações", status: "Pendente", trendUp: null },
   { name: "Financeiro", status: "Pendente", trendUp: null },
 ];
 
 // ── Cash Flow Data (quarterly) ────────────────────────────────────────────────
 const cashFlowQ = [
-  { label: "Q1", points: [16.2, 16.8, 16.5, 17.1, 16.9, 17.4] },
-  { label: "Q2", points: [17.4, 16.6, 16.8, 17.2, 16.5, 16.8] },
-  { label: "Q3", points: [16.8, 17.0, 17.5, 17.8, 17.2, 17.6] },
-  { label: "Q4", points: [17.6, 17.9, 17.4, 17.8, 18.0, 18.2] },
+  { label: "Q1", points: [0, 0, 0, 0, 0, 0] },
+  { label: "Q2", points: [0, 0, 0, 0, 0, 0] },
+  { label: "Q3", points: [0, 0, 0, 0, 0, 0] },
+  { label: "Q4", points: [0, 0, 0, 0, 0, 0] },
 ];
 const allPoints = cashFlowQ.flatMap(q => q.points);
 const minPt = Math.min(...allPoints);
 const maxPt = Math.max(...allPoints);
 const chartW = 340;
 const chartH = 100;
-function toX(i: number, total: number) { return (i / (total - 1)) * chartW; }
+function toX(i: number, total: number) { return total > 1 ? (i / (total - 1)) * chartW : 0; }
 function toY(v: number) { return chartH - ((v - minPt) / (maxPt - minPt + 0.5)) * chartH; }
 
 // ── Risk Area Data ────────────────────────────────────────────────────────────
 const riskMonths = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-const high =   [5,  5,  6,  5,  5,  6,  5,  6,  7,  8,  8,  9];
-const medium = [10, 11, 12, 11, 12, 13, 13, 14, 15, 16, 17, 18];
-const low =    [15, 16, 18, 17, 18, 19, 19, 20, 21, 22, 23, 24];
+const high =   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const medium = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const low =    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 function buildPath(data: number[], minV: number, maxV: number, w: number, h: number) {
   return data.map((v, i) => {
-    const x = (i / (data.length - 1)) * w;
+    const x = data.length > 1 ? (i / (data.length - 1)) * w : 0;
     const y = h - ((v - minV) / (maxV - minV + 1)) * h;
     return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
   }).join(" ");
@@ -66,9 +66,9 @@ const rMin = 0, rMax = 28;
 
 // ── Initiative Bar Data ───────────────────────────────────────────────────────
 const initiativeMonths = ["Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const overdue = [18, 15, 19, 20, 14, 13, 15, 17];
-const budget  = [5,  4,  5,  8,  3,  2,  4,  5];
-const maxInitBar = Math.max(...overdue);
+const overdue = [0, 0, 0, 0, 0, 0, 0, 0];
+const budget  = [0, 0, 0, 0, 0, 0, 0, 0];
+const maxInitBar = Math.max(...overdue, 1);
 
 // ── Animated SVG line ─────────────────────────────────────────────────────────
 function AnimatedLine({ d, stroke, strokeWidth = 1.5 }: { d: string; stroke: string; strokeWidth?: number }) {
@@ -124,7 +124,11 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function DashboardFinanceiro() {
+interface DashboardFinanceiroProps {
+  onTabChange?: (tab: string) => void;
+}
+
+export default function DashboardFinanceiro({ onTabChange }: DashboardFinanceiroProps) {
   const flatPoints = cashFlowQ.flatMap(q => q.points);
   const linePath = flatPoints.map((v, i) => {
     const x = toX(i, flatPoints.length);
@@ -174,7 +178,8 @@ export default function DashboardFinanceiro() {
               ))}
             </div>
             {focusAreas.map((a, i) => (
-              <div key={i} className="grid grid-cols-3 items-center py-3 border-b border-border/15 last:border-0">
+              <div key={i} className="grid grid-cols-3 items-center py-3 border-b border-border/15 last:border-0 group cursor-pointer hover:bg-muted/50 rounded-lg transition-all"
+                onClick={() => a.tab && onTabChange?.(a.tab)}>
                 <span className="text-[12px] font-medium text-foreground">{a.name}</span>
                 <StatusBadge status={a.status} />
                 <span className={cn("text-base font-bold",
@@ -223,10 +228,6 @@ export default function DashboardFinanceiro() {
               <path d={areaPath} fill="url(#cfGrad2)" />
               <AnimatedLine d={linePath} stroke="hsl(var(--primary))" strokeWidth={2} />
               <circle cx={peakX} cy={peakY} r="3.5" fill="hsl(var(--primary))" />
-              <rect x={peakX - 25} y={peakY - 20} width="50" height="16" rx="4" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="1" />
-              <text x={peakX} y={peakY - 8} textAnchor="middle" fontSize="8" fill="hsl(var(--foreground))" fontWeight="600">
-                R$ {flatPoints[peakIdx].toFixed(1)}k
-              </text>
             </svg>
             <div className="flex justify-between mt-1">
               {cashFlowQ.map(q => (
@@ -254,13 +255,12 @@ export default function DashboardFinanceiro() {
               <div key={m} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
                 <AnimatedInitBar
                   height={(overdue[i] / maxInitBar) * 80}
-                  budgetHeight={(budget[i] / overdue[i]) * 100}
+                  budgetHeight={(budget[i] / (overdue[i] || 1)) * 100}
                 />
                 <span className="text-[9px] font-medium text-muted-foreground mt-1">{m}</span>
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-2">Pico: Ago — Vencidas 20 · Orçamento 8</p>
         </div>
 
         {/* Risks Area Chart */}

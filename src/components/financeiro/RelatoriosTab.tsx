@@ -1,33 +1,26 @@
 import React, { useState } from "react";
-import { FileText, Download, TrendingUp, TrendingDown, BarChart3, PieChart, ChevronDown } from "lucide-react";
+import { FileText, Download, TrendingUp, TrendingDown, BarChart3, PieChart, ChevronDown, Edit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 function pct(v: number, t: number) { return t === 0 ? "0%" : `${((v / t) * 100).toFixed(1)}%`; }
 
 const dreData = {
-  receitaBruta: 23476,
-  deducoes: 1174,
+  receitaBruta: 0,
+  deducoes: 0,
   get receitaLiquida() { return this.receitaBruta - this.deducoes; },
-  custosServicos: 1670,
+  custosServicos: 0,
   get lucroBruto() { return this.receitaLiquida - this.custosServicos; },
-  despesasOperacionais: 3000,
+  despesasOperacionais: 0,
   get lucroOperacional() { return this.lucroBruto - this.despesasOperacionais; },
-  impostos: 1409,
+  impostos: 0,
   get lucroLiquido() { return this.lucroOperacional - this.impostos; },
 };
 
 const balanceData = {
-  ativos: [
-    { descricao: "Caixa e Equivalentes", valor: 18806 },
-    { descricao: "Contas a Receber", valor: 6097 },
-    { descricao: "Equipamentos (líquido)", valor: 12400 },
-    { descricao: "Software e Licenças", valor: 3200 },
-  ],
-  passivos: [
-    { descricao: "Contas a Pagar", valor: 4670 },
-    { descricao: "Impostos a Recolher", valor: 1409 },
-  ],
+  ativos: [],
+  passivos: [],
 };
 
 const totalAtivos = balanceData.ativos.reduce((s, a) => s + a.valor, 0);
@@ -35,15 +28,19 @@ const totalPassivos = balanceData.passivos.reduce((s, p) => s + p.valor, 0);
 const patrimonioLiquido = totalAtivos - totalPassivos;
 
 const kpis = [
-  { label: "Margem Bruta", value: `${pct(dreData.lucroBruto, dreData.receitaBruta)}`, sub: "Eficiência de produção", icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-  { label: "Margem Líquida", value: `${pct(dreData.lucroLiquido, dreData.receitaBruta)}`, sub: "Lucro real / Receita", icon: BarChart3, color: "text-blue-500", bg: "bg-blue-500/10" },
-  { label: "EBITDA Est.", value: formatBRL(dreData.lucroOperacional + 800), sub: "Lucro op. + depreciação", icon: TrendingDown, color: "text-violet-500", bg: "bg-violet-500/10" },
-  { label: "ROI Médio", value: "84.2%", sub: "Retorno sobre investimento", icon: PieChart, color: "text-amber-500", bg: "bg-amber-500/10" },
+  { label: "Margem Bruta", value: "0%", sub: "Eficiência de produção", icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+  { label: "Margem Líquida", value: "0%", sub: "Lucro real / Receita", icon: BarChart3, color: "text-blue-500", bg: "bg-blue-500/10" },
+  { label: "EBITDA Est.", value: "R$ 0,00", sub: "Lucro op. + depreciação", icon: TrendingDown, color: "text-violet-500", bg: "bg-violet-500/10" },
+  { label: "ROI Médio", value: "0%", sub: "Retorno sobre investimento", icon: PieChart, color: "text-amber-500", bg: "bg-amber-500/10" },
 ];
 
 type ReportType = "dre" | "balancete" | "fluxo";
 
-export default function RelatoriosTab() {
+interface RelatoriosTabProps {
+  onTabChange?: (tab: string) => void;
+}
+
+export default function RelatoriosTab({ onTabChange }: RelatoriosTabProps) {
   const [activeReport, setActiveReport] = useState<ReportType>("dre");
   const [periodo, setPeriodo] = useState("Dezembro 2025");
 
@@ -100,25 +97,36 @@ export default function RelatoriosTab() {
             <h3 className="text-base font-black">Demonstração do Resultado do Exercício — {periodo}</h3>
           </div>
           {[
-            { label: "Receita Bruta", value: dreData.receitaBruta, level: 0, type: "normal" },
-            { label: "(-) Deduções e Impostos sobre Receita", value: -dreData.deducoes, level: 1, type: "deduction" },
-            { label: "= Receita Líquida", value: dreData.receitaLiquida, level: 0, type: "subtotal" },
-            { label: "(-) Custos dos Serviços Prestados", value: -dreData.custosServicos, level: 1, type: "deduction" },
-            { label: "= Lucro Bruto", value: dreData.lucroBruto, level: 0, type: "subtotal" },
-            { label: "(-) Despesas Operacionais", value: -dreData.despesasOperacionais, level: 1, type: "deduction" },
-            { label: "= Lucro Operacional (EBIT)", value: dreData.lucroOperacional, level: 0, type: "subtotal" },
-            { label: "(-) Impostos sobre o Lucro", value: -dreData.impostos, level: 1, type: "deduction" },
-            { label: "= LUCRO LÍQUIDO DO PERÍODO", value: dreData.lucroLiquido, level: 0, type: "total" },
+            { id: "receita", label: "Receita Bruta", value: dreData.receitaBruta, level: 0, type: "normal" },
+            { id: "deducoes", label: "(-) Deduções e Impostos sobre Receita", value: -dreData.deducoes, level: 1, type: "deduction" },
+            { id: "receita_liq", label: "= Receita Líquida", value: dreData.receitaLiquida, level: 0, type: "subtotal" },
+            { id: "custos", label: "(-) Custos dos Serviços Prestados", value: -dreData.custosServicos, level: 1, type: "deduction" },
+            { id: "lucro_bruto", label: "= Lucro Bruto", value: dreData.lucroBruto, level: 0, type: "subtotal" },
+            { id: "despesas", label: "(-) Despesas Operacionais", value: -dreData.despesasOperacionais, level: 1, type: "deduction", editable: true, tab: "equipe" },
+            { id: "lucro_op", label: "= Lucro Operacional (EBIT)", value: dreData.lucroOperacional, level: 0, type: "subtotal" },
+            { id: "impostos", label: "(-) Impostos sobre o Lucro", value: -dreData.impostos, level: 1, type: "deduction" },
+            { id: "lucro_liq", label: "= LUCRO LÍQUIDO DO PERÍODO", value: dreData.lucroLiquido, level: 0, type: "total" },
           ].map((row, i) => (
             <div key={i} className={cn(
-              "flex items-center justify-between py-3 border-b border-border/20 last:border-0",
+              "flex items-center justify-between py-3 border-b border-border/20 last:border-0 group cursor-default",
               row.type === "subtotal" ? "bg-muted/20 px-4 rounded-xl" : "px-4",
               row.type === "total" ? "bg-emerald-500/10 px-4 rounded-xl border-0 mt-2" : "",
             )}>
-              <span className={cn("text-sm",
-                row.level === 1 ? "ml-4 text-muted-foreground" : "font-bold text-foreground",
-                row.type === "total" && "font-black text-emerald-600"
-              )}>{row.label}</span>
+              <div className="flex items-center gap-2">
+                <span className={cn("text-sm",
+                  row.level === 1 ? "ml-4 text-muted-foreground" : "font-bold text-foreground",
+                  row.type === "total" && "font-black text-emerald-600"
+                )}>{row.label}</span>
+                {row.editable && (
+                  <button 
+                    onClick={() => onTabChange?.(row.tab!)}
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-md bg-primary/10 text-primary transition-all"
+                    title="Editar na aba correspondente"
+                  >
+                    <Edit2 size={10} />
+                  </button>
+                )}
+              </div>
               <span className={cn("font-black",
                 row.value >= 0 ? (row.type === "total" ? "text-emerald-600 text-lg" : "text-foreground") : "text-rose-500",
                 row.type === "total" && "text-xl"
@@ -139,7 +147,7 @@ export default function RelatoriosTab() {
               <TrendingUp size={16} /> ATIVO
             </h3>
             <div className="space-y-3">
-              {balanceData.ativos.map((a, i) => (
+              {balanceData.ativos.map((a: any, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">{a.descricao}</span>
                   <span className="text-sm font-bold text-foreground">{formatBRL(a.valor)}</span>
@@ -158,7 +166,7 @@ export default function RelatoriosTab() {
               <TrendingDown size={16} /> PASSIVO
             </h3>
             <div className="space-y-3">
-              {balanceData.passivos.map((p, i) => (
+              {balanceData.passivos.map((p: any, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">{p.descricao}</span>
                   <span className="text-sm font-bold text-foreground">{formatBRL(p.valor)}</span>
@@ -179,11 +187,11 @@ export default function RelatoriosTab() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Capital Social</span>
-                <span className="text-sm font-bold text-foreground">{formatBRL(20000)}</span>
+                <span className="text-sm font-bold text-foreground">{formatBRL(0)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Lucros Acumulados</span>
-                <span className="text-sm font-bold text-foreground">{formatBRL(patrimonioLiquido - 20000)}</span>
+                <span className="text-sm font-bold text-foreground">{formatBRL(patrimonioLiquido)}</span>
               </div>
               <div className="pt-3 border-t border-blue-500/20 flex items-center justify-between">
                 <span className="text-xs font-black text-blue-500 uppercase">Total PL</span>
@@ -203,18 +211,18 @@ export default function RelatoriosTab() {
           </h3>
           {[
             { section: "Atividades Operacionais", items: [
-              { label: "Recebimentos de clientes", value: 23476 },
-              { label: "Pagamentos a fornecedores", value: -4670 },
-              { label: "Impostos pagos", value: -1409 },
-            ], total: 17397, color: "emerald" },
+              { label: "Recebimentos de clientes", value: 0 },
+              { label: "Pagamentos a fornecedores", value: 0 },
+              { label: "Impostos pagos", value: 0 },
+            ], total: 0, color: "emerald" },
             { section: "Atividades de Investimento", items: [
-              { label: "Aquisição de equipamentos", value: -2400 },
-              { label: "Softwares e licenças", value: -800 },
-            ], total: -3200, color: "amber" },
+              { label: "Aquisição de equipamentos", value: 0 },
+              { label: "Softwares e licenças", value: 0 },
+            ], total: 0, color: "amber" },
             { section: "Atividades de Financiamento", items: [
-              { label: "Aporte de capital sócio", value: 5000 },
-              { label: "Distribuição de lucros", value: -3000 },
-            ], total: 2000, color: "blue" },
+              { label: "Aporte de capital sócio", value: 0 },
+              { label: "Distribuição de lucros", value: 0 },
+            ], total: 0, color: "blue" },
           ].map((s, si) => (
             <div key={si} className="mb-6">
               <h4 className={cn("text-xs font-black uppercase tracking-wider mb-3",
@@ -238,7 +246,7 @@ export default function RelatoriosTab() {
           ))}
           <div className="flex items-center justify-between py-4 px-6 rounded-2xl bg-primary/10 border border-primary/20 mt-4">
             <span className="font-black text-foreground">Variação Líquida do Caixa</span>
-            <span className="text-2xl font-black text-primary">{formatBRL(17397 - 3200 + 2000)}</span>
+            <span className="text-2xl font-black text-primary">{formatBRL(0)}</span>
           </div>
         </div>
       )}

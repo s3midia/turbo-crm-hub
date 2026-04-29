@@ -148,21 +148,21 @@ export default function FinanceiroPage() {
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
         {activeTab === "painel" && <FinanceiroDashboard onTabChange={handleTabChange} />}
-        {activeTab === "dashboard" && <DashboardFinanceiro />}
+        {activeTab === "dashboard" && <DashboardFinanceiro onTabChange={handleTabChange} />}
         {activeTab === "lancamentos" && (
           <LancamentosTab 
             onOpenProfile={handleOpenProfile} 
           />
         )}
         {activeTab === "conciliacao" && <ConciliacaoTab />}
-        {activeTab === "relatorios" && <RelatoriosTab />}
+        {activeTab === "relatorios" && <RelatoriosTab onTabChange={handleTabChange} />}
         {activeTab === "equipe" && (
           <EquipeFinanceiroTab 
             onOpenProfile={handleOpenProfile} 
           />
         )}
-        {activeTab === "investimentos" && <InvestimentosTab />}
-        {activeTab === "valuation" && <ValuationTab />}
+        {activeTab === "investimentos" && <InvestimentosTab onTabChange={handleTabChange} />}
+        {activeTab === "valuation" && <ValuationTab onTabChange={handleTabChange} />}
         {activeTab === "cobrancas" && (
           <CobrancasFiscalTab 
             externalSelectedClient={selectedClient}

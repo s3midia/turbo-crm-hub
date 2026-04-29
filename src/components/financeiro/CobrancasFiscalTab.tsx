@@ -174,17 +174,7 @@ export default function CobrancasFiscalTab({
   });
   const [generatedBoleto, setGeneratedBoleto] = useState<{ url: string, barcode: string } | null>(null);
 
-  // Simulation of timeline events
-  const [timelineEvents, setTimelineEvents] = useState<Record<string, TimelineEvent[]>>({
-    "CL-001": [
-      { id: "1", type: "payment", title: "Pagamento Confirmado", description: "Mensalidade Abril/2026", date: "05/04/2026", status: "success" },
-      { id: "2", type: "email", title: "Email Enviado", description: "Boleto de Abril enviado para cliente", date: "01/04/2026", status: "success" },
-      { id: "3", type: "contract", title: "Contrato Anexado", description: "Contrato_Manutencao_V2.pdf", date: "10/01/2026" },
-    ],
-    "CL-002": [
-      { id: "4", type: "system", title: "Cobrança Gerada", description: "Licença Anual 2026", date: "15/12/2025" },
-    ]
-  });
+  const [timelineEvents, setTimelineEvents] = useState<Record<string, TimelineEvent[]>>({});
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
@@ -208,8 +198,8 @@ export default function CobrancasFiscalTab({
           email: lead.email || "contato@empresa.com",
           telefone: lead.phone || "(11) 99999-9999",
           empresa: lead.company_name || "N/A",
-          plano: lead.niche === "white-label" ? "Plano Enterprise" : "Plano Standard",
-          valor: lead.status === "ganhou" ? 2500 : 1200,
+          plano: lead.plano || "N/A",
+          valor: lead.valor || 0,
           diaVencimento: 10,
           recorrencia: "mensal",
           ativo: lead.status !== "perdeu",
@@ -405,6 +395,21 @@ export default function CobrancasFiscalTab({
                           onChange={(e) => setEditedClient({...editedClient, telefone: e.target.value})}
                           className="bg-background border-primary/20 h-8 text-xs font-bold"
                           placeholder="Telefone"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Input 
+                          value={editedClient?.plano} 
+                          onChange={(e) => setEditedClient({...editedClient, plano: e.target.value})}
+                          className="bg-background border-primary/20 h-8 text-xs font-bold"
+                          placeholder="Plano"
+                        />
+                        <Input 
+                          type="number"
+                          value={editedClient?.valor} 
+                          onChange={(e) => setEditedClient({...editedClient, valor: parseFloat(e.target.value)})}
+                          className="bg-background border-primary/20 h-8 text-xs font-bold"
+                          placeholder="Valor"
                         />
                       </div>
                       <div className="flex gap-2">

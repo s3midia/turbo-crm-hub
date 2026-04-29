@@ -29,24 +29,14 @@ interface Despesa {
   categoria: string;
 }
 
-const FUNCIONARIOS: Funcionario[] = [
-  { id: 1, nome: "Carlos Mendes", cargo: "Dev Full-Stack", salario: 6500, inss: 715, fgts: 520, status: "pago", vencimento: "05/05/2026", email: "carlos.mendes@empresa.com", telefone: "(11) 98765-4321", dataAdmissao: "12/01/2024", cpf: "123.456.789-00" },
-  { id: 2, nome: "Ana Lima", cargo: "Designer UX/UI", salario: 4800, inss: 528, fgts: 384, status: "pago", vencimento: "05/05/2026", email: "ana.lima@empresa.com", telefone: "(11) 98888-7777", dataAdmissao: "05/03/2024", cpf: "234.567.890-11" },
-  { id: 3, nome: "Pedro Souza", cargo: "Vendas", salario: 3200, inss: 352, fgts: 256, status: "pendente", vencimento: "05/05/2026", email: "pedro.souza@empresa.com", telefone: "(11) 97777-6666", dataAdmissao: "20/06/2025", cpf: "345.678.901-22" },
-];
+const FUNCIONARIOS: Funcionario[] = [];
 
-const DESPESAS: Despesa[] = [
-  { id: 1, descricao: "Hospedagem AWS", tipo: "fixa", valor: 1450, vencimento: "15/05/2026", status: "pendente", categoria: "Infraestrutura" },
-  { id: 2, descricao: "API OpenAI", tipo: "variavel", valor: 220, vencimento: "19/05/2026", status: "pendente", categoria: "Tecnologia" },
-  { id: 3, descricao: "Consultoria Marketing", tipo: "fixa", valor: 3000, vencimento: "10/05/2026", status: "pendente", categoria: "Marketing" },
-  { id: 4, descricao: "Aluguel Escritório", tipo: "fixa", valor: 2200, vencimento: "01/05/2026", status: "pago", categoria: "Escritório" },
-  { id: 5, descricao: "Licenças de Software", tipo: "fixa", valor: 480, vencimento: "20/05/2026", status: "pendente", categoria: "Tecnologia" },
-];
+const DESPESAS: Despesa[] = [];
 
 const totalFolha = FUNCIONARIOS.reduce((s, f) => s + f.salario + f.inss + f.fgts, 0);
 const despesasFixas = DESPESAS.filter(d => d.tipo === "fixa").reduce((s, d) => s + d.valor, 0);
 const despesasVariaveis = DESPESAS.filter(d => d.tipo === "variavel").reduce((s, d) => s + d.valor, 0);
-const receitaRef = 23476;
+const receitaRef = 0;
 const comprometimento = ((totalFolha + despesasFixas) / receitaRef) * 100;
 
 export default function EquipeFinanceiroTab() {

@@ -23,21 +23,9 @@ const TIPOS_COLOR: Record<string, string> = {
   "Participações": "bg-cyan-500/10 text-cyan-600",
 };
 
-const INITIAL: Investimento[] = [
-  { id: 1, nome: "CDB Banco Inter 110% CDI", tipo: "Renda Fixa", aporte: 30000, rendimentoPct: 11.2, dataAporte: "01/01/2025", saldoAtual: 33360 },
-  { id: 2, nome: "Fundo Multimercado XP Macro", tipo: "Fundos", aporte: 15000, rendimentoPct: 8.5, dataAporte: "15/03/2025", saldoAtual: 16275 },
-  { id: 3, nome: "Servidores Dell PowerEdge", tipo: "Equipamentos", aporte: 12400, rendimentoPct: -8.0, dataAporte: "01/06/2024", saldoAtual: 11408 },
-  { id: 4, nome: "Sala Comercial (deprec.)", tipo: "Imóveis", aporte: 50000, rendimentoPct: 4.2, dataAporte: "01/01/2023", saldoAtual: 52100 },
-];
+const INITIAL: Investimento[] = [];
 
-const evolutionData = [
-  { month: "Jan", valor: 92000 },
-  { month: "Fev", valor: 96000 },
-  { month: "Mar", valor: 98500 },
-  { month: "Abr", valor: 101000 },
-  { month: "Mai", valor: 107000 },
-  { month: "Jun", valor: 113143 },
-];
+const evolutionData: any[] = [];
 const maxEvol = Math.max(...evolutionData.map(d => d.valor));
 
 export default function InvestimentosTab() {

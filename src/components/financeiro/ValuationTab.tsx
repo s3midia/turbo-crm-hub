@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Building2, TrendingUp, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
@@ -30,14 +31,7 @@ const SETORES = [
   { nome: "Indústria", multiplo: 2.0 },
 ];
 
-const historico = [
-  { mes: "Jan/25", multiplos: 320000, fcd: 295000, patrimonial: 262000 },
-  { mes: "Fev/25", multiplos: 340000, fcd: 312000, patrimonial: 268000 },
-  { mes: "Mar/25", multiplos: 380000, fcd: 355000, patrimonial: 273000 },
-  { mes: "Abr/25", multiplos: 410000, fcd: 388000, patrimonial: 280000 },
-  { mes: "Mai/25", multiplos: 450000, fcd: 420000, patrimonial: 290000 },
-  { mes: "Jun/25", multiplos: 502920, fcd: 471300, patrimonial: 305000 },
-];
+const historico: any[] = [];
 
 function calcularValuation(inputs: ValuationInput, bens: Bem[], metodo: MetodoValuation): { valor: number; min: number; max: number } {
   const setor = SETORES.find(s => s.nome === inputs.setor) || SETORES[0];
@@ -78,20 +72,16 @@ const METODO_INFO = {
 export default function ValuationTab() {
   const [metodo, setMetodo] = useState<MetodoValuation>("multiplos");
   const [inputs, setInputs] = useState<ValuationInput>({
-    faturamento12m: 281712,
-    lucroLiquido: 225690,
-    ativosCirculantes: 42143,
-    passivos: 6079,
-    taxaCrescimento: 25,
+    faturamento12m: 0,
+    lucroLiquido: 0,
+    ativosCirculantes: 0,
+    passivos: 0,
+    taxaCrescimento: 0,
     setor: "Tecnologia / SaaS",
-    wacc: 18,
+    wacc: 0,
   });
 
-  const [bens, setBens] = useState<Bem[]>([
-    { id: "1", nome: "Maquinário de Produção", valor: 45000 },
-    { id: "2", nome: "Frota de Veículos", valor: 38000 },
-    { id: "3", nome: "Móveis e Utensílios", valor: 12500 },
-  ]);
+  const [bens, setBens] = useState<Bem[]>([]);
 
   const [novoBem, setNovoBem] = useState({ nome: "", valor: "" });
 
@@ -107,10 +97,10 @@ export default function ValuationTab() {
   const removeBem = (id: string) => {
     setBens(bens.filter(b => b.id !== id));
   };
-  const maxHistorico = Math.max(...historico.map(h => Math.max(h.multiplos, h.fcd, h.patrimonial)));
+  const maxHistorico = historico.length > 0 ? Math.max(...historico.map(h => Math.max(h.multiplos, h.fcd, h.patrimonial))) : 0;
 
   function updateInput(key: keyof ValuationInput, val: string) {
-    setInputs(prev => ({ ...prev, [key]: parseFloat(val) || prev[key] }));
+    setInputs(prev => ({ ...prev, [key]: parseFloat(val) || 0 }));
   }
 
   return (
@@ -203,12 +193,13 @@ export default function ValuationTab() {
             <div className="flex items-end gap-2 h-28">
               {historico.map((h, i) => {
                 const vals = { multiplos: h.multiplos, fcd: h.fcd, patrimonial: h.patrimonial };
-                const current = vals[metodo];
+                const current = vals[metodo as keyof typeof vals];
                 return (
                   <div key={i} className="flex-1 group flex flex-col items-center gap-1">
                     <div className="w-full relative">
                       <div className="w-full bg-primary/70 hover:bg-primary rounded-t-lg transition-all cursor-pointer relative group"
-                        style={{ height: `${(current / maxHistorico) * 80}px` }}>
+                        onClick={() => toast.info(`Relatório de ${h.mes} em desenvolvimento`)}
+                        style={{ height: `${maxHistorico > 0 ? (current / maxHistorico) * 80 : 0}px` }}>
                         <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-popover text-[9px] font-bold px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                           {formatBRL(current)}
                         </div>
@@ -218,12 +209,17 @@ export default function ValuationTab() {
                   </div>
                 );
               })}
+              {historico.length === 0 && (
+                <div className="w-full flex items-center justify-center h-full text-muted-foreground text-[10px] uppercase font-black tracking-widest opacity-40">
+                  Nenhum histórico disponível
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
               <span className="text-xs text-muted-foreground">Variação 6 meses</span>
-              <span className="font-black text-emerald-500 flex items-center gap-1">
+              <span className={cn("font-black flex items-center gap-1", historico.length > 0 ? "text-emerald-500" : "text-muted-foreground")}>
                 <ArrowUpRight size={14} />
-                +{(((historico[5][metodo] - historico[0][metodo]) / historico[0][metodo]) * 100).toFixed(1)}%
+                {historico.length > 0 ? `+${(((historico[historico.length-1][metodo] - historico[0][metodo]) / historico[0][metodo]) * 100).toFixed(1)}%` : "0%"}
               </span>
             </div>
           </div>
