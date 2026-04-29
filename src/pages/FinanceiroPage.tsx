@@ -51,6 +51,8 @@ const TABS: Tab[] = [
 
 export default function FinanceiroPage() {
   const [activeTab, setActiveTab] = useState<TabId>("painel");
+  const [selectedClient, setSelectedClient] = useState<any | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   function handleTabChange(tab: string) {
     if (TABS.some(t => t.id === tab)) {
@@ -141,13 +143,26 @@ export default function FinanceiroPage() {
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
         {activeTab === "painel" && <FinanceiroDashboard onTabChange={handleTabChange} />}
         {activeTab === "dashboard" && <DashboardFinanceiro />}
-        {activeTab === "lancamentos" && <LancamentosTab />}
+        {activeTab === "lancamentos" && (
+          <LancamentosTab 
+            onOpenProfile={handleOpenProfile} 
+          />
+        )}
         {activeTab === "conciliacao" && <ConciliacaoTab />}
         {activeTab === "relatorios" && <RelatoriosTab />}
         {activeTab === "equipe" && <EquipeFinanceiroTab />}
         {activeTab === "investimentos" && <InvestimentosTab />}
         {activeTab === "valuation" && <ValuationTab />}
-        {activeTab === "cobrancas" && <CobrancasFiscalTab />}
+        {activeTab === "cobrancas" && (
+          <CobrancasFiscalTab 
+            externalSelectedClient={selectedClient}
+            externalShowProfile={showProfile}
+            onProfileChange={(show, client) => {
+              setShowProfile(show);
+              if (client) setSelectedClient(client);
+            }}
+          />
+        )}
         {activeTab === "configuracoes" && <ConfiguracoesFinanceiroTab />}
       </div>
     </div>

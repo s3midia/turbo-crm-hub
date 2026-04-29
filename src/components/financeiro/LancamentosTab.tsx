@@ -186,7 +186,11 @@ function TransacaoModal({ transaction, onClose, onSave }: ModalProps) {
   );
 }
 
-export default function LancamentosTab() {
+interface LancamentosTabProps {
+  onOpenProfile?: (client: any) => void;
+}
+
+export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTipo, setFilterTipo] = useState<"todos" | "entrada" | "saida">("todos");
@@ -305,14 +309,30 @@ export default function LancamentosTab() {
                     <div className={cn("mt-0.5 w-2 h-2 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500" : "bg-rose-500")} />
                     <div>
                       <p className="text-[13px] font-bold text-foreground">{t.descricao}</p>
-                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <button 
+                        onClick={() => {
+                          if (onOpenProfile) {
+                            // Find the lead or create a mock lead from the name
+                            onOpenProfile({ 
+                              cliente: t.lead, 
+                              clientId: `CL-${t.id + 100}`,
+                              empresa: t.lead,
+                              email: "contato@empresa.com",
+                              status: "pago",
+                              plano: "Plano Standard",
+                              valor: t.valor
+                            });
+                          }
+                        }}
+                        className="text-[10px] text-primary hover:underline flex items-center gap-1 mt-0.5 font-bold"
+                      >
                         <Users size={10} /> {t.lead}
                         {t.classificacao && (
                           <span className={cn("ml-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase", t.classificacao === "recorrente" ? "bg-blue-500/10 text-blue-500" : "bg-muted text-muted-foreground")}>
                             {t.classificacao === "recorrente" ? "Recorrente" : "Não Recorrente"}
                           </span>
                         )}
-                      </p>
+                      </button>
                     </div>
                   </div>
                 </td>

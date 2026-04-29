@@ -54,10 +54,16 @@ interface Contrato {
   dataInicio?: string;
 }
 
-const CONTRATOS: Contrato[] = [
-  { id: 1, clientId: "CL-001", cliente: "Clínica Academias 6", plano: "Plano Manutenção CRM", valor: 1200, diaVencimento: 5, recorrencia: "mensal", ativo: true, proximoVencimento: "05/05/2026", ultimoEnvio: "05/04/2026", status: "pago" },
-  { id: 2, clientId: "CL-002", cliente: "ANDREA OLIVEIRA", plano: "Licença Anual Sistema", valor: 4800, diaVencimento: 15, recorrencia: "anual", ativo: true, proximoVencimento: "15/12/2026", ultimoEnvio: "15/12/2025", status: "pendente" },
-  { id: 3, clientId: "CL-003", cliente: "Giovanna Martins", plano: "Hospedagem + Suporte", valor: 350, diaVencimento: 20, recorrencia: "mensal", ativo: false, proximoVencimento: "Pausado", ultimoEnvio: "20/03/2026", status: "atrasado" },
+const CONTRATOS: Contrato[] = [];
+
+const PIPELINE_STAGES = [
+  { key: "novo", label: "Novo", color: "bg-slate-400" },
+  { key: "qualificacao", label: "Qualif.", color: "bg-purple-500" },
+  { key: "site_pronto", label: "Site", color: "bg-cyan-500" },
+  { key: "atendimento", label: "Contato", color: "bg-amber-500" },
+  { key: "reuniao", label: "Reunião", color: "bg-sky-500" },
+  { key: "fechamento", label: "Fechamento", color: "bg-orange-500" },
+  { key: "ganhou", label: "Contratado", color: "bg-emerald-500" },
 ];
 
 const integracoes = [
@@ -107,11 +113,26 @@ const defaultIntState = (): IntState => ({
   saving: false,
 });
 
-export default function CobrancasFiscalTab() {
-  const [contratos, setContratos] = useState(CONTRATOS);
-  const [intStates, setIntStates] = useState<IntState[]>(integracoes.map(defaultIntState));
-  const [selectedClient, setSelectedClient] = useState<Contrato | null>(null);
-  const [showTimeline, setShowTimeline] = useState(false);
+interface CobrancasFiscalTabProps {
+  externalSelectedClient?: any | null;
+  externalShowProfile?: boolean;
+  onProfileChange?: (show: boolean, client?: any) => void;
+}
+
+export default function CobrancasFiscalTab({ 
+  externalSelectedClient, 
+  externalShowProfile, 
+  onProfileChange 
+}: CobrancasFiscalTabProps) {
+  const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [intStates, setIntStates] = useState<IntState[]>(
+    integracoes.map(() => ({ ...defaultIntState(), connected: false, connectedProvider: "", apiKey: "" }))
+  );
+  
+  const selectedClient = externalSelectedClient;
+  const showTimeline = externalShowProfile;
+  const setShowTimeline = (show: boolean) => onProfileChange?.(show);
+  const setSelectedClient = (client: any) => onProfileChange?.(showTimeline ?? false, client);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   // Email and Boleto States
@@ -389,19 +410,63 @@ export default function CobrancasFiscalTab() {
 
             {/* Right Column: Cards & Insights */}
             <div className="lg:col-span-5 p-8 space-y-6">
-              {/* Kanban Integration Card */}
+              {/* Kanban Integration Card: Robust Pipeline Progress */}
               <div className="bg-gradient-to-br from-indigo-500/10 to-blue-500/5 rounded-3xl p-6 border border-indigo-500/20">
-                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Zap size={14} /> Status no Pipeline CRM
-                </h4>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-black text-foreground capitalize">{selectedClient.kanbanStage?.replace('_', ' ')}</p>
-                    <p className="text-[11px] font-bold text-muted-foreground">Responsável: Daniela S.</p>
-                  </div>
+                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center justify-between">
+                  <div className="flex items-center gap-2"><Zap size={14} /> Progresso no Pipeline</div>
                   <Badge className="bg-indigo-500 text-white border-none font-black text-[9px] px-3">
-                    FUNIL DE VENDAS
+                    REAL-TIME SYNC
                   </Badge>
+                </h4>
+                
+                <div className="space-y-6">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-xl font-black text-foreground capitalize">{selectedClient.kanbanStage?.replace('_', ' ')}</p>
+                      <p className="text-[11px] font-bold text-muted-foreground">Etapa atual do fechamento</p>
+                    </div>
+                  </div>
+                  
+                  {/* Stepper Component */}
+                  <div className="relative pt-2 pb-6">
+                     <div className="absolute top-[1.15rem] left-0 right-0 h-1 bg-muted rounded-full" />
+                     <div className="relative flex justify-between">
+                        {PIPELINE_STAGES.map((step, idx) => {
+                          const currentIdx = PIPELINE_STAGES.findIndex(s => s.key === (selectedClient.kanbanStage === 'ganhou' ? 'ganhou' : selectedClient.kanbanStage === 'site_pronto' ? 'site_pronto' : 'novo'));
+                          const isActive = idx <= currentIdx;
+                          return (
+                            <div key={step.key} className="flex flex-col items-center gap-2 z-10">
+                               <div className={cn(
+                                 "w-4 h-4 rounded-full border-4 border-card transition-all",
+                                 isActive ? "bg-primary scale-125" : "bg-muted"
+                               )} />
+                               <span className={cn("text-[8px] font-black uppercase tracking-tighter", isActive ? "text-primary" : "text-muted-foreground")}>
+                                 {step.label}
+                               </span>
+                            </div>
+                          );
+                        })}
+                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Services & Done Card */}
+              <div className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
+                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <Receipt size={14} className="text-amber-500" /> Serviços Contratados
+                </h4>
+                <div className="space-y-2">
+                   {[
+                     { name: "Criação de Site Institucional", status: "Entregue" },
+                     { name: "Licença de Software (SaaS)", status: "Ativo" },
+                     { name: "Hospedagem & Manutenção", status: "Ativo" }
+                   ].map((s, i) => (
+                     <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/10">
+                        <span className="text-[12px] font-bold text-foreground">{s.name}</span>
+                        <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[9px] font-black">{s.status}</Badge>
+                     </div>
+                   ))}
                 </div>
               </div>
 
