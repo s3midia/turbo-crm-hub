@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export interface FinancialTransaction {
   id?: string;
@@ -51,21 +52,36 @@ export const useFinance = (leadId?: string) => {
 
   const saveTransaction = async (transaction: Partial<FinancialTransaction>) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Clean undefined values to avoid Supabase errors
+      const cleanData = Object.fromEntries(
+        Object.entries(transaction).filter(([_, v]) => v !== undefined)
+      );
+
+      // Add user_id if available and not already set
+      if (user && !cleanData.user_id) {
+        (cleanData as any).user_id = user.id;
+      }
+
       if (transaction.id) {
         const { error } = await supabase
           .from('financial_transactions')
-          .update(transaction)
+          .update(cleanData)
           .eq('id', transaction.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('financial_transactions')
-          .insert([transaction]);
+          .insert([cleanData]);
         if (error) throw error;
       }
+      
+      console.log('Transaction saved successfully, re-fetching...');
       await fetchTransactions();
-    } catch (err) {
-      console.error('Error saving transaction:', err);
+    } catch (err: any) {
+      console.error('Error saving transaction:', err.message || err);
+      toast.error(`Erro ao salvar transação: ${err.message || 'Erro desconhecido'}`);
       throw err;
     }
   };

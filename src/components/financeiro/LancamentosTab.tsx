@@ -80,10 +80,10 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
 
   const categorias = form.tipo === "entrada" ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA;
 
-  function handleSave() {
+  async function handleSave() {
     if (!form.descricao || !form.valor || !form.vencimento) return;
-    onSave({
-      id: transaction?.id,
+    
+    const payload: any = {
       descricao: form.descricao,
       tipo: form.tipo,
       valor: parseFloat(form.valor.replace(",", ".")),
@@ -96,7 +96,13 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
       categoria: form.categoria || categorias[0],
       recorrencia: form.recorrencia,
       classificacao: form.tipo === "entrada" ? form.classificacao : undefined,
-    });
+    };
+
+    if (transaction?.id) {
+      payload.id = transaction.id;
+    }
+
+    await onSave(payload);
     onClose();
   }
 
@@ -295,19 +301,36 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     pendentes: transactions.filter(t => t.tipo === "entrada" && t.status === "pendente").reduce((s, t) => s + t.valor, 0),
   };
 
-  function handleUpsertTransaction(t: Partial<FinancialTransaction>) {
-    saveTransaction(t);
-  }
-
-  function handleMarkPaid(id: string) {
-    const t = transactions.find(x => x.id === id);
-    if (t) {
-      saveTransaction({ ...t, status: "pago" });
+  async function handleUpsertTransaction(t: Partial<FinancialTransaction>) {
+    try {
+      await saveTransaction(t);
+      toast.success("Transação salva com sucesso!");
+    } catch (err) {
+      // Error is handled in useFinance toast
     }
   }
 
-  function handleDelete(id: string) {
-    deleteTransaction(id);
+  async function handleMarkPaid(id: string) {
+    const t = transactions.find(x => x.id === id);
+    if (t) {
+      try {
+        await saveTransaction({ ...t, status: "pago" });
+        toast.success("Transação marcada como paga!");
+      } catch (err) {
+        // Error is handled in useFinance toast
+      }
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (confirm("Deseja realmente excluir esta transação?")) {
+      try {
+        await deleteTransaction(id);
+        toast.success("Transação excluída com sucesso!");
+      } catch (err) {
+        toast.error("Erro ao excluir transação.");
+      }
+    }
   }
 
   function openEdit(t: FinancialTransaction) {
