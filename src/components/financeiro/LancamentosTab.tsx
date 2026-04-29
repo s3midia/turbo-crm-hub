@@ -303,14 +303,22 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
           </thead>
           <tbody>
             {filtered.map((t, idx) => (
-              <tr key={t.id} className={cn("border-b border-border/30 hover:bg-muted/20 transition-all group", idx === filtered.length - 1 && "border-0")}>
+              <tr 
+                key={t.id} 
+                className={cn(
+                  "border-b border-border/30 hover:bg-muted/20 transition-all group cursor-pointer", 
+                  idx === filtered.length - 1 && "border-0"
+                )}
+                onClick={() => openEdit(t)}
+              >
                 <td className="px-5 py-4">
                   <div className="flex items-start gap-2">
                     <div className={cn("mt-0.5 w-2 h-2 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500" : "bg-rose-500")} />
                     <div>
                       <p className="text-[13px] font-bold text-foreground">{t.descricao}</p>
                       <button 
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           if (onOpenProfile) {
                             // Find the lead or create a mock lead from the name
                             onOpenProfile({ 
@@ -369,14 +377,14 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {t.status === "pendente" && (
-                      <button onClick={() => handleMarkPaid(t.id)} className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-600 transition-all" title="Marcar como Pago">
+                      <button onClick={(e) => { e.stopPropagation(); handleMarkPaid(t.id); }} className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-600 transition-all" title="Marcar como Pago">
                         <Check size={14} />
                       </button>
                     )}
-                    <button onClick={() => openEdit(t)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all" title="Editar transação">
+                    <button onClick={(e) => { e.stopPropagation(); openEdit(t); }} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all" title="Editar transação">
                       <Edit3Icon size={14} />
                     </button>
-                    <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 transition-all" title="Excluir">
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 transition-all" title="Excluir">
                       <Trash2 size={14} />
                     </button>
                   </div>

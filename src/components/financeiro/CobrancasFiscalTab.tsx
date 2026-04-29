@@ -133,10 +133,18 @@ export default function CobrancasFiscalTab({
   
   const selectedClient = externalSelectedClient;
   const showTimeline = externalShowProfile;
-  const setShowTimeline = (show: boolean) => onProfileChange?.(show);
-  const setSelectedClient = (client: any) => onProfileChange?.(showTimeline ?? false, client);
+  const setShowTimeline = (show: boolean) => {
+    onProfileChange?.(show, selectedClient);
+  };
+  const setSelectedClient = (client: any) => {
+    onProfileChange?.(showTimeline ?? false, client);
+  };
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Profile Tabs State
+  const [activeProfileTab, setActiveProfileTab] = useState<"historico" | "whatsapp" | "documentos">("historico");
+
 
   // Editing State
   const [isEditing, setIsEditing] = useState(false);
@@ -408,113 +416,201 @@ export default function CobrancasFiscalTab({
                       </button>
                     </>
                   )}
-                </div>
-              </div>
             </div>
           </div>
 
+          {/* Profile Navigation Tabs */}
+          <div className="flex px-8 border-b border-border/40 bg-muted/5">
+            {[
+              { id: "historico", label: "Histórico Unificado", icon: History },
+              { id: "whatsapp", label: "WhatsApp Chat", icon: MessageSquare, badge: "LIVE" },
+              { id: "documentos", label: "Documentos", icon: Paperclip },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveProfileTab(tab.id as any)}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-4 text-[11px] font-black uppercase tracking-widest transition-all relative",
+                  activeProfileTab === tab.id
+                    ? "text-primary border-b-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+                )}
+              >
+                <tab.icon size={14} />
+                {tab.label}
+                {tab.badge && (
+                  <span className="ml-1 text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-full animate-pulse">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-            {/* Left Column: Timeline & WhatsApp */}
+            {/* Left Column: Content based on Active Tab */}
             <div className="lg:col-span-7 border-r border-border/40 bg-muted/5">
-              <div className="p-8 pb-4">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                    <History size={16} className="text-primary" /> Histórico Unificado
-                  </h3>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" className="text-[10px] font-bold text-primary hover:bg-primary/5 rounded-xl border border-primary/10">
-                      WHATSAPP INTEGRADO
-                    </Button>
-                  </div>
-                </div>
+              <div className="p-8">
+                {activeProfileTab === "historico" && (
+                  <div className="space-y-8">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                        <History size={16} className="text-primary" /> Timeline de Atividades
+                      </h3>
+                    </div>
 
-                {/* WhatsApp Chat Preview Section */}
-                <div className="mb-10 bg-background/80 rounded-3xl border border-emerald-500/20 overflow-hidden shadow-sm">
-                  <div className="bg-emerald-500/10 p-3 flex items-center justify-between border-b border-emerald-500/20">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white">
-                        <MessageSquare size={14} />
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-black text-emerald-700 uppercase tracking-wider">Conversa WhatsApp</p>
-                        <p className="text-[9px] text-emerald-600/80 font-bold">Online · Sincronizado com Rafa S3</p>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-[9px] font-black text-emerald-700 hover:bg-emerald-500/10"
-                      onClick={() => navigate('/whatsapp')}
-                    >
-                      ABRIR CHAT COMPLETO <ExternalLink size={10} className="ml-1" />
-                    </Button>
-                  </div>
-                  <div className="p-4 space-y-3 max-h-[200px] overflow-y-auto custom-scrollbar">
-                    <div className="flex flex-col items-start max-w-[80%]">
-                      <div className="bg-muted p-2.5 rounded-2xl rounded-tl-none text-[12px] font-medium text-foreground">
-                        Olá {selectedClient.cliente}, tudo bem? Aqui é o Rafa da Torre S3. Vi que o contrato foi assinado!
-                      </div>
-                      <span className="text-[8px] text-muted-foreground mt-1 ml-1">10:45</span>
-                    </div>
-                    <div className="flex flex-col items-end w-full">
-                      <div className="bg-emerald-500 text-white p-2.5 rounded-2xl rounded-tr-none text-[12px] font-medium max-w-[80%]">
-                        Olá Rafa! Sim, acabamos de assinar. Muito animados com o novo site!
-                      </div>
-                      <span className="text-[8px] text-muted-foreground mt-1 mr-1">10:48 · Lida</span>
-                    </div>
-                    <div className="flex flex-col items-start max-w-[80%]">
-                      <div className="bg-muted p-2.5 rounded-2xl rounded-tl-none text-[12px] font-medium text-foreground">
-                        Show! Já estamos iniciando o setup aqui. Vou te enviar o primeiro boleto por e-mail agora.
-                      </div>
-                      <span className="text-[8px] text-muted-foreground mt-1 ml-1">10:50</span>
-                    </div>
-                  </div>
-                  <div className="p-2 bg-muted/30 border-t border-border/40 flex gap-2">
-                    <Input className="h-8 text-[11px] bg-background border-none shadow-none focus-visible:ring-0" placeholder="Enviar mensagem rápida..." />
-                    <Button size="sm" className="h-8 w-8 p-0 bg-emerald-500 hover:bg-emerald-600 rounded-xl">
-                      <Send size={14} className="text-white" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="relative pl-8 space-y-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary/50 before:via-border before:to-border/20">
-                {(timelineEvents[selectedClient.clientId] || []).map((event) => (
-                  <div key={event.id} className="relative group/item">
-                    <div className={cn(
-                      "absolute -left-[25px] top-1 w-5 h-5 rounded-full border-4 border-card z-10 transition-transform group-hover/item:scale-125 shadow-sm",
-                      event.type === "payment" ? "bg-emerald-500" : 
-                      event.type === "email" ? "bg-blue-500" :
-                      event.type === "contract" ? "bg-purple-500" : "bg-slate-500"
-                    )} />
-                    <div className="space-y-2 bg-background/50 p-4 rounded-2xl border border-border/30 group-hover/item:border-primary/20 transition-all">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[14px] font-black text-foreground">{event.title}</p>
-                        <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{event.date}</span>
-                      </div>
-                      <p className="text-[12px] text-muted-foreground leading-relaxed font-medium">{event.description}</p>
-                      {event.status && (
-                        <div className="flex items-center gap-1.5 mt-2">
-                           <CheckCircle2 size={12} className="text-emerald-500" />
-                           <span className="text-[9px] font-black text-emerald-600 uppercase">Processado com sucesso</span>
+                    <div className="relative pl-8 space-y-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary/50 before:via-border before:to-border/20">
+                      {(timelineEvents[selectedClient.clientId] || []).map((event) => (
+                        <div key={event.id} className="relative group/item">
+                          <div className={cn(
+                            "absolute -left-[25px] top-1 w-5 h-5 rounded-full border-4 border-card z-10 transition-transform group-hover/item:scale-125 shadow-sm",
+                            event.type === "payment" ? "bg-emerald-500" : 
+                            event.type === "email" ? "bg-blue-500" :
+                            event.type === "contract" ? "bg-purple-500" : "bg-slate-500"
+                          )} />
+                          <div className="space-y-2 bg-background/50 p-4 rounded-2xl border border-border/30 group-hover/item:border-primary/20 transition-all">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <p className="text-[14px] font-black text-foreground">{event.title}</p>
+                                {event.type === "email" && (
+                                  <button 
+                                    onClick={() => setActiveProfileTab("whatsapp")}
+                                    className="p-1 rounded-full bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all"
+                                    title="Ver conversa relacionada"
+                                  >
+                                    <MessageCircle size={10} />
+                                  </button>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{event.date}</span>
+                            </div>
+                            <p className="text-[12px] text-muted-foreground leading-relaxed font-medium">{event.description}</p>
+                            {event.status && (
+                              <div className="flex items-center gap-1.5 mt-2">
+                                 <CheckCircle2 size={12} className="text-emerald-500" />
+                                 <span className="text-[9px] font-black text-emerald-600 uppercase">Processado com sucesso</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
+                      ))}
+                      
+                      {/* Simulated CRM Integration Events */}
+                      <div className="relative group/item opacity-60">
+                         <div className="absolute -left-[25px] top-1 w-5 h-5 rounded-full border-4 border-card z-10 bg-indigo-500" />
+                         <div className="space-y-2 bg-background/50 p-4 rounded-2xl border border-border/30">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <p className="text-[14px] font-black text-foreground">Kanban: Movido para Fechamento</p>
+                                <button 
+                                  onClick={() => setActiveProfileTab("whatsapp")}
+                                  className="p-1 rounded-full bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all"
+                                >
+                                  <MessageCircle size={10} />
+                                </button>
+                              </div>
+                              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">10/04/2026</span>
+                            </div>
+                            <p className="text-[12px] text-muted-foreground leading-relaxed font-medium">Lead qualificado pela Malu e movido para etapa final do funil.</p>
+                          </div>
+                      </div>
                     </div>
                   </div>
-                ))}
-                
-                {/* Simulated CRM Integration Events */}
-                <div className="relative group/item opacity-60">
-                   <div className="absolute -left-[25px] top-1 w-5 h-5 rounded-full border-4 border-card z-10 bg-indigo-500" />
-                   <div className="space-y-2 bg-background/50 p-4 rounded-2xl border border-border/30">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[14px] font-black text-foreground">Kanban: Movido para Fechamento</p>
-                        <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">10/04/2026</span>
+                )}
+
+                {activeProfileTab === "whatsapp" && (
+                  <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-lg font-black text-foreground">Chat em Tempo Real</h3>
+                        <p className="text-xs text-muted-foreground">Sincronizado via WhatsApp Business API</p>
                       </div>
-                      <p className="text-[12px] text-muted-foreground leading-relaxed font-medium">Lead qualificado pela Malu e movido para etapa final do funil.</p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] font-black text-emerald-600 uppercase">Rafa S3 Online</span>
+                      </div>
                     </div>
-                </div>
+
+                    <div className="bg-background/80 rounded-3xl border border-emerald-500/20 overflow-hidden shadow-sm flex flex-col h-[500px]">
+                      <div className="flex-1 p-6 space-y-4 overflow-y-auto custom-scrollbar bg-[url('https://w0.peakpx.com/wallpaper/580/678/HD-wallpaper-whatsapp-dark-pattern-background-grey-monochrome.jpg')] bg-repeat bg-center opacity-90">
+                        <div className="flex flex-col items-start max-w-[85%]">
+                          <div className="bg-card p-3.5 rounded-2xl rounded-tl-none text-[13px] font-medium text-foreground shadow-sm border border-border/40">
+                            Olá {selectedClient.cliente}, tudo bem? Aqui é o Rafa da Torre S3. Vi que o contrato foi assinado!
+                          </div>
+                          <span className="text-[9px] text-muted-foreground mt-1 ml-1 font-bold">10:45</span>
+                        </div>
+                        <div className="flex flex-col items-end w-full">
+                          <div className="bg-emerald-600 text-white p-3.5 rounded-2xl rounded-tr-none text-[13px] font-medium max-w-[85%] shadow-md">
+                            Olá Rafa! Sim, acabamos de assinar. Muito animados com o novo site!
+                          </div>
+                          <span className="text-[9px] text-muted-foreground mt-1 mr-1 font-bold">10:48 · Lida</span>
+                        </div>
+                        <div className="flex flex-col items-start max-w-[85%]">
+                          <div className="bg-card p-3.5 rounded-2xl rounded-tl-none text-[13px] font-medium text-foreground shadow-sm border border-border/40">
+                            Show! Já estamos iniciando o setup aqui. Vou te enviar o primeiro boleto por e-mail agora.
+                          </div>
+                          <span className="text-[9px] text-muted-foreground mt-1 ml-1 font-bold">10:50</span>
+                        </div>
+                        <div className="flex justify-center my-4">
+                          <span className="bg-background/80 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-black text-muted-foreground border border-border/40 uppercase tracking-widest">
+                            Hoje
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end w-full">
+                          <div className="bg-emerald-600 text-white p-3.5 rounded-2xl rounded-tr-none text-[13px] font-medium max-w-[85%] shadow-md">
+                            Perfeito! Algum prazo estimado para a primeira versão do design?
+                          </div>
+                          <span className="text-[9px] text-muted-foreground mt-1 mr-1 font-bold">11:12 · Lida</span>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-muted/30 border-t border-border/40 flex gap-3">
+                        <Input className="h-11 text-sm bg-background border-border/40 rounded-2xl px-5 focus-visible:ring-primary/20" placeholder="Digite sua mensagem..." />
+                        <Button className="h-11 w-11 p-0 bg-emerald-500 hover:bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-500/20">
+                          <Send size={18} className="text-white" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeProfileTab === "documentos" && (
+                  <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground mb-6 flex items-center gap-2">
+                      <Paperclip size={16} className="text-primary" /> Repositório de Arquivos
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[
+                        { name: "Contrato_Servicos_Assinado.pdf", size: "2.4 MB", type: "PDF", date: "10/04/2026" },
+                        { name: "Proposta_Comercial_V2.pdf", size: "1.8 MB", type: "PDF", date: "05/04/2026" },
+                        { name: "Briefing_Identidade_Visual.docx", size: "850 KB", type: "DOCX", date: "02/04/2026" }
+                      ].map((doc, i) => (
+                        <div key={i} className="p-4 rounded-2xl border border-border/40 bg-background hover:border-primary/20 transition-all group cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                              <FileText size={20} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-bold text-foreground truncate">{doc.name}</p>
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+                                <span>{doc.size}</span>
+                                <span>•</span>
+                                <span>{doc.date}</span>
+                              </div>
+                            </div>
+                            <Download size={14} className="text-muted-foreground group-hover:text-primary" />
+                          </div>
+                        </div>
+                      ))}
+                      <button className="p-4 rounded-2xl border-2 border-dashed border-border/60 hover:border-primary/40 transition-all flex flex-col items-center justify-center gap-2 bg-muted/5 group">
+                        <FilePlus size={24} className="text-muted-foreground group-hover:text-primary" />
+                        <span className="text-[11px] font-black uppercase text-muted-foreground group-hover:text-primary">Upload de Arquivo</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+
           </div>
 
           {/* Right Column: Cards & Insights */}
