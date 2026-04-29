@@ -416,6 +416,8 @@ export default function CobrancasFiscalTab({
                       </button>
                     </>
                   )}
+                </div>
+              </div>
             </div>
           </div>
 
