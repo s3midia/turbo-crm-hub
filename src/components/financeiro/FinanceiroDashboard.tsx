@@ -11,12 +11,12 @@ function formatBRL(value: number) {
 }
 
 const kpis = [
-  { label: "Receita Realizada", value: 23476, icon: TrendingUp, color: "emerald", trend: "+18.2%", up: true },
-  { label: "Despesas Totais", value: 4670, icon: TrendingDown, color: "rose", trend: "-2.3%", up: false },
-  { label: "Saldo Líquido", value: 18806, icon: Scale, color: "blue", trend: "+22.1%", up: true },
-  { label: "A Receber", value: 6097, icon: Clock, color: "amber", trend: "Pendente", up: null },
-  { label: "Margem Líquida", value: null, display: "80.1%", icon: Percent, color: "violet", trend: "+5.4pp", up: true },
-  { label: "Valuation Est.", value: null, display: "R$ 842k", icon: Building2, color: "cyan", trend: "Crescendo", up: true },
+  { label: "Receita Realizada", value: 0, icon: TrendingUp, color: "emerald", trend: "0%", up: true },
+  { label: "Despesas Totais", value: 0, icon: TrendingDown, color: "rose", trend: "0%", up: false },
+  { label: "Saldo Líquido", value: 0, icon: Scale, color: "blue", trend: "0%", up: true },
+  { label: "A Receber", value: 0, icon: Clock, color: "amber", trend: "Nenhum", up: null },
+  { label: "Margem Líquida", value: null, display: "0%", icon: Percent, color: "violet", trend: "0pp", up: true },
+  { label: "Valuation Est.", value: null, display: "R$ 0", icon: Building2, color: "cyan", trend: "Estável", up: true },
 ];
 
 const colorMap: Record<string, string> = {
@@ -28,35 +28,27 @@ const colorMap: Record<string, string> = {
   cyan: "text-cyan-500 bg-cyan-500/8 border-cyan-500/15",
 };
 
-const urgentActions = [
-  { type: "danger", icon: AlertTriangle, title: "3 pagamentos vencidos", desc: "Clínica Academias 6, Giovanna e ANDREA OLIVEIRA — R$ 13.476", action: "Ver cobranças", tab: "cobrancas" },
-  { type: "warning", icon: AlertCircle, title: "Hospedagem AWS vence em 3 dias", desc: "R$ 1.450,00 — vencimento 18/05/2026", action: "Agendar", tab: "lancamentos" },
-  { type: "warning", icon: AlertCircle, title: "Meta mensal: 83% atingida", desc: "Faltam R$ 4.024 · 4 dias restantes", action: "Ver metas", tab: "relatorios" },
-  { type: "success", icon: CheckCircle2, title: "Impostos em dia", desc: "Próximo: DAS Simples — 20/05/2026", action: "Ver fiscal", tab: "cobrancas" },
-];
+const urgentActions: any[] = [];
 
 const barData = [
-  { month: "Nov", receita: 18400, despesa: 3200 },
-  { month: "Dez", receita: 23476, despesa: 4670 },
-  { month: "Jan", receita: 14200, despesa: 5100 },
-  { month: "Fev", receita: 19800, despesa: 4300 },
-  { month: "Mar", receita: 21300, despesa: 3900 },
-  { month: "Abr", receita: 16500, despesa: 4100 },
+  { month: "Jan", receita: 0, despesa: 0 },
+  { month: "Fev", receita: 0, despesa: 0 },
+  { month: "Mar", receita: 0, despesa: 0 },
+  { month: "Abr", receita: 0, despesa: 0 },
+  { month: "Mai", receita: 0, despesa: 0 },
+  { month: "Jun", receita: 0, despesa: 0 },
 ];
-const maxBar = Math.max(...barData.flatMap(d => [d.receita, d.despesa]));
+const maxBar = 100;
 
 const cashflowDays = [
-  { label: "Hoje", value: 18806, delta: 0 },
-  { label: "+7d", value: 16356, delta: -2450 },
-  { label: "+15d", value: 22353, delta: 5997 },
-  { label: "+30d", value: 19853, delta: -2500 },
+  { label: "Hoje", value: 0, delta: 0 },
+  { label: "+7d", value: 0, delta: 0 },
+  { label: "+15d", value: 0, delta: 0 },
+  { label: "+30d", value: 0, delta: 0 },
 ];
 
-const expenseCategories = [
-  { label: "Infraestrutura", value: 1670, pct: 35.8, color: "bg-blue-500" },
-  { label: "Marketing", value: 3000, pct: 64.2, color: "bg-violet-500" },
-];
-const totalExpenses = expenseCategories.reduce((s, c) => s + c.value, 0);
+const expenseCategories: any[] = [];
+const totalExpenses = 0;
 
 // ── Animated bar component ─────────────────────────────────────────────────────
 function AnimatedBar({ height, color, title }: { height: string; color: string; title: string }) {
@@ -203,6 +195,12 @@ export default function FinanceiroDashboard({ onTabChange }: Props) {
                 <ChevronRight size={13} className="mt-0.5 shrink-0 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
               </div>
             ))}
+            {urgentActions.length === 0 && (
+              <div className="h-full flex flex-col items-center justify-center py-10 opacity-40">
+                <CheckCircle2 size={32} className="text-emerald-500 mb-2" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Tudo em dia</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -250,6 +248,9 @@ export default function FinanceiroDashboard({ onTabChange }: Props) {
                 <p className="text-[10px] text-muted-foreground">{cat.pct.toFixed(1)}% do total</p>
               </div>
             ))}
+            {expenseCategories.length === 0 && (
+              <p className="text-center py-10 text-[10px] font-black uppercase tracking-widest opacity-30">Nenhuma despesa</p>
+            )}
             <div className="pt-3 border-t border-border/30 flex items-center justify-between">
               <span className="text-[11px] font-medium text-muted-foreground">Total</span>
               <span className="text-sm font-bold text-foreground">{formatBRL(totalExpenses)}</span>
@@ -269,38 +270,38 @@ export default function FinanceiroDashboard({ onTabChange }: Props) {
             <div className="relative w-16 h-16 shrink-0">
               <svg viewBox="0 0 64 64" className="w-full h-full -rotate-90">
                 <circle cx="32" cy="32" r="26" fill="none" stroke="currentColor" strokeWidth="6" className="text-border/30" />
-                <AnimatedRing />
+                <AnimatedRing score={0} />
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">92</span>
+              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">0</span>
             </div>
             <div className="space-y-1.5 flex-1">
               <div className="flex justify-between text-[10px]">
                 <span className="text-muted-foreground">Margem</span>
-                <span className="font-semibold text-emerald-500">Excelente</span>
+                <span className="font-semibold text-muted-foreground">N/A</span>
               </div>
               <div className="flex justify-between text-[10px]">
                 <span className="text-muted-foreground">Liquidez</span>
-                <span className="font-semibold text-emerald-500">Sólida</span>
+                <span className="font-semibold text-muted-foreground">N/A</span>
               </div>
               <div className="flex justify-between text-[10px]">
                 <span className="text-muted-foreground">Inadimplência</span>
-                <span className="font-semibold text-amber-500">Atenção</span>
+                <span className="font-semibold text-muted-foreground">N/A</span>
               </div>
               <div className="flex justify-between text-[10px]">
                 <span className="text-muted-foreground">Crescimento</span>
-                <span className="font-semibold text-emerald-500">Forte</span>
+                <span className="font-semibold text-muted-foreground">N/A</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-auto p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium leading-relaxed">
-              Margem líquida de <strong>80.1%</strong> está acima da média do setor tech (45–55%). Eficiência operacional excelente.
+          <div className="mt-auto p-3 rounded-lg bg-muted/20 border border-border/15">
+            <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+              Aguardando dados para análise de performance operacional.
             </p>
           </div>
 
           <button
-            onClick={() => {}}
+            onClick={() => onTabChange?.("relatorios")}
             className="w-full py-2 rounded-lg border border-border/50 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:border-border transition-all flex items-center justify-center gap-1.5"
           >
             Ver relatório completo
@@ -312,18 +313,18 @@ export default function FinanceiroDashboard({ onTabChange }: Props) {
   );
 }
 
-function AnimatedRing() {
+function AnimatedRing({ score = 92 }: { score?: number }) {
   const [dash, setDash] = useState(0);
   const circumference = 2 * Math.PI * 26; // ~163.4
   useEffect(() => {
-    const t = setTimeout(() => setDash((92 / 100) * circumference), 100);
+    const t = setTimeout(() => setDash((score / 100) * circumference), 100);
     return () => clearTimeout(t);
-  }, []);
+  }, [score, circumference]);
   return (
     <circle
       cx="32" cy="32" r="26"
       fill="none"
-      stroke="#10b981"
+      stroke={score > 50 ? "#10b981" : "#94a3b8"}
       strokeWidth="6"
       strokeLinecap="round"
       strokeDasharray={circumference}
