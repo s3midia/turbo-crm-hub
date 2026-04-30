@@ -55,6 +55,8 @@ interface DealGeneralTabProps {
     onUpdate: (opportunity: Opportunity) => void;
 }
 
+import { DealTimelineTab } from "./DealTimelineTab";
+
 export function DealGeneralTab({ opportunity, onUpdate }: DealGeneralTabProps) {
     const [formData, setFormData] = useState({
         title: opportunity.title,
@@ -163,7 +165,7 @@ export function DealGeneralTab({ opportunity, onUpdate }: DealGeneralTabProps) {
             </Card>
 
             {/* Collapsible Sections */}
-            <Accordion type="multiple" defaultValue={["contact", "tasks"]} className="space-y-4">
+            <Accordion type="multiple" defaultValue={["contact", "timeline"]} className="space-y-4">
                 {/* Contact Section */}
                 <AccordionItem value="contact" className="border rounded-lg px-4">
                     <AccordionTrigger className="text-lg font-semibold">
@@ -205,6 +207,15 @@ export function DealGeneralTab({ opportunity, onUpdate }: DealGeneralTabProps) {
                     </AccordionContent>
                 </AccordionItem>
 
+                {/* Timeline Section */}
+                <AccordionItem value="timeline" className="border rounded-lg px-4">
+                    <AccordionTrigger className="text-lg font-semibold">
+                        Linha do Tempo
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-4">
+                        <DealTimelineTab deal={opportunity as any} onUpdate={onUpdate as any} />
+                    </AccordionContent>
+                </AccordionItem>
 
                 {/* Tasks Section */}
                 <AccordionItem value="tasks" className="border rounded-lg px-4">
