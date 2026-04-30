@@ -61,6 +61,8 @@ interface DealDetailsModalProps {
     onUpdate: (opportunity: Opportunity) => void;
 }
 
+import { LeadFinanceTab } from "../financeiro/LeadFinanceTab";
+
 export function DealDetailsModal({ opportunity, open, onClose, onUpdate }: DealDetailsModalProps) {
     const [activeTab, setActiveTab] = useState("general");
 
@@ -74,13 +76,23 @@ export function DealDetailsModal({ opportunity, open, onClose, onUpdate }: DealD
                 </DialogHeader>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="general">Geral</TabsTrigger>
+                        <TabsTrigger value="finance">Financeiro</TabsTrigger>
                         <TabsTrigger value="timeline">Linha do Tempo</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="general" className="mt-6">
                         <DealGeneralTab opportunity={opportunity} onUpdate={onUpdate} />
+                    </TabsContent>
+
+                    <TabsContent value="finance" className="mt-6">
+                        <LeadFinanceTab 
+                            leadId={opportunity.id} 
+                            leadName={opportunity.client_name} 
+                            products={opportunity.products}
+                            onUpdateProducts={(products) => onUpdate({ ...opportunity, products })}
+                        />
                     </TabsContent>
 
                     <TabsContent value="timeline" className="mt-6">

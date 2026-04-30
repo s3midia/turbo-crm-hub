@@ -66,42 +66,7 @@ export function DealGeneralTab({ opportunity, onUpdate }: DealGeneralTabProps) {
         observation: opportunity.observation || "",
     });
 
-    const [products, setProducts] = useState<Product[]>(opportunity.products || []);
     const [tasks, setTasks] = useState<Task[]>(opportunity.tasks || []);
-
-    // Sample product catalog (in real app, fetch from Supabase)
-    const productCatalog = [
-        { id: "p1", name: "Produto A", price: 100.00 },
-        { id: "p2", name: "Produto B", price: 250.00 },
-        { id: "p3", name: "Produto C", price: 500.00 },
-        { id: "p4", name: "Serviço Premium", price: 1200.00 },
-    ];
-
-    const handleAddProduct = () => {
-        setProducts([
-            ...products,
-            { id: `temp-${Date.now()}`, name: "", quantity: 1, price: 0 },
-        ]);
-    };
-
-    const handleRemoveProduct = (index: number) => {
-        setProducts(products.filter((_, i) => i !== index));
-    };
-
-    const handleProductChange = (index: number, field: keyof Product, value: any) => {
-        const updated = [...products];
-        updated[index] = { ...updated[index], [field]: value };
-
-        // If changing product name, auto-fill price
-        if (field === "name") {
-            const catalogProduct = productCatalog.find(p => p.name === value);
-            if (catalogProduct) {
-                updated[index].price = catalogProduct.price;
-            }
-        }
-
-        setProducts(updated);
-    };
 
     const handleAddTask = () => {
         setTasks([
@@ -130,16 +95,10 @@ export function DealGeneralTab({ opportunity, onUpdate }: DealGeneralTabProps) {
         const updatedOpportunity = {
             ...opportunity,
             ...formData,
-            products,
             tasks,
         };
         onUpdate(updatedOpportunity);
     };
-
-    const totalProductsValue = products.reduce(
-        (sum, p) => sum + (p.quantity * p.price),
-        0
-    );
 
     return (
         <div className="space-y-6">
@@ -204,7 +163,7 @@ export function DealGeneralTab({ opportunity, onUpdate }: DealGeneralTabProps) {
             </Card>
 
             {/* Collapsible Sections */}
-            <Accordion type="multiple" defaultValue={["contact", "products", "tasks"]} className="space-y-4">
+            <Accordion type="multiple" defaultValue={["contact", "tasks"]} className="space-y-4">
                 {/* Contact Section */}
                 <AccordionItem value="contact" className="border rounded-lg px-4">
                     <AccordionTrigger className="text-lg font-semibold">
@@ -246,101 +205,6 @@ export function DealGeneralTab({ opportunity, onUpdate }: DealGeneralTabProps) {
                     </AccordionContent>
                 </AccordionItem>
 
-                {/* Products Section */}
-                <AccordionItem value="products" className="border rounded-lg px-4">
-                    <AccordionTrigger className="text-lg font-semibold">
-                        Produtos ({products.length})
-                    </AccordionTrigger>
-                    <AccordionContent className="space-y-4 pt-4">
-                        {products.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                                Nenhum produto adicionado
-                            </p>
-                        ) : (
-                            <div className="space-y-3">
-                                {products.map((product, index) => (
-                                    <div key={product.id} className="flex gap-3 items-start p-3 border rounded-lg bg-muted/30">
-                                        <div className="flex-1 grid grid-cols-4 gap-3">
-                                            <div className="col-span-2 space-y-1">
-                                                <Label className="text-xs">Produto</Label>
-                                                <Select
-                                                    value={product.name}
-                                                    onValueChange={(value) => handleProductChange(index, "name", value)}
-                                                >
-                                                    <SelectTrigger className="h-9">
-                                                        <SelectValue placeholder="Selecione..." />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {productCatalog.map((p) => (
-                                                            <SelectItem key={p.id} value={p.name}>
-                                                                {p.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-                                            <div className="space-y-1">
-                                                <Label className="text-xs">Qtd</Label>
-                                                <Input
-                                                    type="number"
-                                                    min="0.01"
-                                                    step="0.01"
-                                                    value={product.quantity}
-                                                    onChange={(e) =>
-                                                        handleProductChange(index, "quantity", parseFloat(e.target.value) || 0)
-                                                    }
-                                                    className="h-9"
-                                                />
-                                            </div>
-
-                                            <div className="space-y-1">
-                                                <Label className="text-xs">Preço</Label>
-                                                <Input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={product.price}
-                                                    onChange={(e) =>
-                                                        handleProductChange(index, "price", parseFloat(e.target.value) || 0)
-                                                    }
-                                                    className="h-9"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1 w-24">
-                                            <Label className="text-xs">Total</Label>
-                                            <div className="h-9 flex items-center px-2 bg-muted rounded-md text-sm font-semibold">
-                                                R$ {(product.quantity * product.price).toFixed(2)}
-                                            </div>
-                                        </div>
-
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleRemoveProduct(index)}
-                                            className="mt-6 h-9 w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ))}
-
-                                <div className="flex justify-between items-center pt-2 border-t">
-                                    <span className="font-semibold">Total Geral:</span>
-                                    <span className="text-lg font-bold text-primary">
-                                        R$ {totalProductsValue.toFixed(2)}
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-
-                        <Button onClick={handleAddProduct} variant="outline" className="w-full">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Adicionar Produto
-                        </Button>
-                    </AccordionContent>
-                </AccordionItem>
 
                 {/* Tasks Section */}
                 <AccordionItem value="tasks" className="border rounded-lg px-4">

@@ -17,12 +17,22 @@ interface LeadFinanceTabProps {
   leadName: string;
   products?: any[];
   siteUrl?: string;
+  onUpdateProducts?: (products: any[]) => void;
 }
 
-export const LeadFinanceTab = ({ leadId, leadName, products = [], siteUrl }: LeadFinanceTabProps) => {
+export const LeadFinanceTab = ({ leadId, leadName, products = [], siteUrl, onUpdateProducts }: LeadFinanceTabProps) => {
   const { transactions, loading, saveTransaction, deleteTransaction } = useFinance(leadId);
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
+  const [showProductForm, setShowProductForm] = useState(false);
+
+  const productCatalog = [
+    { id: "p1", name: "Software", price: 5000.00 },
+    { id: "p2", name: "Web Design", price: 3500.00 },
+    { id: "p3", name: "Consultoria", price: 1200.00 },
+    { id: "p4", name: "Manutenção", price: 500.00 },
+    { id: "p5", name: "Licença", price: 250.00 },
+  ];
 
   const formatBRL = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -35,7 +45,19 @@ export const LeadFinanceTab = ({ leadId, leadName, products = [], siteUrl }: Lea
   };
 
   const handleOpenNew = () => {
-    setEditingTransaction(undefined);
+    const totalValue = products.reduce((acc, p) => acc + (p.quantity * p.price), 0);
+    setEditingTransaction({
+      valor: totalValue,
+      descricao: `Composição de Preço - ${leadName}`,
+      tipo: 'entrada',
+      status: 'pendente',
+      categoria: 'Software',
+      recorrencia: 'unica',
+      data_lancamento: new Date().toISOString().split('T')[0],
+      vencimento: new Date().toISOString().split('T')[0],
+      lead_nome: leadName,
+      lead_id: leadId
+    } as any);
     setShowModal(true);
   };
 
@@ -49,6 +71,33 @@ export const LeadFinanceTab = ({ leadId, leadName, products = [], siteUrl }: Lea
     setShowModal(false);
   };
 
+  const handleAddProduct = () => {
+    const newProduct = { id: `p-${Date.now()}`, name: "Novo Item", quantity: 1, price: 0 };
+    if (onUpdateProducts) {
+      onUpdateProducts([...products, newProduct]);
+    }
+  };
+
+  const handleRemoveProduct = (id: string) => {
+    if (onUpdateProducts) {
+      onUpdateProducts(products.filter(p => p.id !== id));
+    }
+  };
+
+  const handleUpdateProduct = (id: string, field: string, value: any) => {
+    if (onUpdateProducts) {
+      const updated = products.map(p => p.id === id ? { ...p, [field]: value } : p);
+      if (field === 'name') {
+        const catalogItem = productCatalog.find(c => c.name === value);
+        if (catalogItem) {
+          const idx = updated.findIndex(p => p.id === id);
+          updated[idx].price = catalogItem.price;
+        }
+      }
+      onUpdateProducts(updated);
+    }
+  };
+
   if (loading && transactions.length === 0) {
     return (
       <div className="h-64 flex items-center justify-center">
@@ -56,6 +105,8 @@ export const LeadFinanceTab = ({ leadId, leadName, products = [], siteUrl }: Lea
       </div>
     );
   }
+
+  const totalComposition = products.reduce((acc, p) => acc + (p.quantity * p.price), 0);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -69,23 +120,109 @@ export const LeadFinanceTab = ({ leadId, leadName, products = [], siteUrl }: Lea
         />
       )}
 
-      {/* Info do Negócio Associado */}
-      <div className="flex flex-wrap gap-2 items-center pb-2 border-b border-border/40">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/40">
-          <Package size={12} className="text-muted-foreground" />
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
-            {products.length} {products.length === 1 ? 'Produto' : 'Produtos'} no Funil
-          </span>
-        </div>
-        {siteUrl && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/40">
-            <Globe size={12} className="text-muted-foreground" />
-            <span className="text-[10px] font-bold text-muted-foreground lowercase truncate max-w-[150px]">
-              {siteUrl}
-            </span>
+      {/* Composição de Preço */}
+      <Card className="bg-card border-border shadow-sm overflow-hidden">
+        <CardHeader className="pb-3 pt-4 border-b bg-muted/20 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
+            <Package className="h-4 w-4" /> Composição de Preço
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowProductForm(!showProductForm)}
+              className="h-7 text-[10px] font-black uppercase"
+            >
+              {showProductForm ? 'Ver Lista' : 'Editar Itens'}
+            </Button>
+            <Badge variant="outline" className="text-[10px] font-black uppercase bg-primary/10 text-primary border-primary/20">
+              {products.length} {products.length === 1 ? 'Item' : 'Itens'}
+            </Badge>
           </div>
-        )}
-      </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {products.length === 0 && !showProductForm ? (
+            <div className="flex flex-col items-center justify-center py-8 opacity-40">
+              <Package className="h-8 w-8 mb-2 text-muted-foreground" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-center">
+                Nenhum item na composição
+              </p>
+            </div>
+          ) : showProductForm ? (
+            <div className="p-4 space-y-3 bg-muted/10">
+              {products.map((p) => (
+                <div key={p.id} className="flex gap-2 items-center bg-card p-2 rounded-xl border border-border/50">
+                  <div className="flex-1 grid grid-cols-12 gap-2">
+                    <div className="col-span-6">
+                      <select 
+                        value={p.name} 
+                        onChange={(e) => handleUpdateProduct(p.id, 'name', e.target.value)}
+                        className="w-full text-[11px] font-bold bg-transparent border-none focus:ring-0"
+                      >
+                        <option value="">Selecione...</option>
+                        {productCatalog.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        {!productCatalog.find(c => c.name === p.name) && p.name && <option value={p.name}>{p.name}</option>}
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <input 
+                        type="number" 
+                        value={p.quantity} 
+                        onChange={(e) => handleUpdateProduct(p.id, 'quantity', parseFloat(e.target.value))}
+                        className="w-full text-[11px] font-bold bg-transparent border-none focus:ring-0 text-center"
+                      />
+                    </div>
+                    <div className="col-span-4 text-right">
+                      <input 
+                        type="number" 
+                        value={p.price} 
+                        onChange={(e) => handleUpdateProduct(p.id, 'price', parseFloat(e.target.value))}
+                        className="w-full text-[11px] font-bold bg-transparent border-none focus:ring-0 text-right"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                    onClick={() => handleRemoveProduct(p.id)}
+                  >
+                    <Trash2 size={12} />
+                  </Button>
+                </div>
+              ))}
+              <Button 
+                variant="dashed" 
+                size="sm" 
+                onClick={handleAddProduct}
+                className="w-full h-8 text-[10px] font-black uppercase border-dashed"
+              >
+                <Plus size={12} className="mr-1" /> Adicionar Item
+              </Button>
+            </div>
+          ) : (
+            <div className="divide-y divide-border/40">
+              {products.map((p, idx) => (
+                <div key={idx} className="px-5 py-3 flex items-center justify-between hover:bg-muted/10 transition-colors">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-foreground">{p.name}</span>
+                    <span className="text-[10px] text-muted-foreground font-bold">{p.quantity}x {formatBRL(p.price)}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-primary">{formatBRL(p.quantity * p.price)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="px-5 py-4 bg-muted/30 flex items-center justify-between border-t border-border">
+            <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Valor Total da Composição</span>
+            <p className="text-lg font-black text-primary">
+              {formatBRL(totalComposition)}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Resumo Financeiro do Lead */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
