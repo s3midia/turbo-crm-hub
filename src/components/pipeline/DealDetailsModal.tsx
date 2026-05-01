@@ -1,16 +1,11 @@
-import { useState } from "react";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { User, DollarSign } from "lucide-react";
 import { DealGeneralTab } from "./DealGeneralTab";
 import { LeadFinanceTab } from "../financeiro/LeadFinanceTab";
 
@@ -62,8 +57,6 @@ interface DealDetailsModalProps {
 }
 
 export function DealDetailsModal({ opportunity, open, onClose, onUpdate }: DealDetailsModalProps) {
-    const [activeTab, setActiveTab] = useState("general");
-
     if (!opportunity) return null;
 
     return (
@@ -73,25 +66,36 @@ export function DealDetailsModal({ opportunity, open, onClose, onUpdate }: DealD
                     <DialogTitle className="text-2xl font-bold">{opportunity.title}</DialogTitle>
                 </DialogHeader>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="general">Geral</TabsTrigger>
-                        <TabsTrigger value="finance">Financeiro</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="general" className="mt-6">
+                <div className="space-y-8 mt-4">
+                    {/* Seção: Informações do Usuário / Contato */}
+                    <section>
+                        <div className="flex items-center gap-2 mb-4 pb-2 border-b">
+                            <User className="h-5 w-5 text-primary" />
+                            <h2 className="text-lg font-bold uppercase tracking-wider text-primary">
+                                Informações do Usuário
+                            </h2>
+                        </div>
                         <DealGeneralTab opportunity={opportunity} onUpdate={onUpdate} />
-                    </TabsContent>
+                    </section>
 
-                    <TabsContent value="finance" className="mt-6">
-                        <LeadFinanceTab 
-                            leadId={opportunity.id} 
-                            leadName={opportunity.client_name} 
+                    <Separator className="my-2" />
+
+                    {/* Seção: Informações Financeiras */}
+                    <section>
+                        <div className="flex items-center gap-2 mb-4 pb-2 border-b">
+                            <DollarSign className="h-5 w-5 text-emerald-600" />
+                            <h2 className="text-lg font-bold uppercase tracking-wider text-emerald-600">
+                                Informações Financeiras
+                            </h2>
+                        </div>
+                        <LeadFinanceTab
+                            leadId={opportunity.id}
+                            leadName={opportunity.client_name}
                             products={opportunity.products}
                             onUpdateProducts={(products) => onUpdate({ ...opportunity, products })}
                         />
-                    </TabsContent>
-                </Tabs>
+                    </section>
+                </div>
             </DialogContent>
         </Dialog>
     );
