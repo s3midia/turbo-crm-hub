@@ -44,6 +44,14 @@ export const LeadFinanceTab = ({
     return t.tipo === 'saida' ? acc - v : acc + v;
   }, 0);
 
+  // eslint-disable-next-line no-console
+  console.log('[LeadFinanceTab] DEBUG', {
+    leadId,
+    transactionsCount: transactions.length,
+    transactions: transactions.map(t => ({ valor: t.valor, tipo: t.tipo, status: t.status, type: typeof t.valor })),
+    contractTotal,
+  });
+
   const totals = {
     paid: transactions
       .filter(t => t.tipo === 'entrada' && t.status === 'pago')
