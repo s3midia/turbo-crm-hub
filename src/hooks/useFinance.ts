@@ -32,9 +32,16 @@ const syncOpportunityTotal = async (leadId: string) => {
       return t.tipo === 'saida' ? acc - v : acc + v;
     }, 0);
 
+    // Update opportunities table
     await supabase
       .from('opportunities')
       .update({ total_value: total })
+      .eq('id', leadId);
+
+    // Update leads table (Kanban)
+    await supabase
+      .from('leads')
+      .update({ value: total, total_value: total })
       .eq('id', leadId);
   } catch (err) {
     console.warn('Erro ao sincronizar total_value:', err);

@@ -291,7 +291,7 @@ function LeadCard({
             {/* Value + Date row */}
             <div className="flex items-center justify-between mt-2.5">
                 <span className="text-[13px] font-black text-foreground tracking-tight">
-                    {formatBRL(lead.value || 0)}
+                    {formatBRL(lead.total_value || lead.value || 0)}
                 </span>
                 <div className="flex items-center gap-1">
                     {isAtrasado ? (
@@ -393,7 +393,7 @@ export default function FunilKanbanPage() {
           )
         : leads;
 
-    const totalValue = leads.reduce((acc, l) => acc + (l.value || 0), 0);
+    const totalValue = leads.reduce((acc, l) => acc + (l.total_value || l.value || 0), 0);
     const wonLeads   = leads.filter(l => l.status === "ganhou").length;
 
     return (
@@ -469,7 +469,7 @@ export default function FunilKanbanPage() {
                                 if (stage.key === "novo") return l.status === "novo" || !l.status;
                                 return l.status === stage.key;
                             });
-                            const stageValue = stageLeads.reduce((acc, l) => acc + (l.value || 0), 0);
+                            const stageValue = stageLeads.reduce((acc, l) => acc + (l.total_value || l.value || 0), 0);
                             const sc = STAGE_COLORS[stage.tw];
 
                             return (
