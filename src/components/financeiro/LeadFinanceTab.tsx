@@ -32,11 +32,17 @@ export const LeadFinanceTab = ({
   const formatBRL = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  const toNumber = (v: any) => Number(v) || 0;
+  const toNumber = (v: any) => {
+    if (v === null || v === undefined) return 0;
+    const n = typeof v === 'string' ? parseFloat(v) : Number(v);
+    return isNaN(n) ? 0 : n;
+  };
 
-  const contractTotal = transactions
-    .filter(t => t.tipo === 'entrada')
-    .reduce((acc, t) => acc + toNumber(t.valor), 0);
+  // Soma TODAS as transações (entradas - saídas)
+  const contractTotal = transactions.reduce((acc, t) => {
+    const v = toNumber(t.valor);
+    return t.tipo === 'saida' ? acc - v : acc + v;
+  }, 0);
 
   const totals = {
     paid: transactions
