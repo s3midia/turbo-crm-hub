@@ -42,30 +42,31 @@ export interface TimelineEntry {
     created_at: string;
 }
 
-// Create or update opportunity (SUPABASE VERSION)
+// Create or update opportunity (OPPORTUNITIES TABLE VERSION)
 export const saveOpportunity = async (opportunity: Opportunity) => {
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Usuário não autenticado");
     
-    const leadData = {
-        company_name: opportunity.lead_identification,
-        phone: opportunity.contact_phone,
-        status: opportunity.stage,
-        // Map other fields to metadata or new columns if they exist
-        // For now, we use existing columns in 'leads' table
+    const opportunityData = {
+        user_id: user.id,
+        lead_identification: opportunity.lead_identification,
+        contact_phone: opportunity.contact_phone,
+        contact_name: opportunity.contact_name,
+        contact_email: opportunity.contact_email,
+        stage: opportunity.stage,
+        priority: opportunity.priority,
+        observation: opportunity.observation,
+        responsible_id: opportunity.responsible_id || null,
+        total_value: opportunity.total_value || 0,
+        products: opportunity.products || [],
+        tasks: opportunity.tasks || [],
+        updated_at: new Date().toISOString(),
     };
 
     if (opportunity.id) {
         const { data, error } = await supabase
-            .from('leads')
-            .update({
-                company_name: opportunity.lead_identification,
-                phone: opportunity.contact_phone,
-                status: opportunity.stage,
-                niche: opportunity.niche,
-                site_url: opportunity.site_url,
-                total_value: opportunity.total_value,
-                updated_at: new Date().toISOString(),
-            })
+            .from('opportunities')
+            .update(opportunityData)
             .eq('id', opportunity.id)
             .select()
             .single();
@@ -74,15 +75,8 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         return data;
     } else {
         const { data, error } = await supabase
-            .from('leads')
-            .insert([{
-                company_name: opportunity.lead_identification,
-                phone: opportunity.contact_phone,
-                status: opportunity.stage,
-                niche: opportunity.niche,
-                site_url: opportunity.site_url,
-                total_value: opportunity.total_value,
-            }])
+            .from('opportunities')
+            .insert([opportunityData])
             .select()
             .single();
         
@@ -93,101 +87,102 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
 
 export const getOpportunityById = async (id: string) => {
     const { data, error } = await supabase
-        .from('leads')
+        .from('opportunities')
         .select('*')
         .eq('id', id)
         .single();
     
     if (error) throw error;
     
-    // Map database lead to Opportunity interface
     return {
         id: data.id,
-        lead_identification: data.company_name,
-        contact_phone: data.phone,
-        stage: data.status,
-        niche: data.niche,
-        site_url: data.site_url,
+        lead_identification: data.lead_identification,
+        contact_phone: data.contact_phone,
+        contact_name: data.contact_name,
+        contact_email: data.contact_email,
+        stage: data.stage,
+        priority: data.priority,
+        observation: data.observation,
+        responsible_id: data.responsible_id,
+        total_value: data.total_value || 0,
+        products: data.products || [],
+        tasks: data.tasks || [],
         created_at: data.created_at,
         updated_at: data.updated_at,
-        total_value: data.total_value || 0, 
-        products: [],
-        tasks: []
     } as Opportunity;
+};
+
+export const updateOpportunityStage = async (id: string, stage: string) => {
+    const { error } = await supabase
+        .from('opportunities')
+        .update({ stage, updated_at: new Date().toISOString() })
+        .eq('id', id);
+    if (error) throw error;
 };
 
 export const archiveOpportunity = async (id: string) => {
     const { error } = await supabase
-        .from('leads')
-        .update({ status: 'arquivado' }) // Using status as archive flag for now
+        .from('opportunities')
+        .update({ stage: 'arquivado' }) 
         .eq('id', id);
     if (error) throw error;
 };
 
 export const getTimelineEntries = async (opportunityId: string): Promise<TimelineEntry[]> => {
-    // 1. Fetch manual comments (if we had a comments table, but we'll use agent_logs for now)
-    // 2. Fetch agent logs for this lead
-    const { data: logs, error: logsError } = await supabase
-        .from('agent_logs')
+    const { data, error } = await supabase
+        .from('opportunity_timeline')
         .select('*')
-        .or(`message.ilike.%[Lead:${opportunityId}]%,message.ilike.%[AÇÃO][Lead:${opportunityId}]%`)
+        .eq('opportunity_id', opportunityId)
         .order('created_at', { ascending: false });
 
-    if (logsError) throw logsError;
+    if (error) throw error;
 
-    const timeline: TimelineEntry[] = logs.map(log => ({
-        id: log.id,
-        type: log.message.includes('[AÇÃO]') ? 'agent' : 'comment',
-        content: log.message.replace(/\[Lead:.*?\]\s*/, '').replace(/\[AÇÃO\]\s*/, ''),
-        agent_id: log.agent_id,
-        created_at: log.created_at
+    return data.map(entry => ({
+        id: entry.id,
+        type: 'comment',
+        content: entry.comment,
+        created_at: entry.created_at
     }));
-
-    return timeline;
 };
 
 export const addTimelineComment = async (opportunityId: string, comment: string) => {
-    const { error } = await supabase.from('agent_logs').insert({
-        agent_id: 'user',
-        message: `[Lead:${opportunityId}] ${comment}`,
-        type: 'info'
-    });
-    if (error) throw error;
-};
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Usuário não autenticado");
 
-export const updateOpportunityStage = async (id: string, stage: string) => {
-    const { error } = await supabase
-        .from('leads')
-        .update({ status: stage, updated_at: new Date().toISOString() })
-        .eq('id', id);
+    const { error } = await supabase.from('opportunity_timeline').insert({
+        opportunity_id: opportunityId,
+        user_id: user.id,
+        comment: comment
+    });
     if (error) throw error;
 };
 
 export const getOpportunities = async (): Promise<Opportunity[]> => {
     const { data, error } = await supabase
-        .from('leads')
+        .from('opportunities')
         .select('*')
         .order('created_at', { ascending: false });
     
     if (error) throw error;
     
-    return data.map(lead => ({
-        id: lead.id,
-        lead_identification: lead.company_name,
-        contact_phone: lead.phone,
-        stage: lead.status,
-        niche: lead.niche,
-        site_url: lead.site_url,
-        created_at: lead.created_at,
-        updated_at: lead.updated_at,
-        total_value: lead.total_value || 0, 
-        products: [],
-        tasks: []
+    return data.map(opp => ({
+        id: opp.id,
+        lead_identification: opp.lead_identification,
+        contact_phone: opp.contact_phone,
+        contact_name: opp.contact_name,
+        contact_email: opp.contact_email,
+        stage: opp.stage,
+        priority: opp.priority,
+        observation: opp.observation,
+        responsible_id: opp.responsible_id,
+        total_value: opp.total_value || 0,
+        products: opp.products || [],
+        tasks: opp.tasks || [],
+        created_at: opp.created_at,
+        updated_at: opp.updated_at,
     }));
 };
 
 export const initializeDemoData = async () => {
-    // Função placeholder: no Supabase não inserimos dados fake via frontend por padrão.
-    // Se for necessário mockar, adicione a lógica aqui futuramente.
     return Promise.resolve();
 };
