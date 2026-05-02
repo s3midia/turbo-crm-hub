@@ -64,6 +64,10 @@ export const useFinance = (leadId?: string) => {
         setTransactions([]);
       } else {
         setTransactions(data || []);
+        // Sincroniza total_value no card do pipeline sempre que carregar
+        if (leadId && data && data.length > 0) {
+          await syncOpportunityTotal(leadId);
+        }
       }
     } catch (err) {
       console.error('Error fetching finance data:', err);
