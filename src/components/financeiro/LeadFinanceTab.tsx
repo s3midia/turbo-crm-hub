@@ -32,7 +32,9 @@ export const LeadFinanceTab = ({
   const formatBRL = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  const contractTotal = products.reduce((acc, p) => acc + p.quantity * p.price, 0);
+  const contractTotal = transactions
+    .filter(t => t.tipo === 'entrada')
+    .reduce((acc, t) => acc + t.valor, 0);
 
   const totals = {
     paid: transactions
