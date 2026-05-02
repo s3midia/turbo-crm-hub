@@ -32,23 +32,25 @@ export const LeadFinanceTab = ({
   const formatBRL = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+  const toNumber = (v: any) => Number(v) || 0;
+
   const contractTotal = transactions
     .filter(t => t.tipo === 'entrada')
-    .reduce((acc, t) => acc + t.valor, 0);
+    .reduce((acc, t) => acc + toNumber(t.valor), 0);
 
   const totals = {
     paid: transactions
       .filter(t => t.tipo === 'entrada' && t.status === 'pago')
-      .reduce((acc, t) => acc + t.valor, 0),
+      .reduce((acc, t) => acc + toNumber(t.valor), 0),
     pending: transactions
       .filter(t => t.tipo === 'entrada' && t.status === 'pendente')
-      .reduce((acc, t) => acc + t.valor, 0),
+      .reduce((acc, t) => acc + toNumber(t.valor), 0),
     mrr: transactions
       .filter(t => t.tipo === 'entrada' && t.classificacao === 'recorrente')
-      .reduce((acc, t) => acc + t.valor, 0),
+      .reduce((acc, t) => acc + toNumber(t.valor), 0),
     overdue: transactions
       .filter(t => t.status === 'pendente' && new Date(t.vencimento) < new Date())
-      .reduce((acc, t) => acc + t.valor, 0),
+      .reduce((acc, t) => acc + toNumber(t.valor), 0),
   };
 
   const paidPercent = contractTotal > 0 ? Math.min((totals.paid / contractTotal) * 100, 100) : 0;
