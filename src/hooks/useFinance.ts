@@ -19,6 +19,28 @@ export interface FinancialTransaction {
   created_at?: string;
 }
 
+// Recalcula o total_value na tabela opportunities após cada mudança de transação
+const syncOpportunityTotal = async (leadId: string) => {
+  try {
+    const { data: txData } = await supabase
+      .from('financial_transactions')
+      .select('valor, tipo')
+      .eq('lead_id', leadId);
+
+    const total = (txData || []).reduce((acc, t) => {
+      const v = parseFloat(String(t.valor)) || 0;
+      return t.tipo === 'saida' ? acc - v : acc + v;
+    }, 0);
+
+    await supabase
+      .from('opportunities')
+      .update({ total_value: total })
+      .eq('id', leadId);
+  } catch (err) {
+    console.warn('Erro ao sincronizar total_value:', err);
+  }
+};
+
 export const useFinance = (leadId?: string) => {
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,13 +75,11 @@ export const useFinance = (leadId?: string) => {
   const saveTransaction = async (transaction: Partial<FinancialTransaction>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      // Clean undefined values to avoid Supabase errors
+
       const cleanData = Object.fromEntries(
         Object.entries(transaction).filter(([_, v]) => v !== undefined)
       );
 
-      // Add user_id if available and not already set
       if (user && !cleanData.user_id) {
         (cleanData as any).user_id = user.id;
       }
@@ -76,9 +96,13 @@ export const useFinance = (leadId?: string) => {
           .insert([cleanData]);
         if (error) throw error;
       }
-      
-      console.log('Transaction saved successfully, re-fetching...');
+
       await fetchTransactions();
+
+      // Atualiza total_value no card do pipeline
+      const tid = (transaction.lead_id || leadId);
+      if (tid) await syncOpportunityTotal(tid);
+
     } catch (err: any) {
       console.error('Error saving transaction:', err.message || err);
       toast.error(`Erro ao salvar transação: ${err.message || 'Erro desconhecido'}`);
@@ -93,7 +117,12 @@ export const useFinance = (leadId?: string) => {
         .delete()
         .eq('id', id);
       if (error) throw error;
+
       await fetchTransactions();
+
+      // Atualiza total_value no card do pipeline
+      if (leadId) await syncOpportunityTotal(leadId);
+
     } catch (err) {
       console.error('Error deleting transaction:', err);
       throw err;
