@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { OpportunityModal } from "./whatsapp/OpportunityModal";
 import { getOpportunities, initializeDemoData, updateOpportunityStage, type Opportunity as DbOpportunity } from "@/hooks/useOpportunities";
+import { supabase } from '@/integrations/supabase/client';
 import { VendedorSelector } from "./pipeline/VendedorSelector";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useUser } from "@/contexts/UserContext";
@@ -66,20 +67,45 @@ export default function Pipeline() {
       setLoading(true);
       const data = await getOpportunities();
 
+      // Busca soma das transações financeiras por lead
+      const leadIds = data.map(opp => opp.id).filter(Boolean) as string[];
+      let transactionTotals: Record<string, number> = {};
+
+      if (leadIds.length > 0) {
+        const { data: txData } = await supabase
+          .from('financial_transactions')
+          .select('lead_id, valor, tipo')
+          .in('lead_id', leadIds);
+
+        if (txData) {
+          txData.forEach(t => {
+            if (!t.lead_id) return;
+            const v = parseFloat(String(t.valor)) || 0;
+            transactionTotals[t.lead_id] = (transactionTotals[t.lead_id] || 0) +
+              (t.tipo === 'saida' ? -v : v);
+          });
+        }
+      }
+
       // Transform DB format to component format
-      const transformed = data.map(opp => ({
-        id: opp.id!,
-        title: opp.lead_identification,
-        client_name: opp.contact_name || opp.contact_phone || '',
-        phone: opp.contact_phone,
-        email: opp.contact_email,
-        value: Number(opp.total_value),
-        priority: opp.priority || 'medium',
-        created_at: opp.created_at!,
-        stage: opp.stage,
-        observation: opp.observation,
-        responsible_id: opp.responsible_id,
-      }));
+      const transformed = data.map(opp => {
+        const txTotal = transactionTotals[opp.id!] ?? 0;
+        const legacyTotal = parseFloat(String(opp.total_value)) || 0;
+        return {
+          id: opp.id!,
+          title: opp.lead_identification,
+          client_name: opp.contact_name || opp.contact_phone || '',
+          phone: opp.contact_phone,
+          email: opp.contact_email,
+          // Prioriza soma das transações; cai para total_value se não houver transações
+          value: txTotal > 0 ? txTotal : legacyTotal,
+          priority: opp.priority || 'medium',
+          created_at: opp.created_at!,
+          stage: opp.stage,
+          observation: opp.observation,
+          responsible_id: opp.responsible_id,
+        };
+      });
 
       setOpportunities(transformed);
     } catch (error) {
