@@ -63,6 +63,7 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
                 status: opportunity.stage,
                 niche: opportunity.niche,
                 site_url: opportunity.site_url,
+                total_value: opportunity.total_value,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', opportunity.id)
@@ -80,6 +81,7 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
                 status: opportunity.stage,
                 niche: opportunity.niche,
                 site_url: opportunity.site_url,
+                total_value: opportunity.total_value,
             }])
             .select()
             .single();
@@ -108,7 +110,7 @@ export const getOpportunityById = async (id: string) => {
         site_url: data.site_url,
         created_at: data.created_at,
         updated_at: data.updated_at,
-        total_value: 0, 
+        total_value: data.total_value || 0, 
         products: [],
         tasks: []
     } as Opportunity;
@@ -153,6 +155,14 @@ export const addTimelineComment = async (opportunityId: string, comment: string)
     if (error) throw error;
 };
 
+export const updateOpportunityStage = async (id: string, stage: string) => {
+    const { error } = await supabase
+        .from('leads')
+        .update({ status: stage, updated_at: new Date().toISOString() })
+        .eq('id', id);
+    if (error) throw error;
+};
+
 export const getOpportunities = async (): Promise<Opportunity[]> => {
     const { data, error } = await supabase
         .from('leads')
@@ -170,7 +180,7 @@ export const getOpportunities = async (): Promise<Opportunity[]> => {
         site_url: lead.site_url,
         created_at: lead.created_at,
         updated_at: lead.updated_at,
-        total_value: 0, 
+        total_value: lead.total_value || 0, 
         products: [],
         tasks: []
     }));

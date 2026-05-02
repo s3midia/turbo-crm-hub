@@ -33,7 +33,7 @@ const syncOpportunityTotal = async (leadId: string) => {
     }, 0);
 
     await supabase
-      .from('opportunities')
+      .from('leads')
       .update({ total_value: total })
       .eq('id', leadId);
   } catch (err) {
