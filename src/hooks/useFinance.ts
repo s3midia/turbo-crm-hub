@@ -1,12 +1,12 @@
-import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface FinancialTransaction {
   id?: string;
+  user_id?: string;
   descricao: string;
   tipo: 'entrada' | 'saida';
-  valor: number;
+  valor: number | string;
   data_lancamento: string;
   vencimento: string;
   recebimento?: string;
@@ -19,136 +19,96 @@ export interface FinancialTransaction {
   created_at?: string;
 }
 
-// Recalcula o total_value na tabela opportunities após cada mudança de transação
-const syncOpportunityTotal = async (leadId: string) => {
-  try {
-    const { data: txData } = await supabase
-      .from('financial_transactions')
-      .select('valor, tipo')
-      .eq('lead_id', leadId);
-
-    const total = (txData || []).reduce((acc, t) => {
-      const v = parseFloat(String(t.valor)) || 0;
-      return t.tipo === 'saida' ? acc - v : acc + v;
-    }, 0);
-
-    // Update opportunities table
-    await supabase
-      .from('opportunities')
-      .update({ total_value: total })
-      .eq('id', leadId);
-
-    // Update leads table (Kanban)
-    await supabase
-      .from('leads')
-      .update({ value: total, total_value: total })
-      .eq('id', leadId);
-  } catch (err) {
-    console.warn('Erro ao sincronizar total_value:', err);
-  }
-};
-
 export const useFinance = (leadId?: string) => {
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchTransactions = async () => {
-    setLoading(true);
     try {
-      let query = supabase
-        .from('financial_transactions')
-        .select('*')
-        .order('vencimento', { ascending: false });
-
-      if (leadId) {
-        query = query.eq('lead_id', leadId);
-      }
-
+      setLoading(true);
+      let query = supabase.from('financial_transactions').select('*').order('vencimento', { ascending: false });
+      if (leadId) query = query.eq('lead_id', leadId);
       const { data, error } = await query;
-
-      if (error) {
-        console.warn('Finance table might not exist:', error.message);
-        setTransactions([]);
-      } else {
-        setTransactions(data || []);
-        // Sincroniza total_value no card do pipeline sempre que carregar
-        if (leadId && data && data.length > 0) {
-          await syncOpportunityTotal(leadId);
-        }
-      }
+      if (error) throw error;
+      setTransactions(data || []);
     } catch (err) {
-      console.error('Error fetching finance data:', err);
+      console.error('Erro ao buscar transações:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveTransaction = async (transaction: Partial<FinancialTransaction>) => {
+  const syncOpportunityTotal = async (leadId: string, transactions: FinancialTransaction[]) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const total = transactions.reduce((acc, t) => {
+        const v = typeof t.valor === 'string' ? parseFloat(t.valor) : Number(t.valor);
+        const val = isNaN(v) ? 0 : v;
+        return t.tipo === 'saida' ? acc - val : acc + v;
+      }, 0);
 
-      const cleanData = Object.fromEntries(
-        Object.entries(transaction).filter(([_, v]) => v !== undefined)
-      );
+      // 1. Update 'opportunities' table (has total_value)
+      await supabase
+        .from('opportunities')
+        .update({ total_value: total })
+        .eq('id', leadId);
 
-      if (user && !cleanData.user_id) {
-        (cleanData as any).user_id = user.id;
-      }
+      // 2. Update 'leads' table (Kanban) - separate calls to be safe
+      // Try 'value' column first
+      await supabase
+        .from('leads')
+        .update({ value: total })
+        .eq('id', leadId);
+        
+      // Try 'total_value' column optionally (this might fail if column doesn't exist, which is fine)
+      await supabase
+        .from('leads')
+        .update({ total_value: total } as any)
+        .eq('id', leadId);
 
-      if (transaction.id) {
-        const { error } = await supabase
-          .from('financial_transactions')
-          .update(cleanData)
-          .eq('id', transaction.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('financial_transactions')
-          .insert([cleanData]);
-        if (error) throw error;
-      }
+    } catch (err) {
+      console.warn('Erro ao sincronizar valores financeiros:', err);
+    }
+  }
 
-      await fetchTransactions();
+  useEffect(() => {
+    fetchTransactions();
+    const channel = supabase.channel('finance-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'financial_transactions' }, () => {
+        fetchTransactions();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [leadId]);
 
-      // Atualiza total_value no card do pipeline
-      const tid = (transaction.lead_id || leadId);
-      if (tid) await syncOpportunityTotal(tid);
+  const saveTransaction = async (transaction: Partial<FinancialTransaction>) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Usuário não autenticado");
 
-    } catch (err: any) {
-      console.error('Error saving transaction:', err.message || err);
-      toast.error(`Erro ao salvar transação: ${err.message || 'Erro desconhecido'}`);
-      throw err;
+    const data = { ...transaction, user_id: user.id };
+    if (data.id) {
+      const { error } = await supabase.from('financial_transactions').update(data).eq('id', data.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('financial_transactions').insert([data]);
+      if (error) throw error;
+    }
+    
+    // Auto-sync total if leadId is present
+    if (leadId) {
+      const { data: allTransactions } = await supabase.from('financial_transactions').select('*').eq('lead_id', leadId);
+      if (allTransactions) await syncOpportunityTotal(leadId, allTransactions);
     }
   };
 
   const deleteTransaction = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('financial_transactions')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-
-      await fetchTransactions();
-
-      // Atualiza total_value no card do pipeline
-      if (leadId) await syncOpportunityTotal(leadId);
-
-    } catch (err) {
-      console.error('Error deleting transaction:', err);
-      throw err;
+    const { error } = await supabase.from('financial_transactions').delete().eq('id', id);
+    if (error) throw error;
+    
+    if (leadId) {
+      const { data: allTransactions } = await supabase.from('financial_transactions').select('*').eq('lead_id', leadId);
+      if (allTransactions) await syncOpportunityTotal(leadId, allTransactions);
     }
   };
 
-  useEffect(() => {
-    fetchTransactions();
-  }, [leadId]);
-
-  return {
-    transactions,
-    loading,
-    fetchTransactions,
-    saveTransaction,
-    deleteTransaction,
-  };
+  return { transactions, loading, saveTransaction, deleteTransaction, refresh: fetchTransactions };
 };

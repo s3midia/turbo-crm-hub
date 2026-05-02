@@ -42,24 +42,22 @@ export interface TimelineEntry {
     created_at: string;
 }
 
-// Create or update opportunity (HYBRID VERSION: UPDATES BOTH LEADS AND OPPORTUNITIES)
 export const saveOpportunity = async (opportunity: Opportunity) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado");
     
-    // Data for the 'leads' table (used by FunilKanbanPage)
+    // 1. Prepare data for 'leads' table (Kanban) - ONLY SURE COLUMNS
     const leadData = {
         company_name: opportunity.lead_identification,
         phone: opportunity.contact_phone,
         status: opportunity.stage,
         niche: opportunity.niche,
         site_url: opportunity.site_url,
-        value: opportunity.total_value, // Kanban uses 'value'
-        total_value: opportunity.total_value,
+        value: opportunity.total_value, // Standard column in leads
         updated_at: new Date().toISOString(),
     };
 
-    // Data for the 'opportunities' table (richer data)
+    // 2. Prepare data for 'opportunities' table (Rich data)
     const opportunityData = {
         user_id: user.id,
         lead_identification: opportunity.lead_identification,
@@ -77,22 +75,21 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
     };
 
     if (opportunity.id) {
-        // Try updating 'leads' first (most important for current UI)
+        // Update leads
         await supabase.from('leads').update(leadData).eq('id', opportunity.id);
         
-        // Then try updating/upserting 'opportunities'
+        // Try updating 'total_value' in leads separately
+        await supabase.from('leads').update({ total_value: opportunity.total_value } as any).eq('id', opportunity.id);
+        
+        // Upsert into opportunities
         const { data, error } = await supabase
             .from('opportunities')
             .upsert({ id: opportunity.id, ...opportunityData })
             .select()
             .single();
         
-        if (error) {
-            console.warn("Could not upsert into opportunities, but leads might have been updated:", error.message);
-        }
         return data || { id: opportunity.id, ...opportunityData };
     } else {
-        // Create new in 'leads' first
         const { data: newLead, error: leadError } = await supabase
             .from('leads')
             .insert([leadData])
@@ -100,16 +97,12 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
             .single();
         
         if (leadError) throw leadError;
-
-        // Then create in 'opportunities' with the same ID
         await supabase.from('opportunities').insert([{ id: newLead.id, ...opportunityData }]);
-        
         return newLead;
     }
 };
 
 export const getOpportunityById = async (id: string) => {
-    // Try opportunities first (has products/tasks)
     const { data: opp, error: oppError } = await supabase
         .from('opportunities')
         .select('*')
@@ -135,7 +128,6 @@ export const getOpportunityById = async (id: string) => {
         } as Opportunity;
     }
 
-    // Fallback to leads
     const { data: lead, error: leadError } = await supabase
         .from('leads')
         .select('*')
@@ -151,7 +143,7 @@ export const getOpportunityById = async (id: string) => {
         stage: lead.status,
         niche: lead.niche,
         site_url: lead.site_url,
-        total_value: lead.total_value || lead.value || 0,
+        total_value: lead.value || lead.total_value || 0,
         products: [],
         tasks: [],
         created_at: lead.created_at,
@@ -160,7 +152,6 @@ export const getOpportunityById = async (id: string) => {
 };
 
 export const updateOpportunityStage = async (id: string, stage: string) => {
-    // Update both tables to keep them in sync
     await supabase.from('opportunities').update({ stage }).eq('id', id);
     await supabase.from('leads').update({ status: stage }).eq('id', id);
 };
@@ -171,43 +162,20 @@ export const archiveOpportunity = async (id: string) => {
 };
 
 export const getTimelineEntries = async (opportunityId: string): Promise<TimelineEntry[]> => {
-    const { data, error } = await supabase
-        .from('opportunity_timeline')
-        .select('*')
-        .eq('opportunity_id', opportunityId)
-        .order('created_at', { ascending: false });
-
+    const { data, error } = await supabase.from('opportunity_timeline').select('*').eq('opportunity_id', opportunityId).order('created_at', { ascending: false });
     if (error) return [];
-
-    return data.map(entry => ({
-        id: entry.id,
-        type: 'comment',
-        content: entry.comment,
-        created_at: entry.created_at
-    }));
+    return data.map(entry => ({ id: entry.id, type: 'comment', content: entry.comment, created_at: entry.created_at }));
 };
 
 export const addTimelineComment = async (opportunityId: string, comment: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado");
-
-    const { error } = await supabase.from('opportunity_timeline').insert({
-        opportunity_id: opportunityId,
-        user_id: user.id,
-        comment: comment
-    });
-    if (error) throw error;
+    await supabase.from('opportunity_timeline').insert({ opportunity_id: opportunityId, user_id: user.id, comment: comment });
 };
 
 export const getOpportunities = async (): Promise<Opportunity[]> => {
-    // Pipeline usually uses 'leads' table for the Kanban board view
-    const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false });
-    
+    const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
     if (error) throw error;
-    
     return data.map(lead => ({
         id: lead.id,
         lead_identification: lead.company_name,
@@ -217,12 +185,10 @@ export const getOpportunities = async (): Promise<Opportunity[]> => {
         site_url: lead.site_url,
         created_at: lead.created_at,
         updated_at: lead.updated_at,
-        total_value: lead.total_value || lead.value || 0, 
+        total_value: lead.value || lead.total_value || 0, 
         products: [],
         tasks: []
     }));
 };
 
-export const initializeDemoData = async () => {
-    return Promise.resolve();
-};
+export const initializeDemoData = async () => Promise.resolve();
