@@ -166,17 +166,42 @@ function LeadCard({ lead, accentBar, onClick }: { lead: Lead; accentBar: string;
 export default function FunilKanbanPage() {
     const [search, setSearch]       = useState("");
     const [leads, setLeads]         = useState<Lead[]>([]);
+    const [transactions, setTransactions] = useState<any[]>([]);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-    const fetchLeads = async () => {
-        const { data, error } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
-        if (!error && data) setLeads(data as any);
+    const fetchData = async () => {
+        // Fetch leads
+        const { data: leadsData, error: leadsError } = await supabase
+            .from("leads")
+            .select("*")
+            .order("created_at", { ascending: false });
+        
+        if (!leadsError && leadsData) setLeads(leadsData as any);
+
+        // Fetch ALL transactions to sum them up in frontend for each lead
+        const { data: transData, error: transError } = await supabase
+            .from("financial_transactions")
+            .select("lead_id, valor, tipo");
+        
+        if (!transError && transData) setTransactions(transData);
     };
 
     useEffect(() => {
-        fetchLeads();
-        const channel = supabase.channel("kanban-leads").on("postgres_changes", { event: "*", schema: "public", table: "leads" }, fetchLeads).subscribe();
-        return () => { supabase.removeChannel(channel); };
+        fetchData();
+        
+        // Realtime for both leads and transactions
+        const leadsChannel = supabase.channel("kanban-leads")
+            .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, fetchData)
+            .subscribe();
+            
+        const transChannel = supabase.channel("kanban-trans")
+            .on("postgres_changes", { event: "*", schema: "public", table: "financial_transactions" }, fetchData)
+            .subscribe();
+
+        return () => { 
+            supabase.removeChannel(leadsChannel); 
+            supabase.removeChannel(transChannel);
+        };
     }, []);
 
     const onDragEnd = async (result: any) => {
@@ -187,41 +212,164 @@ export default function FunilKanbanPage() {
         await supabase.from("leads").update({ status: newStatus }).eq("id", draggableId);
     };
 
-    const filtered = leads.filter(l => l.company_name.toLowerCase().includes(search.toLowerCase()) || (l.niche && l.niche.toLowerCase().includes(search.toLowerCase())));
-    const totalValue = filtered.reduce((acc, l) => acc + (parseCurrency(l.total_value) || parseCurrency(l.value) || 0), 0);
+    // Merge logic: calculate real value from transactions for each lead
+    const leadsWithRealValues = leads.map(lead => {
+        const leadTrans = transactions.filter(t => t.lead_id === lead.id);
+        const transSum = leadTrans.reduce((acc, t) => {
+            const v = parseCurrency(t.valor);
+            return t.tipo === 'saida' ? acc - v : acc + v;
+        }, 0);
+
+        return {
+            ...lead,
+            // Prioritize transaction sum if it exists, otherwise use saved values
+            displayValue: transSum || parseCurrency(lead.total_value) || parseCurrency(lead.value) || 0
+        };
+    });
+
+    const filtered = leadsWithRealValues.filter(l => 
+        l.company_name.toLowerCase().includes(search.toLowerCase()) || 
+        (l.niche && l.niche.toLowerCase().includes(search.toLowerCase()))
+    );
+
+    const totalValue = filtered.reduce((acc, l) => acc + l.displayValue, 0);
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
             <div className="flex items-center justify-between px-6 py-3.5 border-b border-border bg-card/60 backdrop-blur-sm shrink-0">
-                <div className="flex items-center gap-2.5"><div className="bg-primary text-primary-foreground rounded-lg w-8 h-8 flex items-center justify-center"><TrendingUp size={15} /></div><span className="text-[15px] font-extrabold text-foreground tracking-tight">CRM & Pipeline</span></div>
+                <div className="flex items-center gap-2.5">
+                    <div className="bg-primary text-primary-foreground rounded-lg w-8 h-8 flex items-center justify-center">
+                        <TrendingUp size={15} />
+                    </div>
+                    <span className="text-[15px] font-extrabold text-foreground tracking-tight">CRM & Pipeline</span>
+                </div>
                 <div className="flex items-center gap-6">
-                    <div className="text-right"><div className="text-base font-black tracking-tight text-indigo-500">{leads.length}</div><div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Leads</div></div>
-                    <div className="text-right"><div className="text-base font-black tracking-tight text-emerald-500">{formatBRL(totalValue)}</div><div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Pipeline</div></div>
+                    <div className="text-right">
+                        <div className="text-base font-black tracking-tight text-indigo-500">{leads.length}</div>
+                        <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Leads</div>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-base font-black tracking-tight text-emerald-500">{formatBRL(totalValue)}</div>
+                        <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Pipeline</div>
+                    </div>
                 </div>
             </div>
+
             <div className="flex-1 flex flex-col overflow-hidden p-5 gap-4">
                 <div className="flex items-center justify-between gap-4 shrink-0">
                     <h1 className="text-2xl font-black text-foreground tracking-tight">Funil de Leads</h1>
-                    <div className="flex gap-2"><button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-card border border-border text-foreground text-[13px] font-bold hover:bg-muted transition-all"><Download size={13} /> Exportar</button></div>
+                    <div className="flex gap-2">
+                        <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-card border border-border text-foreground text-[13px] font-bold hover:bg-muted transition-all">
+                            <Download size={13} /> Exportar
+                        </button>
+                    </div>
                 </div>
-                <div className="relative shrink-0"><Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar leads..." className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-card border border-border text-foreground text-[13px] outline-none" /></div>
+
+                <div className="relative shrink-0">
+                    <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
+                    <input 
+                        value={search} 
+                        onChange={(e) => setSearch(e.target.value)} 
+                        placeholder="Buscar leads..." 
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-card border border-border text-foreground text-[13px] outline-none" 
+                    />
+                </div>
+
                 <DragDropContext onDragEnd={onDragEnd}>
                     <div className="flex gap-3 flex-1 overflow-x-auto overflow-y-hidden pb-2">
                         {STAGES.map((stage) => {
-                            const stageLeads = filtered.filter(l => (stage.key === "novo" ? (l.status === "novo" || !l.status) : (stage.key === "kanban_ready" ? (l.status === "kanban_ready" || l.status === "gerando_site") : l.status === stage.key)));
-                            const stageValue = stageLeads.reduce((acc, l) => acc + (parseCurrency(l.total_value) || parseCurrency(l.value) || 0), 0);
+                            const stageLeads = filtered.filter(l => {
+                                if (stage.key === "novo") return l.status === "novo" || !l.status;
+                                if (stage.key === "kanban_ready") return l.status === "kanban_ready" || l.status === "gerando_site";
+                                return l.status === stage.key;
+                            });
+                            
+                            const stageValue = stageLeads.reduce((acc, l) => acc + l.displayValue, 0);
                             const sc = STAGE_COLORS[stage.tw] || STAGE_COLORS.indigo;
+
                             return (
                                 <div key={stage.key} className="flex flex-col w-56 min-w-[224px] shrink-0">
-                                    <div className={`rounded-xl border p-2.5 mb-2.5 ${sc.lightBg} ${sc.darkBg}`}><div className="flex items-center justify-between"><div className="flex items-center gap-2"><span>{stage.emoji}</span><span className="text-[12px] font-extrabold text-foreground leading-none">{stage.label}</span></div><span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${sc.badge}`}>{stageLeads.length}</span></div><div className="flex items-center justify-between mt-1.5">{formatBRL(stageValue)}</div></div>
-                                    <Droppable droppableId={stage.key}>{(provided) => (<div className="flex-1 overflow-y-auto pr-0.5" ref={provided.innerRef} {...provided.droppableProps}>{stageLeads.map((lead, index) => (<Draggable key={lead.id} draggableId={lead.id} index={index}>{(provided) => (<div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}><LeadCard lead={lead} accentBar={sc.accent} onClick={setSelectedLead} /></div>)}</Draggable>))}{provided.placeholder}</div>)}</Droppable>
+                                    <div className={`rounded-xl border p-2.5 mb-2.5 ${sc.lightBg} ${sc.darkBg}`}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span>{stage.emoji}</span>
+                                                <span className="text-[12px] font-extrabold text-foreground leading-none">{stage.label}</span>
+                                            </div>
+                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${sc.badge}`}>{stageLeads.length}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between mt-1.5 font-bold text-foreground">
+                                            {formatBRL(stageValue)}
+                                        </div>
+                                    </div>
+
+                                    <Droppable droppableId={stage.key}>
+                                        {(provided) => (
+                                            <div className="flex-1 overflow-y-auto pr-0.5" ref={provided.innerRef} {...provided.droppableProps}>
+                                                {stageLeads.map((lead, index) => (
+                                                    <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                                                        {(provided) => (
+                                                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                                                                <div onClick={() => setSelectedLead(lead)} className="group relative bg-card border border-border rounded-xl p-3.5 mb-2.5 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] hover:border-border/80 dark:hover:border-white/10 overflow-hidden outline-none">
+                                                                    <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl opacity-60 ${sc.accent}`} />
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <span className="font-mono text-[10px] font-bold text-muted-foreground/40 tracking-widest">#{String(lead.id).substring(0, 6).toUpperCase()}</span>
+                                                                        <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-0.5 rounded-full border border-border/50">
+                                                                            <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                                                                            <span className="text-[10px] font-bold text-muted-foreground">Daniela</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-start justify-between gap-2">
+                                                                        <p className="text-[15px] font-extrabold text-foreground leading-snug tracking-tight">{lead.company_name || 'Sem nome'}</p>
+                                                                        <button 
+                                                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/30 hover:text-destructive p-1 -mt-0.5" 
+                                                                            onClick={async (e) => { 
+                                                                                e.stopPropagation(); 
+                                                                                if (confirm("Deseja excluir este lead?")) await supabase.from("leads").delete().eq("id", lead.id); 
+                                                                            }}
+                                                                        >
+                                                                            <Trash2 size={12} />
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                                                        {lead.niche && <span className="bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700/40 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">{lead.niche}</span>}
+                                                                        <span className="bg-amber-100 text-amber-600 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/30 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                                                                            <span className="w-1.5 h-1.5 rounded-full inline-block bg-amber-500" />
+                                                                            {(String(lead.id).charCodeAt(0) % 2 === 0 ? "QUENTE" : "MORNO")}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between mt-2.5">
+                                                                        <span className="text-[13px] font-black text-foreground tracking-tight">{formatBRL(lead.displayValue)}</span>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground/60">
+                                                                                <Clock size={10} /> {new Date(lead.created_at).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'})}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <PipelineStepper status={lead.status} />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </Draggable>
+                                                ))}
+                                                {provided.placeholder}
+                                            </div>
+                                        )}
+                                    </Droppable>
                                 </div>
                             );
                         })}
                     </div>
                 </DragDropContext>
             </div>
-            <OpportunityModal open={!!selectedLead} onClose={() => setSelectedLead(null)} opportunityId={selectedLead?.id} contactName={selectedLead?.company_name} contactPhone={selectedLead?.phone} stage={selectedLead?.status} />
+
+            <OpportunityModal 
+                open={!!selectedLead} 
+                onClose={() => setSelectedLead(null)} 
+                opportunityId={selectedLead?.id} 
+                contactName={selectedLead?.company_name} 
+                contactPhone={selectedLead?.phone} 
+                stage={selectedLead?.status} 
+            />
         </div>
     );
 }
