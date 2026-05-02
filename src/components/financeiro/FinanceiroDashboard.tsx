@@ -6,9 +6,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
+import { formatBRL } from "@/lib/formatters";
 
 const kpis = [
   { label: "Receita Realizada", value: 0, icon: TrendingUp, color: "emerald", trend: "0%", up: true },

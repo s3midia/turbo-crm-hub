@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { TrendingUp, Plus, Building2, BarChart3, Percent, ArrowUpRight, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+import { formatBRL } from "@/lib/formatters";
 function formatPct(v: number) { return `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`; }
 
 interface Investimento {

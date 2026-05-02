@@ -21,7 +21,7 @@ const MOCK_BANK: BankEntry[] = [
   { id: 6, data: "05/12/2025", descricao: "PIX RECEBIDO 5231xxxx", valor: 1800, tipo: "credito", status: "nao_encontrado" },
 ];
 
-function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+import { formatBRL } from "@/lib/formatters";
 
 const statusConfig = {
   conciliado: { icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Conciliado" },

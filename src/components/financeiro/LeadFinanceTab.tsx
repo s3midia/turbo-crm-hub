@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { TransacaoModal } from './LancamentosTab';
+import { formatBRL } from '@/lib/formatters';
 
 interface LeadFinanceTabProps {
   leadId: string;
@@ -28,9 +29,6 @@ export const LeadFinanceTab = ({
   const { transactions, loading, saveTransaction, deleteTransaction } = useFinance(leadId);
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
-
-  const formatBRL = (value: number) =>
-    value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   const toNumber = (v: any) => {
     if (v === null || v === undefined) return 0;

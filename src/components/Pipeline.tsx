@@ -18,6 +18,7 @@ import { getOpportunities, initializeDemoData, updateOpportunityStage, type Oppo
 import { VendedorSelector } from "./pipeline/VendedorSelector";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useUser } from "@/contexts/UserContext";
+import { formatBRL } from "@/lib/formatters";
 
 interface Opportunity {
   id: string;
@@ -279,7 +280,7 @@ export default function Pipeline() {
                         </button>
                       </div>
                       <div className="bolten-stage-value">
-                        R${stageValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatBRL(stageValue)}
                       </div>
                     </div>
 
@@ -305,7 +306,7 @@ export default function Pipeline() {
                                     {/* Header: Valor + Menu */}
                                     <div className="bolten-card-header">
                                       <div className="bolten-card-header-value">
-                                        R${opportunity.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {formatBRL(opportunity.value)}
                                       </div>
                                       <DropdownMenu>
                                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -347,7 +348,7 @@ export default function Pipeline() {
 
                                     {/* Valor Monetário Verde */}
                                     <div className="bolten-monetary">
-                                      R${opportunity.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          {formatBRL(opportunity.value)}
                                     </div>
                                   </div>
                                 </div>

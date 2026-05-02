@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ import { saveOpportunity, archiveOpportunity, getTimelineEntries, addTimelineCom
 import { useToast } from '@/hooks/use-toast';
 import { useProfiles } from '@/hooks/useProfiles';
 import { LeadFinanceTab } from '@/components/financeiro/LeadFinanceTab';
+import { formatBRL } from '@/lib/formatters';
 
 interface OpportunityModalProps {
     open: boolean;
@@ -30,8 +31,6 @@ interface OpportunityModalProps {
     onSaved?: () => void;
     opportunityId?: string;
 }
-
-
 
 export const OpportunityModal = ({
     open,
@@ -59,7 +58,6 @@ export const OpportunityModal = ({
         siteUrl: '',
         template: '',
     });
-
 
     const [products, setProducts] = useState<Product[]>([
         { name: '', quantity: 0, price: 0 },
@@ -264,6 +262,8 @@ export const OpportunityModal = ({
     return (
         <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none bg-transparent shadow-none">
+                <DialogTitle className="sr-only">Detalhes da Oportunidade</DialogTitle>
+                <DialogDescription className="sr-only">Visualize e edite os detalhes desta oportunidade de negócio.</DialogDescription>
                 <Card className="border-none shadow-2xl bg-background/95 backdrop-blur-md overflow-hidden">
                     <CardHeader className="bg-gradient-to-r from-primary/10 via-background to-background border-b pb-6">
                         <div className="flex items-center justify-between">
@@ -285,7 +285,7 @@ export const OpportunityModal = ({
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Valor Total</p>
                                     <div className="flex items-center gap-2 text-3xl font-black text-green-500">
                                         <DollarSign className="h-6 w-6" />
-                                        <span>{calculateGrandTotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        <span>{formatBRL(calculateGrandTotal())}</span>
                                     </div>
                                 </div>
                                 <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
@@ -523,6 +523,78 @@ export const OpportunityModal = ({
                                             </CardContent>
                                         </Card>
                                     </div>
+
+                                    {/* Produtos / Composição de Preço */}
+                                    <Card className="bg-white/50 backdrop-blur-sm shadow-sm border-muted">
+                                        <CardHeader className="pb-4 pt-4 flex flex-row items-center justify-between">
+                                            <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
+                                                <DollarSign className="h-4 w-4" /> Composição de Preço
+                                            </CardTitle>
+                                            <Button onClick={addProduct} variant="outline" size="sm" className="h-7 text-[10px] font-bold uppercase gap-1.5 border-primary/20 hover:bg-primary/5">
+                                                <Plus className="h-3 w-3" /> Adicionar Item
+                                            </Button>
+                                        </CardHeader>
+                                        <CardContent className="space-y-3">
+                                            {products.map((product, index) => (
+                                                <div key={index} className="grid grid-cols-[3fr,1fr,1fr,1fr,auto] gap-3 items-end bg-background/40 p-3 rounded-lg border border-muted/50 transition-all hover:bg-background/80 group">
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Produto / Serviço</Label>
+                                                        <Input
+                                                            value={product.name}
+                                                            onChange={(e) => updateProduct(index, 'name', e.target.value)}
+                                                            placeholder="Nome do produto"
+                                                            className="h-8 text-xs bg-white"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Qtde</Label>
+                                                        <Input
+                                                            type="number"
+                                                            value={product.quantity || ''}
+                                                            onChange={(e) => updateProduct(index, 'quantity', Math.max(1, Number(e.target.value)))}
+                                                            className="h-8 text-xs bg-white text-center"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor Un.</Label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground">R$</span>
+                                                            <Input
+                                                                type="number"
+                                                                className="h-8 text-xs pl-7 bg-white"
+                                                                value={product.price || ''}
+                                                                onChange={(e) => updateProduct(index, 'price', Number(e.target.value))}
+                                                                step="0.01"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 text-right">
+                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground block">Subtotal</Label>
+                                                        <p className="h-8 flex items-center justify-end text-xs font-bold text-foreground pr-2 font-mono">
+                                                            R$ {calculateProductTotal(product.quantity, product.price).toFixed(2)}
+                                                        </p>
+                                                    </div>
+                                                    <Button
+                                                        onClick={() => removeProduct(index)}
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+
+                                            <div className="flex justify-end pt-2">
+                                                <div className="text-right bg-primary/5 px-6 py-2 rounded-xl border border-primary/10 shadow-inner">
+                                                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-0.5">Total da Oportunidade</p>
+                                                    <p className="text-2xl font-black text-primary font-mono tracking-tighter">
+                                                        {formatBRL(calculateGrandTotal())}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
                                     {/* ── Divisor: Seção Financeira ── */}
                                     <div className="flex items-center gap-3">

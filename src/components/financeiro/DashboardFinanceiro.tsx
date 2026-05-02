@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, ArrowDownRight, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+import { formatBRL } from "@/lib/formatters";
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 const kpis = [

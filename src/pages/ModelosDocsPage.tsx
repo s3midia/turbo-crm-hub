@@ -7,6 +7,7 @@ import { ManualProposalModal } from "@/components/ManualProposalModal";
 import { VisualSettingsModal } from "@/components/VisualSettingsModal";
 import { S3_PROPOSAL_TEMPLATE } from "@/lib/documentTemplates";
 import { toast } from "sonner";
+import { formatBRL } from "@/lib/formatters";
 
 interface Doc {
     id: number;
@@ -26,10 +27,6 @@ const MOCK_DOCS: Doc[] = [
     { id: 21, titulo: "Proposta de Serviços", subtipo: "Contrato", cliente: "Cliente Avulso", valor: 200, status: "pendente", data: "10/12/2025" },
     { id: 20, titulo: "Proposta de Serviços", subtipo: "Contrato", cliente: "Cliente Avulso", valor: 200, status: "aprovado", data: "10/12/2025" },
 ];
-
-function formatBRL(v: number) {
-    return (v / 100 > 1000 ? v : v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 export default function ModelosDocsPage() {
     const [docs, setDocs] = useState<Doc[]>(MOCK_DOCS);

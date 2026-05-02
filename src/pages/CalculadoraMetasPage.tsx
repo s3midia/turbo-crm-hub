@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Calculator } from "lucide-react";
+import { formatBRL } from "@/lib/formatters";
 
 export default function CalculadoraMetasPage() {
     const [ticketMedio, setTicketMedio] = useState(3000);
@@ -29,7 +30,7 @@ export default function CalculadoraMetasPage() {
                         <div key={label} className="space-y-2">
                             <div className="flex justify-between">
                                 <label className="text-[13px] font-medium text-[hsl(220,10%,65%)]">{label}</label>
-                                <span className="text-[13px] font-bold text-foreground">{value.toLocaleString("pt-BR")}</span>
+                                <span className="text-[13px] font-bold text-foreground">{formatBRL(value)}</span>
                             </div>
                             <input type="range" min={min} max={max} value={value}
                                 onChange={e => set(Number(e.target.value))}
@@ -53,7 +54,7 @@ export default function CalculadoraMetasPage() {
 
                 <div className="bg-[hsl(265,85%,60%,0.1)] border border-[hsl(265,85%,60%,0.25)] rounded-xl p-4">
                     <p className="text-[13px] text-[hsl(220,15%,75%)]">
-                        Para atingir <span className="font-bold text-foreground">R$ {metaMensal.toLocaleString("pt-BR")}/mês</span> com ticket médio de <span className="font-bold text-foreground">R$ {ticketMedio.toLocaleString("pt-BR")}</span>, você precisa capturar <span className="font-bold text-[hsl(265,85%,70%)]">{leadsPorDia} leads por dia</span> e fechar {taxaConversao}% deles.
+                        Para atingir <span className="font-bold text-foreground">{formatBRL(metaMensal)}/mês</span> com ticket médio de <span className="font-bold text-foreground">{formatBRL(ticketMedio)}</span>, você precisa capturar <span className="font-bold text-[hsl(265,85%,70%)]">{leadsPorDia} leads por dia</span> e fechar {taxaConversao}% deles.
                     </p>
                 </div>
             </div>

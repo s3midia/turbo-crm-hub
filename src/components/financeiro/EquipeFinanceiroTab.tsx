@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Users, Check, AlertCircle, Plus, Trash2, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+import { formatBRL } from "@/lib/formatters";
 
 interface Funcionario {
   id: number;

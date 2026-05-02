@@ -3,7 +3,7 @@ import { FileText, Download, TrendingUp, TrendingDown, BarChart3, PieChart, Chev
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+import { formatBRL } from "@/lib/formatters";
 function pct(v: number, t: number) { return t === 0 ? "0%" : `${((v / t) * 100).toFixed(1)}%`; }
 
 const dreData = {

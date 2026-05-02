@@ -28,7 +28,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription 
 } from "@/components/ui/dialog";
 
-function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+import { formatBRL, formatDateTime } from "@/lib/formatters";
 
 interface TimelineEvent {
   id: string;
@@ -334,10 +334,10 @@ export default function CobrancasFiscalTab({
       {/* Robust Client Profile Command Center - NOW IN A MODAL */}
       <Dialog open={showTimeline} onOpenChange={handleCloseProfile}>
         <DialogContent className="max-w-[95vw] w-[1200px] p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl bg-card">
-            <DialogHeader className="sr-only">
-              <DialogTitle>Perfil do Cliente: {selectedClient?.cliente}</DialogTitle>
-              <DialogDescription>Detalhes, histórico e ações para o cliente selecionado.</DialogDescription>
-            </DialogHeader>
+          <DialogHeader className="sr-only">
+            <DialogTitle>Perfil do Cliente: {selectedClient?.cliente || "Cliente"}</DialogTitle>
+            <DialogDescription>Detalhes, histórico e ações para o cliente selecionado.</DialogDescription>
+          </DialogHeader>
             {selectedClient && (
               <div className="max-h-[90vh] overflow-y-auto custom-scrollbar">
           {/* Profile Header Banner */}
@@ -359,7 +359,7 @@ export default function CobrancasFiscalTab({
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-3xl font-black text-foreground tracking-tight">{selectedClient.cliente}</h2>
+                  <h2 className="text-3xl font-black text-foreground tracking-tight">{selectedClient?.cliente || "Sem Nome"}</h2>
                   <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
                     CLIENTE ATIVO
                   </Badge>
@@ -409,9 +409,9 @@ export default function CobrancasFiscalTab({
                     </div>
                   ) : (
                     <>
-                      <span className="flex items-center gap-1.5"><Building2 size={14} className="text-primary/60" /> {selectedClient.empresa}</span>
-                      <span className="flex items-center gap-1.5"><Calendar size={14} className="text-primary/60" /> Início: {selectedClient.dataInicio}</span>
-                      <span className="bg-muted px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">ID: {selectedClient.clientId}</span>
+                      <span className="flex items-center gap-1.5"><Building2 size={14} className="text-primary/60" /> {selectedClient?.empresa || "N/A"}</span>
+                      <span className="flex items-center gap-1.5"><Calendar size={14} className="text-primary/60" /> Início: {selectedClient?.dataInicio || "N/A"}</span>
+                      <span className="bg-muted px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">ID: {selectedClient?.clientId || "N/A"}</span>
                       <button 
                         onClick={() => setIsEditing(true)}
                         className="flex items-center gap-1 text-primary hover:underline ml-2"
@@ -541,7 +541,7 @@ export default function CobrancasFiscalTab({
                       <div className="flex-1 p-6 space-y-4 overflow-y-auto custom-scrollbar bg-[url('https://w0.peakpx.com/wallpaper/580/678/HD-wallpaper-whatsapp-dark-pattern-background-grey-monochrome.jpg')] bg-repeat bg-center opacity-90">
                         <div className="flex flex-col items-start max-w-[85%]">
                           <div className="bg-card p-3.5 rounded-2xl rounded-tl-none text-[13px] font-medium text-foreground shadow-sm border border-border/40">
-                            Olá {selectedClient.cliente}, tudo bem? Aqui é o Rafa da Torre S3. Vi que o contrato foi assinado!
+                            Olá {selectedClient?.cliente || "Cliente"}, tudo bem? Aqui é o Rafa da Torre S3. Vi que o contrato foi assinado!
                           </div>
                           <span className="text-[9px] text-muted-foreground mt-1 ml-1 font-bold">10:45</span>
                         </div>
@@ -631,7 +631,7 @@ export default function CobrancasFiscalTab({
                 <div className="space-y-6">
                   <div className="flex justify-between items-end">
                     <div>
-                      <p className="text-xl font-black text-foreground capitalize">{selectedClient.kanbanStage?.replace('_', ' ')}</p>
+                      <p className="text-xl font-black text-foreground capitalize">{selectedClient?.kanbanStage?.replace('_', ' ') || "N/A"}</p>
                       <p className="text-[11px] font-bold text-muted-foreground">Etapa atual do fechamento</p>
                     </div>
                     <Button 
@@ -772,13 +772,13 @@ export default function CobrancasFiscalTab({
                    </div>
                    <div className="bg-muted/20 p-3 rounded-2xl border border-border/20">
                       <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">MRR Atual</p>
-                      <p className="text-lg font-black text-primary">{formatBRL(selectedClient.valor)}</p>
+                      <p className="text-lg font-black text-primary">{formatBRL(selectedClient?.valor)}</p>
                    </div>
                 </div>
                 <div className="pt-2 border-t border-border/40 space-y-2">
                    <div className="flex justify-between text-[11px]">
                       <span className="text-muted-foreground font-medium">Próximo Faturamento:</span>
-                      <span className="font-bold text-foreground">{selectedClient.proximoVencimento}</span>
+                      <span className="font-bold text-foreground">{selectedClient?.proximoVencimento || "N/A"}</span>
                    </div>
                    <div className="flex justify-between text-[11px]">
                       <span className="text-muted-foreground font-medium">Método Preferencial:</span>
@@ -797,13 +797,13 @@ export default function CobrancasFiscalTab({
                       <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
                         <Mail size={16} />
                       </div>
-                      <span className="font-bold text-foreground">{selectedClient.email}</span>
+                      <span className="font-bold text-foreground">{selectedClient?.email || "N/A"}</span>
                    </div>
                    <div className="flex items-center gap-3 text-sm">
                       <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                         <Phone size={16} />
                       </div>
-                      <span className="font-bold text-foreground">{selectedClient.telefone}</span>
+                      <span className="font-bold text-foreground">{selectedClient?.telefone || "N/A"}</span>
                    </div>
                 </div>
               </div>
@@ -813,7 +813,7 @@ export default function CobrancasFiscalTab({
                 <Button 
                   variant="outline" 
                   className="rounded-2xl h-14 flex flex-col items-center justify-center gap-0.5 border-primary/20 hover:bg-primary/5 group"
-                  onClick={() => handleAction(selectedClient, "boleto")}
+                  onClick={() => selectedClient && handleAction(selectedClient, "boleto")}
                 >
                   <Download className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
                   <span className="text-[10px] font-black uppercase tracking-tighter">Gerar Boleto</span>
@@ -821,7 +821,7 @@ export default function CobrancasFiscalTab({
                 <Button 
                   variant="outline" 
                   className="rounded-2xl h-14 flex flex-col items-center justify-center gap-0.5 border-blue-500/20 hover:bg-blue-500/5 group"
-                  onClick={() => handleAction(selectedClient, "email")}
+                  onClick={() => selectedClient && handleAction(selectedClient, "email")}
                 >
                   <Send className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
                   <span className="text-[10px] font-black uppercase tracking-tighter">Enviar Email</span>
@@ -1229,8 +1229,8 @@ export default function CobrancasFiscalTab({
                       <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Sacado (Cliente)</p>
                         <p className="text-lg font-black text-slate-800">{generatedBoleto?.client}</p>
-                        <p className="text-sm text-slate-500 font-medium">Contrato: {selectedClient?.clientId}</p>
-                        <p className="text-sm text-slate-500 font-medium">Plano: {selectedClient?.plano}</p>
+                        <p className="text-sm text-slate-500 font-medium">Contrato: {selectedClient?.clientId || "N/A"}</p>
+                        <p className="text-sm text-slate-500 font-medium">Plano: {selectedClient?.plano || "N/A"}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pagamento</p>

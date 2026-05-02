@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { formatBRL } from "@/lib/formatters";
 
 import {
   Table,
@@ -164,7 +165,7 @@ export default function Contacts() {
           { label: "Total de Contatos", val: totalContacts, icon: User, color: "text-primary", bg: "bg-primary/10" },
           { label: "Clientes Ativos", val: totalClients, icon: Star, color: "text-emerald-500", bg: "bg-emerald-500/10" },
           { label: "Novos Leads", val: totalLeads, icon: User, color: "text-blue-500", bg: "bg-blue-500/10" },
-          { label: "Valor em Pipeline", val: `R$ ${totalValue.toLocaleString()}`, icon: Star, color: "text-amber-500", bg: "bg-amber-500/10" },
+          { label: "Valor em Pipeline", val: formatBRL(totalValue), icon: Star, color: "text-amber-500", bg: "bg-amber-500/10" },
         ].map((s, i) => (
           <Card key={i} className="border-border/40 shadow-sm rounded-3xl overflow-hidden hover:border-primary/30 transition-all group">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -247,7 +248,7 @@ export default function Contacts() {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-bold text-[13px] text-foreground">
-                      R$ {contact.value.toLocaleString()}
+                      {formatBRL(contact.value)}
                     </TableCell>
                     <TableCell className="text-[11px] font-medium text-muted-foreground">
                       {new Date(contact.lastInteraction).toLocaleDateString("pt-BR")}

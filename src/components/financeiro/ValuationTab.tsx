@@ -3,7 +3,7 @@ import { Building2, TrendingUp, BarChart3, RefreshCw, ChevronDown, ArrowUpRight,
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-function formatBRL(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+import { formatBRL } from "@/lib/formatters";
 
 type MetodoValuation = "multiplos" | "fcd" | "patrimonial";
 

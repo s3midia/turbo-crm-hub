@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { generateAgentResponse } from "@/lib/gemini";
 import { executeAgentTool } from "@/lib/agentActions";
+import { formatDateTime } from "@/lib/formatters";
 
 export interface Lead {
     id: string;
@@ -184,7 +185,7 @@ function TimelineTab({ leadId }: { leadId: string }) {
                                     Agent: {log.agent_id}
                                 </span>
                                 <span className="text-[10px] text-slate-400 font-medium">
-                                    {new Date(log.created_at).toLocaleString('pt-BR')}
+                                    {formatDateTime(log.created_at)}
                                 </span>
                             </div>
                             <p className="text-sm text-slate-700 font-medium leading-relaxed">
@@ -649,7 +650,7 @@ ${aiData.proposta_valor}
                                         </div>
                                         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Criação do Lead</p>
-                                            <p className="font-bold text-lg text-slate-800">{new Date(selectedLead.created_at).toLocaleString('pt-BR')}</p>
+                                            <p className="font-bold text-lg text-slate-800">{formatDateTime(selectedLead.created_at)}</p>
                                         </div>
                                         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 col-span-2">
                                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Sócios / Sócios Diretores</p>

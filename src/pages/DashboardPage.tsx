@@ -1,6 +1,7 @@
 import React from "react";
 import { TrendingUp, Users, Globe, MessageSquare, ArrowRight, Scan, DollarSign } from "lucide-react";
 import { Link } from "react-router-dom";
+import { formatBRL } from "@/lib/formatters";
 
 const metrics = {
     leadsRadar: 87,
@@ -59,7 +60,7 @@ export default function DashboardPage() {
 
             {/* KPIs Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <KPICard label="Receita Total" value={`R$ ${metrics.mrr.toLocaleString("pt-BR")}`} icon={DollarSign} change="+20.1%" />
+                <KPICard label="Receita Total" value={formatBRL(metrics.mrr)} icon={DollarSign} change="+20.1%" />
                 <KPICard label="Novos Leads" value={metrics.leadsRadar} icon={Scan} change="+180.1%" />
                 <KPICard label="Taxa de Conversão" value={`${convRate}%`} icon={TrendingUp} change="+19%" />
                 <KPICard label="Negócios Ativos" value={metrics.leadsKanban} icon={Users} change={`+${metrics.atendimento}`} />

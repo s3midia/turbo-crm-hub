@@ -7,6 +7,7 @@ import {
 import { OpportunityModal } from "../components/whatsapp/OpportunityModal";
 import { supabase } from "@/integrations/supabase/client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { formatBRL } from "@/lib/formatters";
 
 export interface Lead {
     id: string;
@@ -290,7 +291,7 @@ function LeadCard({
             {/* Value + Date row */}
             <div className="flex items-center justify-between mt-2.5">
                 <span className="text-[13px] font-black text-foreground tracking-tight">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lead.value || 0)}
+                    {formatBRL(lead.value || 0)}
                 </span>
                 <div className="flex items-center gap-1">
                     {isAtrasado ? (
@@ -411,7 +412,7 @@ export default function FunilKanbanPage() {
                 <div className="flex items-center gap-6">
                     {[
                         { label: "Leads",    value: leads.length,                                  cls: "text-indigo-500"  },
-                        { label: "Pipeline", value: `R$ ${totalValue.toLocaleString("pt-BR")},00`, cls: "text-emerald-500" },
+                        { label: "Pipeline", value: formatBRL(totalValue), cls: "text-emerald-500" },
                         { label: "Ganhos",   value: wonLeads,                                      cls: "text-amber-500"   },
                     ].map(s => (
                         <div key={s.label} className="text-right">
@@ -486,9 +487,7 @@ export default function FunilKanbanPage() {
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between mt-1.5">
-                                            <span className={`text-[11px] font-bold ${sc.accent}`}>
-                                                R$ {stageValue.toLocaleString("pt-BR")},00
-                                            </span>
+                                                {formatBRL(stageValue)}
                                             <ChevronRight size={10} className={`${sc.accent} opacity-40`} />
                                         </div>
                                     </div>
