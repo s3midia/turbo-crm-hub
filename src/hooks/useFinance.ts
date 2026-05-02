@@ -19,6 +19,22 @@ export interface FinancialTransaction {
   created_at?: string;
 }
 
+// Helper to clean currency strings and return a valid number
+const parseCurrency = (val: any): number => {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === 'number') return val;
+  
+  // Remove R$, spaces, dots (thousands), and replace comma with dot
+  const cleaned = String(val)
+    .replace(/R\$/g, '')
+    .replace(/\s/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.');
+    
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 export const useFinance = (leadId?: string) => {
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,28 +57,20 @@ export const useFinance = (leadId?: string) => {
   const syncOpportunityTotal = async (leadId: string, transactions: FinancialTransaction[]) => {
     try {
       const total = transactions.reduce((acc, t) => {
-        const v = typeof t.valor === 'string' ? parseFloat(t.valor) : Number(t.valor);
-        const val = isNaN(v) ? 0 : v;
-        return t.tipo === 'saida' ? acc - val : acc + v;
+        const val = parseCurrency(t.valor);
+        return t.tipo === 'saida' ? acc - val : acc + val;
       }, 0);
 
-      // 1. Update 'opportunities' table (has total_value)
+      // 1. Update 'opportunities' table
       await supabase
         .from('opportunities')
         .update({ total_value: total })
         .eq('id', leadId);
 
-      // 2. Update 'leads' table (Kanban) - separate calls to be safe
-      // Try 'value' column first
+      // 2. Update 'leads' table (value column)
       await supabase
         .from('leads')
         .update({ value: total })
-        .eq('id', leadId);
-        
-      // Try 'total_value' column optionally (this might fail if column doesn't exist, which is fine)
-      await supabase
-        .from('leads')
-        .update({ total_value: total } as any)
         .eq('id', leadId);
 
     } catch (err) {
@@ -93,7 +101,6 @@ export const useFinance = (leadId?: string) => {
       if (error) throw error;
     }
     
-    // Auto-sync total if leadId is present
     if (leadId) {
       const { data: allTransactions } = await supabase.from('financial_transactions').select('*').eq('lead_id', leadId);
       if (allTransactions) await syncOpportunityTotal(leadId, allTransactions);

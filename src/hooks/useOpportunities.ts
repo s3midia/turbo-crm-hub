@@ -42,22 +42,30 @@ export interface TimelineEntry {
     created_at: string;
 }
 
+const parseCurrency = (val: any): number => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'number') return val;
+    const cleaned = String(val).replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0 : parsed;
+};
+
 export const saveOpportunity = async (opportunity: Opportunity) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado");
     
-    // 1. Prepare data for 'leads' table (Kanban) - ONLY SURE COLUMNS
+    const finalValue = parseCurrency(opportunity.total_value);
+
     const leadData = {
         company_name: opportunity.lead_identification,
         phone: opportunity.contact_phone,
         status: opportunity.stage,
         niche: opportunity.niche,
         site_url: opportunity.site_url,
-        value: opportunity.total_value, // Standard column in leads
+        value: finalValue,
         updated_at: new Date().toISOString(),
     };
 
-    // 2. Prepare data for 'opportunities' table (Rich data)
     const opportunityData = {
         user_id: user.id,
         lead_identification: opportunity.lead_identification,
@@ -68,26 +76,19 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         priority: opportunity.priority,
         observation: opportunity.observation,
         responsible_id: opportunity.responsible_id || null,
-        total_value: opportunity.total_value || 0,
+        total_value: finalValue,
         products: opportunity.products || [],
         tasks: opportunity.tasks || [],
         updated_at: new Date().toISOString(),
     };
 
     if (opportunity.id) {
-        // Update leads
         await supabase.from('leads').update(leadData).eq('id', opportunity.id);
-        
-        // Try updating 'total_value' in leads separately
-        await supabase.from('leads').update({ total_value: opportunity.total_value } as any).eq('id', opportunity.id);
-        
-        // Upsert into opportunities
         const { data, error } = await supabase
             .from('opportunities')
             .upsert({ id: opportunity.id, ...opportunityData })
             .select()
             .single();
-        
         return data || { id: opportunity.id, ...opportunityData };
     } else {
         const { data: newLead, error: leadError } = await supabase
@@ -95,7 +96,6 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
             .insert([leadData])
             .select()
             .single();
-        
         if (leadError) throw leadError;
         await supabase.from('opportunities').insert([{ id: newLead.id, ...opportunityData }]);
         return newLead;
@@ -103,12 +103,7 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
 };
 
 export const getOpportunityById = async (id: string) => {
-    const { data: opp, error: oppError } = await supabase
-        .from('opportunities')
-        .select('*')
-        .eq('id', id)
-        .single();
-    
+    const { data: opp, error: oppError } = await supabase.from('opportunities').select('*').eq('id', id).single();
     if (!oppError && opp) {
         return {
             id: opp.id,
@@ -120,7 +115,7 @@ export const getOpportunityById = async (id: string) => {
             priority: opp.priority,
             observation: opp.observation,
             responsible_id: opp.responsible_id,
-            total_value: opp.total_value || 0,
+            total_value: parseCurrency(opp.total_value),
             products: opp.products || [],
             tasks: opp.tasks || [],
             created_at: opp.created_at,
@@ -128,14 +123,8 @@ export const getOpportunityById = async (id: string) => {
         } as Opportunity;
     }
 
-    const { data: lead, error: leadError } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('id', id)
-        .single();
-    
+    const { data: lead, error: leadError } = await supabase.from('leads').select('*').eq('id', id).single();
     if (leadError) throw leadError;
-
     return {
         id: lead.id,
         lead_identification: lead.company_name,
@@ -143,7 +132,7 @@ export const getOpportunityById = async (id: string) => {
         stage: lead.status,
         niche: lead.niche,
         site_url: lead.site_url,
-        total_value: lead.value || lead.total_value || 0,
+        total_value: parseCurrency(lead.value || lead.total_value),
         products: [],
         tasks: [],
         created_at: lead.created_at,
@@ -185,7 +174,7 @@ export const getOpportunities = async (): Promise<Opportunity[]> => {
         site_url: lead.site_url,
         created_at: lead.created_at,
         updated_at: lead.updated_at,
-        total_value: lead.value || lead.total_value || 0, 
+        total_value: parseCurrency(lead.value || lead.total_value), 
         products: [],
         tasks: []
     }));
