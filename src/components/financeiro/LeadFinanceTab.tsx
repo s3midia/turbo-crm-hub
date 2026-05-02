@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useFinance, FinancialTransaction } from '@/hooks/useFinance';
 import {
-  DollarSign, Clock, CheckCircle2, Plus,
+  DollarSign, Plus,
   ArrowUpCircle, ArrowDownCircle, Edit3, Trash2,
-  TrendingUp, Banknote, Receipt, AlertTriangle
+  Banknote, Receipt, AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -149,57 +149,6 @@ export const LeadFinanceTab = ({
         </Card>
       )}
 
-      {/* ── KPIs ── */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="bg-emerald-500/5 border-emerald-500/15 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-emerald-500/10 rounded-lg">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              </div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700">
-                Recebido
-              </span>
-            </div>
-            <p className="text-xl font-black text-emerald-700 leading-none">
-              {formatBRL(totals.paid)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-amber-500/5 border-amber-500/15 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-amber-500/10 rounded-lg">
-                <Clock className="h-3.5 w-3.5 text-amber-600" />
-              </div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-amber-700">
-                Pendente
-              </span>
-            </div>
-            <p className="text-xl font-black text-amber-700 leading-none">
-              {formatBRL(totals.pending)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-blue-500/5 border-blue-500/15 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-blue-500/10 rounded-lg">
-                <TrendingUp className="h-3.5 w-3.5 text-blue-600" />
-              </div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-blue-700">
-                MRR
-              </span>
-            </div>
-            <p className="text-xl font-black text-blue-700 leading-none">
-              {formatBRL(totals.mrr)}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* ── Histórico de Transações ── */}
       <Card className="bg-card border-border shadow-sm overflow-hidden">
         <CardHeader className="py-3 px-5 border-b bg-muted/20 flex flex-row items-center justify-between">
@@ -313,6 +262,21 @@ export const LeadFinanceTab = ({
           )}
         </CardContent>
       </Card>
+
+      {/* ── Total da Oportunidade ── */}
+      <div className="flex items-center justify-between bg-primary/5 border border-primary/15 rounded-xl px-6 py-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">
+            Total da Oportunidade
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            Valor contratado conforme proposta comercial
+          </p>
+        </div>
+        <p className="text-2xl font-black text-primary font-mono tracking-tight">
+          {formatBRL(contractTotal)}
+        </p>
+      </div>
     </div>
   );
 };
