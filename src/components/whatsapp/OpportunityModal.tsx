@@ -32,6 +32,8 @@ interface OpportunityModalProps {
     opportunityId?: string;
 }
 
+import { useFinance } from '@/hooks/useFinance';
+
 export const OpportunityModal = ({
     open,
     onClose,
@@ -46,6 +48,10 @@ export const OpportunityModal = ({
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
     const [archiving, setArchiving] = useState(false);
+    
+    // USANDO useFinance AQUI PARA SINCRONIZAR O CABEÇALHO
+    const { transactions } = useFinance(opportunityId);
+
     const [formData, setFormData] = useState({
         status: stage,
         leadIdentification: contactName,
@@ -69,6 +75,13 @@ export const OpportunityModal = ({
 
     const [comment, setComment] = useState('');
     const [timelineData, setTimelineData] = useState<TimelineEntry[]>([]);
+
+    // CÁLCULO DO TOTAL BASEADO EM TRANSAÇÕES (EXCLUSIVO)
+    const transactionsTotal = transactions.reduce((acc, t) => {
+        const v = typeof t.valor === 'string' ? parseFloat(t.valor) : Number(t.valor);
+        const val = isNaN(v) ? 0 : v;
+        return t.tipo === 'saida' ? acc - val : acc + val;
+    }, 0);
 
     // Load opportunity data if editing
     useEffect(() => {
@@ -206,7 +219,7 @@ export const OpportunityModal = ({
                 contact_email: formData.email,
                 observation: formData.observation,
                 responsible_id: formData.responsible || undefined,
-                total_value: calculateGrandTotal(),
+                // REMOVIDO: total_value não é mais atualizado pelos produtos
                 products: products.filter(p => p.name),
                 tasks: tasks.filter(t => t.title),
                 niche: formData.niche,
@@ -285,7 +298,7 @@ export const OpportunityModal = ({
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Valor Total</p>
                                     <div className="flex items-center gap-2 text-3xl font-black text-green-500">
                                         <DollarSign className="h-6 w-6" />
-                                        <span>{formatBRL(calculateGrandTotal())}</span>
+                                        <span>{formatBRL(transactionsTotal)}</span>
                                     </div>
                                 </div>
                                 <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
@@ -587,7 +600,7 @@ export const OpportunityModal = ({
 
                                             <div className="flex justify-end pt-2">
                                                 <div className="text-right bg-primary/5 px-6 py-2 rounded-xl border border-primary/10 shadow-inner">
-                                                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-0.5">Total da Oportunidade</p>
+                                                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-0.5">Previsão por Produtos</p>
                                                     <p className="text-2xl font-black text-primary font-mono tracking-tighter">
                                                         {formatBRL(calculateGrandTotal())}
                                                     </p>

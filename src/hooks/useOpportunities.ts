@@ -54,19 +54,16 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado");
     
-    const finalValue = parseCurrency(opportunity.total_value);
-
-    const leadData = {
+    const leadData: any = {
         company_name: opportunity.lead_identification,
         phone: opportunity.contact_phone,
         status: opportunity.stage,
         niche: opportunity.niche,
         site_url: opportunity.site_url,
-        value: finalValue,
         updated_at: new Date().toISOString(),
     };
 
-    const opportunityData = {
+    const opportunityData: any = {
         user_id: user.id,
         lead_identification: opportunity.lead_identification,
         contact_phone: opportunity.contact_phone,
@@ -76,11 +73,18 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         priority: opportunity.priority,
         observation: opportunity.observation,
         responsible_id: opportunity.responsible_id || null,
-        total_value: finalValue,
         products: opportunity.products || [],
         tasks: opportunity.tasks || [],
         updated_at: new Date().toISOString(),
     };
+
+    // Só atualiza o valor se ele for explicitamente passado (ex: via finanças)
+    // Se vier do modal geral onde removemos o vínculo, ele será undefined
+    if (opportunity.total_value !== undefined) {
+        const val = parseCurrency(opportunity.total_value);
+        leadData.value = val;
+        opportunityData.total_value = val;
+    }
 
     if (opportunity.id) {
         await supabase.from('leads').update(leadData).eq('id', opportunity.id);
