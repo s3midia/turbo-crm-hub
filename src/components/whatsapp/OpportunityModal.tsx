@@ -304,9 +304,6 @@ export const OpportunityModal = ({
                                 <TabsTrigger value="timeline" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 font-bold transition-all">
                                     Linha do tempo
                                 </TabsTrigger>
-                                <TabsTrigger value="financeiro" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 font-bold transition-all">
-                                    Financeiro
-                                </TabsTrigger>
                             </TabsList>
                         </div>
 
@@ -668,6 +665,25 @@ export const OpportunityModal = ({
                                         </CardContent>
                                     </Card>
 
+                                    {/* Financeiro */}
+                                    {opportunityId ? (
+                                        <LeadFinanceTab
+                                            leadId={opportunityId}
+                                            leadName={formData.leadIdentification}
+                                            products={products}
+                                            siteUrl={formData.siteUrl}
+                                        />
+                                    ) : (
+                                        <Card className="bg-white/50 backdrop-blur-sm shadow-sm border-muted">
+                                            <CardContent className="h-32 flex flex-col items-center justify-center opacity-40">
+                                                <DollarSign className="h-8 w-8 mb-2" />
+                                                <p className="text-xs font-black uppercase tracking-widest text-center">
+                                                    Ative o negócio primeiro para<br />acessar os recursos financeiros
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+
                                     <div className="flex items-center justify-between pt-4 border-t gap-4">
                                         <div className="flex items-center gap-2">
                                             {opportunityId && (
@@ -776,23 +792,6 @@ export const OpportunityModal = ({
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="financeiro" className="p-6 space-y-4 mt-0">
-                            {opportunityId ? (
-                                <LeadFinanceTab 
-                                    leadId={opportunityId} 
-                                    leadName={formData.leadIdentification} 
-                                    products={products}
-                                    siteUrl={formData.siteUrl}
-                                />
-                            ) : (
-                                <div className="h-64 flex flex-col items-center justify-center opacity-40">
-                                    <DollarSign className="h-12 w-12 mb-4" />
-                                    <p className="text-xs font-black uppercase tracking-widest text-center">
-                                        Ative o negócio primeiro para<br />acessar os recursos financeiros
-                                    </p>
-                                </div>
-                            )}
-                        </TabsContent>
                     </Tabs>
                 </Card>
             </DialogContent>
