@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { X, Plus, Trash2, Loader2, Archive, User, Mail, Phone, Info, Briefcase, Calendar, CheckCircle2, DollarSign, Target, Tag, ExternalLink, Bot, Globe, Search, MessageSquare } from 'lucide-react';
+import { X, Plus, Trash2, Loader2, Archive, User, Mail, Phone, Info, Briefcase, Calendar, CheckCircle2, DollarSign, Target, Tag, ExternalLink, Bot, Globe, MessageSquare, TrendingUp, Handshake } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { saveOpportunity, archiveOpportunity, getTimelineEntries, addTimelineComment, getOpportunityById, type Product, type Task, type TimelineEntry } from '@/hooks/useOpportunities';
 import { useToast } from '@/hooks/use-toast';
@@ -314,6 +314,18 @@ export const OpportunityModal = ({
                                 </div>
                             ) : (
                                 <>
+                                    {/* ── Divisor: Seção Comercial ── */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 bg-blue-500/8 border border-blue-500/15 rounded-xl px-4 py-2.5">
+                                            <Handshake className="h-4 w-4 text-blue-600 shrink-0" />
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-700 leading-none">Seção Comercial</p>
+                                                <p className="text-[10px] text-blue-500/70 mt-0.5">Informações do negócio, contato e proposta</p>
+                                            </div>
+                                        </div>
+                                        <div className="h-px flex-1 bg-blue-500/10" />
+                                    </div>
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {/* Informações gerais */}
                                         <Card className="bg-white/50 backdrop-blur-sm shadow-sm border-muted">
@@ -664,6 +676,18 @@ export const OpportunityModal = ({
                                             )}
                                         </CardContent>
                                     </Card>
+
+                                    {/* ── Divisor: Seção Financeira ── */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 bg-emerald-500/8 border border-emerald-500/15 rounded-xl px-4 py-2.5">
+                                            <TrendingUp className="h-4 w-4 text-emerald-600 shrink-0" />
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 leading-none">Seção Financeira</p>
+                                                <p className="text-[10px] text-emerald-500/70 mt-0.5">Receitas, lançamentos e controle de pagamentos</p>
+                                            </div>
+                                        </div>
+                                        <div className="h-px flex-1 bg-emerald-500/10" />
+                                    </div>
 
                                     {/* Financeiro */}
                                     {opportunityId ? (
