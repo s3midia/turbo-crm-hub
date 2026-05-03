@@ -343,34 +343,31 @@ export default function FunilKanbanPage() {
 
     return (
         <div className="flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
-            <div className="flex items-center justify-between px-8 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0">
-                <div className="flex items-center gap-4">
-                    <div className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl w-10 h-10 flex items-center justify-center shadow-lg shadow-zinc-200 dark:shadow-none">
-                        <TrendingUp size={20} />
-                    </div>
+            <div className="flex items-center justify-between px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shrink-0">
+                <div className="flex items-center gap-3">
                     <div>
-                        <h1 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter uppercase">Pipeline de Vendas</h1>
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest leading-none">Gestão de Performance</p>
+                        <h1 className="text-[15px] font-black text-zinc-900 dark:text-zinc-100 tracking-tighter uppercase leading-none">Pipeline de Vendas</h1>
+                        <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest leading-none mt-0.5">Gestão de Performance</p>
                     </div>
                 </div>
                 
-                <div className="flex items-center gap-8">
-                    <div className="flex items-center gap-6 px-6 py-2 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-700">
-                        <div className="text-center">
-                            <div className="text-lg font-black tracking-tighter text-zinc-900 dark:text-zinc-100 leading-none">{leads.length}</div>
-                            <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Ativos</div>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 px-4 py-1.5 bg-zinc-100 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-black tracking-tighter text-zinc-900 dark:text-zinc-100">{leads.length}</span>
+                            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Leads</span>
                         </div>
-                        <div className="w-[1px] h-8 bg-zinc-200 dark:bg-zinc-700" />
-                        <div className="text-center">
-                            <div className="text-lg font-black tracking-tighter text-zinc-900 dark:text-zinc-100 leading-none">{formatBRL(totalValue)}</div>
-                            <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Volume Total</div>
+                        <div className="w-[1px] h-4 bg-zinc-200 dark:bg-zinc-700" />
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-black tracking-tighter text-zinc-900 dark:text-zinc-100">{formatBRL(totalValue)}</span>
+                            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Volume</span>
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                         <StageManagerModal stages={stages} setStages={setStages} />
-                        <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[13px] font-black hover:opacity-90 transition-all shadow-md active:scale-95">
-                            <Plus size={16} /> Novo Lead
+                        <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[12px] font-black hover:opacity-90 transition-all active:scale-95">
+                            <Plus size={13} /> Novo Lead
                         </button>
                     </div>
                 </div>
@@ -407,20 +404,12 @@ export default function FunilKanbanPage() {
                             const sc = STAGE_COLORS[stage.tw] || STAGE_COLORS.zinc;
 
                             return (
-                                <div key={stage.key} className="flex flex-col w-72 min-w-[288px] shrink-0">
-                                    <div className={`rounded-2xl border-b-4 p-4 mb-4 ${sc.lightBg} shadow-sm`}>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-2.5">
-                                                <span className="text-lg">{stage.emoji}</span>
-                                                <span className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter leading-none">{stage.label}</span>
-                                            </div>
-                                            <span className="text-[11px] font-black bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-2.5 py-1 rounded-lg">
-                                                {stageLeads.length}
-                                            </span>
-                                        </div>
-                                        <div className="text-[16px] font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                                            {formatBRL(stageValue)}
-                                        </div>
+                                <div key={stage.key} className="flex flex-col w-64 min-w-[256px] shrink-0">
+                                    <div className="flex items-center justify-between px-3 py-2 mb-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                                        <span className="text-[11px] font-black text-zinc-700 dark:text-zinc-300 uppercase tracking-widest leading-none">{stage.label}</span>
+                                        <span className="text-[10px] font-black bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 w-5 h-5 flex items-center justify-center rounded-md">
+                                            {stageLeads.length}
+                                        </span>
                                     </div>
 
                                     <Droppable droppableId={stage.key}>
