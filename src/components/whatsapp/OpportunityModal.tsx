@@ -65,9 +65,7 @@ export const OpportunityModal = ({
         template: '',
     });
 
-    const [products, setProducts] = useState<Product[]>([
-        { name: '', quantity: 0, price: 0 },
-    ]);
+
 
     const [tasks, setTasks] = useState<Task[]>([
         { title: '', scheduledFor: '', assignedTo: '', status: 'pending' },
@@ -104,7 +102,7 @@ export const OpportunityModal = ({
                             siteUrl: opp.site_url || '',
                             template: '',
                         });
-                        setProducts(opp.products && opp.products.length > 0 ? opp.products : [{ name: '', quantity: 1, price: 0 }]);
+                        // setProducts(opp.products && opp.products.length > 0 ? opp.products : [{ name: '', quantity: 1, price: 0 }]);
                         setTasks(opp.tasks && opp.tasks.length > 0 ? opp.tasks : []);
                     }
 
@@ -133,7 +131,7 @@ export const OpportunityModal = ({
                 siteUrl: '',
                 template: '',
             });
-            setProducts([{ name: '', quantity: 1, price: 0 }]);
+            // setProducts([{ name: '', quantity: 1, price: 0 }]);
             setTasks([]);
             setTimelineData([]);
         }
@@ -150,29 +148,7 @@ export const OpportunityModal = ({
         }
     };
 
-    const calculateProductTotal = (quantity: number, price: number) => {
-        return quantity * price;
-    };
 
-    const calculateGrandTotal = () => {
-        return products.reduce((sum, product) => {
-            return sum + calculateProductTotal(product.quantity, product.price);
-        }, 0);
-    };
-
-    const addProduct = () => {
-        setProducts([...products, { name: '', quantity: 0, price: 0 }]);
-    };
-
-    const removeProduct = (index: number) => {
-        setProducts(products.filter((_, i) => i !== index));
-    };
-
-    const updateProduct = (index: number, field: keyof Product, value: any) => {
-        const updated = [...products];
-        updated[index] = { ...updated[index], [field]: value };
-        setProducts(updated);
-    };
 
     const addTask = () => {
         setTasks([...tasks, { title: '', scheduledFor: '', assignedTo: '', status: 'pending' }]);
@@ -220,7 +196,7 @@ export const OpportunityModal = ({
                 observation: formData.observation,
                 responsible_id: formData.responsible || undefined,
                 // REMOVIDO: total_value não é mais atualizado pelos produtos
-                products: products.filter(p => p.name),
+                products: [],
                 tasks: tasks.filter(t => t.title),
                 niche: formData.niche,
                 site_url: formData.siteUrl,
@@ -537,78 +513,6 @@ export const OpportunityModal = ({
                                         </Card>
                                     </div>
 
-                                    {/* Produtos / Composição de Preço */}
-                                    <Card className="bg-white/50 backdrop-blur-sm shadow-sm border-muted">
-                                        <CardHeader className="pb-4 pt-4 flex flex-row items-center justify-between">
-                                            <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
-                                                <DollarSign className="h-4 w-4" /> Composição de Preço
-                                            </CardTitle>
-                                            <Button onClick={addProduct} variant="outline" size="sm" className="h-7 text-[10px] font-bold uppercase gap-1.5 border-primary/20 hover:bg-primary/5">
-                                                <Plus className="h-3 w-3" /> Adicionar Item
-                                            </Button>
-                                        </CardHeader>
-                                        <CardContent className="space-y-3">
-                                            {products.map((product, index) => (
-                                                <div key={index} className="grid grid-cols-[3fr,1fr,1fr,1fr,auto] gap-3 items-end bg-background/40 p-3 rounded-lg border border-muted/50 transition-all hover:bg-background/80 group">
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Produto / Serviço</Label>
-                                                        <Input
-                                                            value={product.name}
-                                                            onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                                                            placeholder="Nome do produto"
-                                                            className="h-8 text-xs bg-white"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Qtde</Label>
-                                                        <Input
-                                                            type="number"
-                                                            value={product.quantity || ''}
-                                                            onChange={(e) => updateProduct(index, 'quantity', Math.max(1, Number(e.target.value)))}
-                                                            className="h-8 text-xs bg-white text-center"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor Un.</Label>
-                                                        <div className="relative">
-                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground">R$</span>
-                                                            <Input
-                                                                type="number"
-                                                                className="h-8 text-xs pl-7 bg-white"
-                                                                value={product.price || ''}
-                                                                onChange={(e) => updateProduct(index, 'price', Number(e.target.value))}
-                                                                step="0.01"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="space-y-1.5 text-right">
-                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground block">Subtotal</Label>
-                                                        <p className="h-8 flex items-center justify-end text-xs font-bold text-foreground pr-2 font-mono">
-                                                            R$ {calculateProductTotal(product.quantity, product.price).toFixed(2)}
-                                                        </p>
-                                                    </div>
-                                                    <Button
-                                                        onClick={() => removeProduct(index)}
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-                                                    >
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-
-                                            <div className="flex justify-end pt-2">
-                                                <div className="text-right bg-primary/5 px-6 py-2 rounded-xl border border-primary/10 shadow-inner">
-                                                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-0.5">Previsão por Produtos</p>
-                                                    <p className="text-2xl font-black text-primary font-mono tracking-tighter">
-                                                        {formatBRL(calculateGrandTotal())}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
                                     {/* ── Divisor: Seção Financeira ── */}
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center gap-2 bg-emerald-500/8 border border-emerald-500/15 rounded-xl px-4 py-2.5">
@@ -626,7 +530,7 @@ export const OpportunityModal = ({
                                         <LeadFinanceTab
                                             leadId={opportunityId}
                                             leadName={formData.leadIdentification}
-                                            products={products}
+
                                             siteUrl={formData.siteUrl}
                                         />
                                     ) : (
