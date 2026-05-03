@@ -2,8 +2,14 @@ import React, { useState, useEffect } from "react";
 import {
     Download, Plus, MessageSquareMore, Trash2, Globe,
     Loader2, MessageSquareText, Clock, AlertCircle,
-    Search, TrendingUp, Zap, ChevronRight, ExternalLink
+    Search, TrendingUp, Zap, ChevronRight, ExternalLink, Settings, X, GripVertical
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 import { OpportunityModal } from "../components/whatsapp/OpportunityModal";
 import { supabase } from "@/integrations/supabase/client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -24,22 +30,23 @@ export interface Lead {
     total_value?: number | string;
 }
 
-const STAGES = [
-    { key: "vendas_b2b",   label: "Vendas B2B",    emoji: "🎯", tw: "indigo"   },
-    { key: "novo",         label: "Novo",           emoji: "✨", tw: "violet"   },
-    { key: "kanban_ready", label: "Qualificados",   emoji: "✅", tw: "emerald"  },
-    { key: "site_pronto",  label: "Site Pronto",    emoji: "🌐", tw: "cyan"     },
-    { key: "atendimento",  label: "Em Atendimento", emoji: "💬", tw: "amber"    },
-    { key: "qualificacao", label: "Qualificação",   emoji: "🔍", tw: "purple"   },
-    { key: "agendado",     label: "Agendado",       emoji: "📅", tw: "blue"     },
-    { key: "reuniao",      label: "Reunião",        emoji: "🤝", tw: "sky"      },
-    { key: "apresentacao", label: "Apresentação",   emoji: "📊", tw: "teal"     },
-    { key: "fechamento",   label: "Fechamento",     emoji: "🔥", tw: "orange"   },
-    { key: "ganhou",       label: "Ganhou",         emoji: "🏆", tw: "green"    },
-    { key: "perdeu",       label: "Perdeu",         emoji: "💔", tw: "red"      },
-] as const;
+const DEFAULT_STAGES = [
+    { key: "vendas_b2b",   label: "Vendas B2B",    emoji: "🎯", tw: "zinc"   },
+    { key: "novo",         label: "Novo",           emoji: "✨", tw: "zinc"   },
+    { key: "kanban_ready", label: "Qualificados",   emoji: "✅", tw: "zinc"  },
+    { key: "site_pronto",  label: "Site Pronto",    emoji: "🌐", tw: "zinc"     },
+    { key: "atendimento",  label: "Em Atendimento", emoji: "💬", tw: "zinc"    },
+    { key: "qualificacao", label: "Qualificação",   emoji: "🔍", tw: "zinc"   },
+    { key: "agendado",     label: "Agendado",       emoji: "📅", tw: "zinc"     },
+    { key: "reuniao",      label: "Reunião",        emoji: "🤝", tw: "zinc"      },
+    { key: "apresentacao", label: "Apresentação",   emoji: "📊", tw: "zinc"     },
+    { key: "fechamento",   label: "Fechamento",     emoji: "🔥", tw: "zinc"   },
+    { key: "ganhou",       label: "Ganhou",         emoji: "🏆", tw: "zinc"    },
+    { key: "perdeu",       label: "Perdeu",         emoji: "💔", tw: "zinc"      },
+];
 
 const STAGE_COLORS: Record<string, { accent: string; lightBg: string; darkBg: string; badge: string }> = {
+    zinc:    { accent: "text-zinc-500",    lightBg: "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800", darkBg: "dark:bg-zinc-900 dark:border-zinc-800", badge: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300" },
     indigo:  { accent: "text-indigo-500",  lightBg: "bg-indigo-50  border-indigo-200",  darkBg: "dark:bg-indigo-950/40  dark:border-indigo-800/50",  badge: "bg-indigo-100  text-indigo-700  dark:bg-indigo-900/50  dark:text-indigo-300" },
     violet:  { accent: "text-violet-500",  lightBg: "bg-violet-50  border-violet-200",  darkBg: "dark:bg-violet-950/40  dark:border-violet-800/50",  badge: "bg-violet-100  text-violet-700  dark:bg-violet-900/50  dark:text-violet-300" },
     emerald: { accent: "text-emerald-500", lightBg: "bg-emerald-50 border-emerald-200", darkBg: "dark:bg-emerald-950/40 dark:border-emerald-800/50", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300" },
@@ -71,56 +78,44 @@ const PIPELINE_STEPS = [
     { key: "fechamento", label: "Fechado"   },
 ] as const;
 
-function getPipelineStep(status: Lead["status"]): number {
-    const map: Partial<Record<Lead["status"], number>> = {
-        vendas_b2b:   0,
-        novo:         0,
-        kanban_ready: 1,
-        gerando_site: 2,
-        site_pronto:  2,
-        atendimento:  3,
-        qualificacao: 3,
-        agendado:     4,
-        reuniao:      4,
-        apresentacao: 4,
-        fechamento:   5,
-        ganhou:       5,
-        perdeu:       5,
-    };
-    return map[status] ?? 0;
+function getPipelineStep(status: Lead["status"], stages: any[]): number {
+    const index = stages.findIndex(s => s.key === status);
+    return index >= 0 ? index : 0;
 }
 
-function PipelineStepper({ status }: { status: Lead["status"] }) {
-    const currentStep = getPipelineStep(status);
+function PipelineStepper({ status, stages }: { status: Lead["status"], stages: any[] }) {
+    const currentStep = getPipelineStep(status, stages);
     const isDone = status === "ganhou";
     const isLost = status === "perdeu";
-    const total  = PIPELINE_STEPS.length;
+    const total  = stages.length;
 
     return (
-        <div className="mt-3 pt-3 border-t border-border/50">
-            <div className="relative flex items-center w-full mb-1">
-                {PIPELINE_STEPS.map((step, i) => {
+        <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+            <div className="relative flex items-center w-full mb-1 px-0.5">
+                {stages.map((stage, i) => {
                     const completed = isLost ? false : (isDone ? true : i < currentStep);
                     const active    = !isLost && !isDone && i === currentStep;
                     const isLast    = i === total - 1;
                     return (
-                        <React.Fragment key={step.key}>
-                            <div className={["relative z-10 w-3 h-3 rounded-full flex-shrink-0 flex items-center justify-center transition-all duration-200", completed ? "bg-emerald-500" : active ? "bg-primary ring-2 ring-primary/30" : isLost && i <= currentStep ? "bg-red-400" : "bg-background border-2 border-muted-foreground/30"].join(" ")}>
-                                {completed && <svg viewBox="0 0 10 10" className="w-1.5 h-1.5" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                        <React.Fragment key={stage.key}>
+                            <div className={["relative z-10 w-2 h-2 rounded-full flex-shrink-0 flex items-center justify-center transition-all duration-300", completed ? "bg-zinc-900 dark:bg-white" : active ? "bg-zinc-900 dark:bg-white ring-4 ring-zinc-900/10 dark:ring-white/10" : isLost && i <= currentStep ? "bg-red-400" : "bg-zinc-200 dark:bg-zinc-800"].join(" ")}>
+                                {completed && <div className="w-1 h-1 rounded-full bg-white dark:bg-zinc-900" />}
                             </div>
-                            {!isLast && <div className="flex-1 h-[2px] mx-[2px] rounded-full bg-muted-foreground/15 overflow-hidden"><div className={["h-full rounded-full transition-all duration-300", completed ? "bg-emerald-500 w-full" : active ? "bg-primary w-1/2" : "w-0"].join(" ")} /></div>}
+                            {!isLast && <div className="flex-1 h-[1.5px] mx-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"><div className={["h-full rounded-full transition-all duration-500", completed ? "bg-zinc-900 dark:bg-white w-full" : active ? "bg-zinc-900/30 dark:bg-white/30 w-1/2" : "w-0"].join(" ")} /></div>}
                         </React.Fragment>
                     );
                 })}
             </div>
-            <div className="flex items-start w-full">
-                {PIPELINE_STEPS.map((step, i) => {
+            <div className="flex items-start w-full px-0.5">
+                {stages.map((stage, i) => {
                     const completed = isLost ? false : (isDone ? true : i < currentStep);
                     const active    = !isLost && !isDone && i === currentStep;
                     const isLast    = i === total - 1;
+                    // Only show text for first, last, and active to avoid cluttering
+                    const shouldShowText = i === 0 || isLast || active;
                     return (
-                        <React.Fragment key={step.key}>
-                            <span className={["text-[8px] font-bold flex-shrink-0 leading-none", i === 0 ? "text-left" : isLast ? "text-right" : "text-center", completed ? "text-emerald-600 dark:text-emerald-400" : active ? "text-primary" : isLost && i <= currentStep ? "text-red-400" : "text-muted-foreground/35"].join(" ")} style={{ minWidth: 0 }}>{step.label}</span>
+                        <React.Fragment key={stage.key}>
+                            <span className={["text-[7px] font-black flex-shrink-0 leading-none uppercase tracking-tighter transition-colors duration-300", i === 0 ? "text-left" : isLast ? "text-right" : "text-center", completed ? "text-zinc-400" : active ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-300 dark:text-zinc-700", !shouldShowText && "opacity-0"].join(" ")} style={{ minWidth: 0 }}>{stage.label}</span>
                             {!isLast && <div className="flex-1" />}
                         </React.Fragment>
                     );
@@ -130,36 +125,144 @@ function PipelineStepper({ status }: { status: Lead["status"] }) {
     );
 }
 
-function LeadCard({ lead, accentBar, onClick }: { lead: Lead; accentBar: string; onClick: (l: Lead) => void; }) {
+function LeadCard({ lead, accentBar, onClick, stages }: { lead: Lead; accentBar: string; onClick: (l: Lead) => void; stages: any[]; }) {
     const idStr = String(lead.id || "");
     const tempText = (idStr.charCodeAt(0) || 0) % 2 === 0 ? "QUENTE" : (idStr.charCodeAt(1) || 0) % 5 === 0 ? "FRIO" : "MORNO";
     const d = new Date(lead.created_at || Date.now());
     const dateStr = `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear().toString().slice(-2)}`;
     
-    // USANDO PARSE CURRENCY PARA O CARD
     const cardValue = parseCurrency(lead.total_value) || parseCurrency(lead.value) || 0;
 
     return (
-        <div onClick={() => onClick(lead)} className="group relative bg-card border border-border rounded-xl p-3.5 mb-2.5 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] hover:border-border/80 dark:hover:border-white/10 overflow-hidden outline-none">
-            <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl opacity-60 ${accentBar}`} />
+        <div onClick={() => onClick(lead)} className="group relative bg-card border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 mb-2.5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-[2px] hover:border-zinc-300 dark:hover:border-zinc-700 overflow-hidden outline-none">
+            <div className={`absolute left-0 top-0 bottom-0 w-[4px] rounded-l-xl opacity-80 ${accentBar}`} />
             <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[10px] font-bold text-muted-foreground/40 tracking-widest">#{idStr.substring(0, 6).toUpperCase()}</span>
-                <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-0.5 rounded-full border border-border/50"><div className="w-1.5 h-1.5 rounded-full bg-violet-400" /><span className="text-[10px] font-bold text-muted-foreground">Daniela</span></div>
+                <span className="font-mono text-[10px] font-bold text-zinc-400 tracking-widest">#{idStr.substring(0, 6).toUpperCase()}</span>
+                <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700"><div className="w-1.5 h-1.5 rounded-full bg-zinc-400" /><span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">Daniela</span></div>
             </div>
             <div className="flex items-start justify-between gap-2">
-                <p className="text-[15px] font-extrabold text-foreground leading-snug tracking-tight">{lead.company_name || 'Sem nome'}</p>
-                <button className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/30 hover:text-destructive p-1 -mt-0.5" onClick={async (e) => { e.stopPropagation(); if (confirm("Deseja excluir este lead?")) await supabase.from("leads").delete().eq("id", lead.id); }}><Trash2 size={12} /></button>
+                <p className="text-[15px] font-bold text-zinc-900 dark:text-zinc-100 leading-snug tracking-tight">{lead.company_name || 'Sem nome'}</p>
+                <button className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-red-500 p-1 -mt-0.5" onClick={async (e) => { e.stopPropagation(); if (confirm("Deseja excluir este lead?")) await supabase.from("leads").delete().eq("id", lead.id); }}><Trash2 size={12} /></button>
             </div>
             <div className="flex flex-wrap gap-1.5 mt-2">
-                {lead.niche && <span className="bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700/40 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">{lead.niche}</span>}
-                <span className="bg-amber-100 text-amber-600 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/30 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full inline-block bg-amber-500" />{tempText}</span>
+                {lead.niche && <span className="bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800/60 dark:text-zinc-300 dark:border-zinc-700 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">{lead.niche}</span>}
+                <span className="bg-zinc-100 text-zinc-600 border border-zinc-200 dark:bg-zinc-800/40 dark:text-zinc-400 dark:border-zinc-700 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1"><span className={`w-1.5 h-1.5 rounded-full inline-block ${tempText === 'QUENTE' ? 'bg-red-500' : tempText === 'MORNO' ? 'bg-amber-500' : 'bg-blue-500'}`} />{tempText}</span>
             </div>
             <div className="flex items-center justify-between mt-2.5">
-                <span className="text-[13px] font-black text-foreground tracking-tight">{formatBRL(cardValue)}</span>
-                <div className="flex items-center gap-1"><span className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground/60"><Clock size={10} /> {dateStr}</span></div>
+                <span className="text-[14px] font-black text-zinc-900 dark:text-zinc-100 tracking-tight">{formatBRL(cardValue)}</span>
+                <div className="flex items-center gap-1"><span className="flex items-center gap-1 text-[10px] font-medium text-zinc-500"><Clock size={10} /> {dateStr}</span></div>
             </div>
-            <PipelineStepper status={lead.status} />
+            <PipelineStepper status={lead.status} stages={stages} />
         </div>
+    );
+}
+
+function StageManagerModal({ stages, setStages }: { stages: any[], setStages: (s: any[]) => void }) {
+    const [localStages, setLocalStages] = useState(stages);
+    const [isAdding, setIsAdding] = useState(false);
+    const [newStage, setNewStage] = useState({ label: '', emoji: '✨', tw: 'zinc' });
+
+    const handleSave = () => {
+        setStages(localStages);
+        localStorage.setItem('turbo_crm_stages', JSON.stringify(localStages));
+        toast.success("Pipeline atualizado com sucesso!");
+    };
+
+    const addStage = () => {
+        if (!newStage.label) return;
+        const key = newStage.label.toLowerCase().replace(/\s+/g, '_');
+        setLocalStages([...localStages, { ...newStage, key }]);
+        setNewStage({ label: '', emoji: '✨', tw: 'zinc' });
+        setIsAdding(false);
+    };
+
+    const removeStage = (key: string) => {
+        setLocalStages(localStages.filter(s => s.key !== key));
+    };
+
+    const updateStage = (key: string, updates: any) => {
+        setLocalStages(localStages.map(s => s.key === key ? { ...s, ...updates } : s));
+    };
+
+    const moveStage = (index: number, direction: 'up' | 'down') => {
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= localStages.length) return;
+        const updated = [...localStages];
+        const temp = updated[index];
+        updated[index] = updated[newIndex];
+        updated[newIndex] = temp;
+        setLocalStages(updated);
+    };
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    <Settings size={14} />
+                    Configurar Funil
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Gerenciar Etapas do Funil</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                    <ScrollArea className="h-[400px] pr-4">
+                        <div className="space-y-3">
+                            {localStages.map((stage, index) => (
+                                <div key={stage.key} className="flex items-center gap-3 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+                                    <div className="flex flex-col gap-1">
+                                        <button onClick={() => moveStage(index, 'up')} disabled={index === 0} className="text-zinc-400 hover:text-zinc-900 disabled:opacity-30"><GripVertical size={12} className="rotate-90" /></button>
+                                        <button onClick={() => moveStage(index, 'down')} disabled={index === localStages.length - 1} className="text-zinc-400 hover:text-zinc-900 disabled:opacity-30"><GripVertical size={12} className="rotate-270" /></button>
+                                    </div>
+                                    <Input 
+                                        className="w-12 h-9 text-center p-0 text-lg border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950" 
+                                        value={stage.emoji} 
+                                        onChange={(e) => updateStage(stage.key, { emoji: e.target.value })}
+                                    />
+                                    <Input 
+                                        className="flex-1 h-9 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 font-bold" 
+                                        value={stage.label} 
+                                        onChange={(e) => updateStage(stage.key, { label: e.target.value })}
+                                    />
+                                    <select 
+                                        className="h-9 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs font-bold px-2"
+                                        value={stage.tw}
+                                        onChange={(e) => updateStage(stage.key, { tw: e.target.value })}
+                                    >
+                                        {Object.keys(STAGE_COLORS).map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20" onClick={() => removeStage(stage.key)}>
+                                        <Trash2 size={14} />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        {isAdding ? (
+                            <div className="mt-4 p-4 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col gap-3">
+                                <div className="flex gap-2">
+                                    <Input placeholder="✨" className="w-12 h-9 text-center" value={newStage.emoji} onChange={(e) => setNewStage({...newStage, emoji: e.target.value})} />
+                                    <Input placeholder="Nome da etapa..." className="flex-1 h-9" value={newStage.label} onChange={(e) => setNewStage({...newStage, label: e.target.value})} />
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                    <Button variant="ghost" size="sm" onClick={() => setIsAdding(false)}>Cancelar</Button>
+                                    <Button size="sm" onClick={addStage} className="bg-zinc-900 text-white dark:bg-white dark:text-zinc-950">Adicionar</Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <Button variant="ghost" className="w-full mt-4 border-2 border-dashed border-zinc-200 dark:border-zinc-800 h-12 gap-2 text-zinc-500 hover:text-zinc-900 hover:border-zinc-400" onClick={() => setIsAdding(true)}>
+                                <Plus size={16} /> Nova Etapa
+                            </Button>
+                        )}
+                    </ScrollArea>
+                </div>
+                <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                    <Button variant="ghost" className="font-bold">Cancelar</Button>
+                    <Button className="bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-black px-8" onClick={handleSave}>Salvar Alterações</Button>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -168,6 +271,10 @@ export default function FunilKanbanPage() {
     const [leads, setLeads]         = useState<Lead[]>([]);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+    const [stages, setStages]       = useState(() => {
+        const saved = localStorage.getItem('turbo_crm_stages');
+        return saved ? JSON.parse(saved) : DEFAULT_STAGES;
+    });
 
     const fetchData = async () => {
         // Fetch leads
@@ -235,49 +342,61 @@ export default function FunilKanbanPage() {
     const totalValue = filtered.reduce((acc, l) => acc + l.displayValue, 0);
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-3.5 border-b border-border bg-card/60 backdrop-blur-sm shrink-0">
-                <div className="flex items-center gap-2.5">
-                    <div className="bg-primary text-primary-foreground rounded-lg w-8 h-8 flex items-center justify-center">
-                        <TrendingUp size={15} />
+        <div className="flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+            <div className="flex items-center justify-between px-8 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0">
+                <div className="flex items-center gap-4">
+                    <div className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl w-10 h-10 flex items-center justify-center shadow-lg shadow-zinc-200 dark:shadow-none">
+                        <TrendingUp size={20} />
                     </div>
-                    <span className="text-[15px] font-extrabold text-foreground tracking-tight">CRM & Pipeline</span>
+                    <div>
+                        <h1 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter uppercase">Pipeline de Vendas</h1>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest leading-none">Gestão de Performance</p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-6">
-                    <div className="text-right">
-                        <div className="text-base font-black tracking-tight text-indigo-500">{leads.length}</div>
-                        <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Leads</div>
+                
+                <div className="flex items-center gap-8">
+                    <div className="flex items-center gap-6 px-6 py-2 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border border-zinc-200 dark:border-zinc-700">
+                        <div className="text-center">
+                            <div className="text-lg font-black tracking-tighter text-zinc-900 dark:text-zinc-100 leading-none">{leads.length}</div>
+                            <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Ativos</div>
+                        </div>
+                        <div className="w-[1px] h-8 bg-zinc-200 dark:bg-zinc-700" />
+                        <div className="text-center">
+                            <div className="text-lg font-black tracking-tighter text-zinc-900 dark:text-zinc-100 leading-none">{formatBRL(totalValue)}</div>
+                            <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Volume Total</div>
+                        </div>
                     </div>
-                    <div className="text-right">
-                        <div className="text-base font-black tracking-tight text-emerald-500">{formatBRL(totalValue)}</div>
-                        <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Pipeline</div>
+                    
+                    <div className="flex items-center gap-3">
+                        <StageManagerModal stages={stages} setStages={setStages} />
+                        <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[13px] font-black hover:opacity-90 transition-all shadow-md active:scale-95">
+                            <Plus size={16} /> Novo Lead
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col overflow-hidden p-5 gap-4">
+            <div className="flex-1 flex flex-col overflow-hidden p-6 gap-6">
                 <div className="flex items-center justify-between gap-4 shrink-0">
-                    <h1 className="text-2xl font-black text-foreground tracking-tight">Funil de Leads</h1>
+                    <div className="relative flex-1 max-w-2xl">
+                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
+                        <input 
+                            value={search} 
+                            onChange={(e) => setSearch(e.target.value)} 
+                            placeholder="Pesquisar por empresa, nicho ou valor..." 
+                            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 text-[14px] font-medium outline-none focus:ring-2 focus:ring-zinc-900/5 dark:focus:ring-white/5 transition-all shadow-sm" 
+                        />
+                    </div>
                     <div className="flex gap-2">
-                        <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-card border border-border text-foreground text-[13px] font-bold hover:bg-muted transition-all">
-                            <Download size={13} /> Exportar
+                        <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 text-[13px] font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all shadow-sm">
+                            <Download size={14} /> Exportar CSV
                         </button>
                     </div>
                 </div>
 
-                <div className="relative shrink-0">
-                    <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
-                    <input 
-                        value={search} 
-                        onChange={(e) => setSearch(e.target.value)} 
-                        placeholder="Buscar leads..." 
-                        className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-card border border-border text-foreground text-[13px] outline-none" 
-                    />
-                </div>
-
                 <DragDropContext onDragEnd={onDragEnd}>
-                    <div className="flex gap-3 flex-1 overflow-x-auto overflow-y-hidden pb-2">
-                        {STAGES.map((stage) => {
+                    <div className="flex gap-4 flex-1 overflow-x-auto overflow-y-hidden pb-4">
+                        {stages.map((stage) => {
                             const stageLeads = filtered.filter(l => {
                                 if (stage.key === "novo") return l.status === "novo" || !l.status;
                                 if (stage.key === "kanban_ready") return l.status === "kanban_ready" || l.status === "gerando_site";
@@ -285,68 +404,38 @@ export default function FunilKanbanPage() {
                             });
                             
                             const stageValue = stageLeads.reduce((acc, l) => acc + l.displayValue, 0);
-                            const sc = STAGE_COLORS[stage.tw] || STAGE_COLORS.indigo;
+                            const sc = STAGE_COLORS[stage.tw] || STAGE_COLORS.zinc;
 
                             return (
-                                <div key={stage.key} className="flex flex-col w-56 min-w-[224px] shrink-0">
-                                    <div className={`rounded-xl border p-2.5 mb-2.5 ${sc.lightBg} ${sc.darkBg}`}>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span>{stage.emoji}</span>
-                                                <span className="text-[12px] font-extrabold text-foreground leading-none">{stage.label}</span>
+                                <div key={stage.key} className="flex flex-col w-72 min-w-[288px] shrink-0">
+                                    <div className={`rounded-2xl border-b-4 p-4 mb-4 ${sc.lightBg} shadow-sm`}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2.5">
+                                                <span className="text-lg">{stage.emoji}</span>
+                                                <span className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter leading-none">{stage.label}</span>
                                             </div>
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${sc.badge}`}>{stageLeads.length}</span>
+                                            <span className="text-[11px] font-black bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-2.5 py-1 rounded-lg">
+                                                {stageLeads.length}
+                                            </span>
                                         </div>
-                                        <div className="flex items-center justify-between mt-1.5 font-bold text-foreground">
+                                        <div className="text-[16px] font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
                                             {formatBRL(stageValue)}
                                         </div>
                                     </div>
 
                                     <Droppable droppableId={stage.key}>
                                         {(provided) => (
-                                            <div className="flex-1 overflow-y-auto pr-0.5" ref={provided.innerRef} {...provided.droppableProps}>
+                                            <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar" ref={provided.innerRef} {...provided.droppableProps}>
                                                 {stageLeads.map((lead, index) => (
                                                     <Draggable key={lead.id} draggableId={lead.id} index={index}>
                                                         {(provided) => (
                                                             <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
-                                                                <div onClick={() => setSelectedLead(lead)} className="group relative bg-card border border-border rounded-xl p-3.5 mb-2.5 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-[1px] hover:border-border/80 dark:hover:border-white/10 overflow-hidden outline-none">
-                                                                    <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl opacity-60 ${sc.accent}`} />
-                                                                    <div className="flex items-center justify-between mb-2">
-                                                                        <span className="font-mono text-[10px] font-bold text-muted-foreground/40 tracking-widest">#{String(lead.id).substring(0, 6).toUpperCase()}</span>
-                                                                        <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-0.5 rounded-full border border-border/50">
-                                                                            <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
-                                                                            <span className="text-[10px] font-bold text-muted-foreground">Daniela</span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-start justify-between gap-2">
-                                                                        <p className="text-[15px] font-extrabold text-foreground leading-snug tracking-tight">{lead.company_name || 'Sem nome'}</p>
-                                                                        <button 
-                                                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/30 hover:text-destructive p-1 -mt-0.5" 
-                                                                            onClick={async (e) => { 
-                                                                                e.stopPropagation(); 
-                                                                                if (confirm("Deseja excluir este lead?")) await supabase.from("leads").delete().eq("id", lead.id); 
-                                                                            }}
-                                                                        >
-                                                                            <Trash2 size={12} />
-                                                                        </button>
-                                                                    </div>
-                                                                    <div className="flex flex-wrap gap-1.5 mt-2">
-                                                                        {lead.niche && <span className="bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700/40 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">{lead.niche}</span>}
-                                                                        <span className="bg-amber-100 text-amber-600 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700/30 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                                                                            <span className="w-1.5 h-1.5 rounded-full inline-block bg-amber-500" />
-                                                                            {(String(lead.id).charCodeAt(0) % 2 === 0 ? "QUENTE" : "MORNO")}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="flex items-center justify-between mt-2.5">
-                                                                        <span className="text-[13px] font-black text-foreground tracking-tight">{formatBRL(lead.displayValue)}</span>
-                                                                        <div className="flex items-center gap-1">
-                                                                            <span className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground/60">
-                                                                                <Clock size={10} /> {new Date(lead.created_at).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'})}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <PipelineStepper status={lead.status} />
-                                                                </div>
+                                                                <LeadCard 
+                                                                    lead={lead} 
+                                                                    accentBar={sc.accent} 
+                                                                    onClick={setSelectedLead} 
+                                                                    stages={stages}
+                                                                />
                                                             </div>
                                                         )}
                                                     </Draggable>
