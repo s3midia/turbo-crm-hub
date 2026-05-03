@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,14 +13,13 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
-import { X, Plus, Trash2, Loader2, Archive, User, Mail, Phone, Info, Briefcase, Calendar, CheckCircle2, DollarSign, Target, Tag, ExternalLink, Bot, Globe, MessageSquare, TrendingUp, Handshake } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { saveOpportunity, archiveOpportunity, getTimelineEntries, addTimelineComment, getOpportunityById, type Product, type Task, type TimelineEntry } from '@/hooks/useOpportunities';
+import { X, Loader2, Archive, ExternalLink, MessageSquare, Bot, Plus } from 'lucide-react';
+import { saveOpportunity, archiveOpportunity, getTimelineEntries, addTimelineComment, getOpportunityById, type Task, type TimelineEntry } from '@/hooks/useOpportunities';
 import { useToast } from '@/hooks/use-toast';
 import { useProfiles } from '@/hooks/useProfiles';
 import { LeadFinanceTab } from '@/components/financeiro/LeadFinanceTab';
 import { formatBRL } from '@/lib/formatters';
+import { useFinance } from '@/hooks/useFinance';
 
 interface OpportunityModalProps {
     open: boolean;
@@ -32,7 +31,27 @@ interface OpportunityModalProps {
     opportunityId?: string;
 }
 
-import { useFinance } from '@/hooks/useFinance';
+// ─── mini field ────────────────────────────────────────────────────────────────
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="flex flex-col gap-1">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 leading-none">
+                {label}
+            </Label>
+            {children}
+        </div>
+    );
+}
+
+// ─── section divider ──────────────────────────────────────────────────────────
+function Section({ title }: { title: string }) {
+    return (
+        <div className="flex items-center gap-3 py-1">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">{title}</span>
+            <div className="flex-1 h-px bg-zinc-100 dark:bg-zinc-800" />
+        </div>
+    );
+}
 
 export const OpportunityModal = ({
     open,
@@ -48,9 +67,12 @@ export const OpportunityModal = ({
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
     const [archiving, setArchiving] = useState(false);
-    
-    // USANDO useFinance AQUI PARA SINCRONIZAR O CABEÇALHO
+
     const { transactions } = useFinance(opportunityId);
+    const transactionsTotal = transactions.reduce((acc, t) => {
+        const v = typeof t.valor === 'string' ? parseFloat(t.valor) : Number(t.valor);
+        return t.tipo === 'saida' ? acc - (isNaN(v) ? 0 : v) : acc + (isNaN(v) ? 0 : v);
+    }, 0);
 
     const [formData, setFormData] = useState({
         status: stage,
@@ -65,30 +87,16 @@ export const OpportunityModal = ({
         template: '',
     });
 
-
-
-    const [tasks, setTasks] = useState<Task[]>([
-        { title: '', scheduledFor: '', assignedTo: '', status: 'pending' },
-    ]);
-
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [comment, setComment] = useState('');
     const [timelineData, setTimelineData] = useState<TimelineEntry[]>([]);
 
-    // CÁLCULO DO TOTAL BASEADO EM TRANSAÇÕES (EXCLUSIVO)
-    const transactionsTotal = transactions.reduce((acc, t) => {
-        const v = typeof t.valor === 'string' ? parseFloat(t.valor) : Number(t.valor);
-        const val = isNaN(v) ? 0 : v;
-        return t.tipo === 'saida' ? acc - val : acc + val;
-    }, 0);
-
-    // Load opportunity data if editing
     useEffect(() => {
         if (opportunityId && open) {
-            const loadData = async () => {
+            const load = async () => {
                 setFetching(true);
                 try {
                     const opp = await getOpportunityById(opportunityId).catch(() => null);
-                    
                     if (opp) {
                         setFormData({
                             status: opp.stage || stage,
@@ -102,90 +110,31 @@ export const OpportunityModal = ({
                             siteUrl: opp.site_url || '',
                             template: '',
                         });
-                        // setProducts(opp.products && opp.products.length > 0 ? opp.products : [{ name: '', quantity: 1, price: 0 }]);
                         setTasks(opp.tasks && opp.tasks.length > 0 ? opp.tasks : []);
                     }
-
-                    // Fetch Timeline
                     const entries = await getTimelineEntries(opportunityId);
                     setTimelineData(entries);
-
-                } catch (error) {
-                    console.error('Error fetching opportunity:', error);
+                } catch (e) {
+                    console.error(e);
                 } finally {
                     setFetching(false);
                 }
             };
-            loadData();
+            load();
         } else if (!opportunityId && open) {
-            // Reset for new opportunity
-            setFormData({
-                status: stage,
-                leadIdentification: contactName,
-                priority: '',
-                contact: contactPhone,
-                email: '',
-                observation: '',
-                responsible: '',
-                niche: '',
-                siteUrl: '',
-                template: '',
-            });
-            // setProducts([{ name: '', quantity: 1, price: 0 }]);
+            setFormData({ status: stage, leadIdentification: contactName, priority: '', contact: contactPhone, email: '', observation: '', responsible: '', niche: '', siteUrl: '', template: '' });
             setTasks([]);
             setTimelineData([]);
         }
     }, [opportunityId, open, stage, contactName, contactPhone]);
 
-    const handleAssignToMe = () => {
-        if (profiles && profiles.length > 0) {
-            const me = profiles.find(p => p.email === 'me@example.com') || profiles[0];
-            setFormData(prev => ({ ...prev, responsible: me.id }));
-            toast({
-                title: "Atribuído a você",
-                description: `A oportunidade foi atribuída a ${me.full_name}`,
-            });
-        }
-    };
-
-
-
-    const addTask = () => {
-        setTasks([...tasks, { title: '', scheduledFor: '', assignedTo: '', status: 'pending' }]);
-    };
-
-    const removeTask = (index: number) => {
-        setTasks(tasks.filter((_, i) => i !== index));
-    };
-
-    const updateTask = (index: number, field: keyof Task, value: string) => {
-        const updated = [...tasks];
-        updated[index] = { ...updated[index], [field]: value };
-        setTasks(updated);
-
-        // Auto-sync: when assigning a task to a vendor, also set opportunity responsible
-        if (field === 'assignedTo' && value) {
-            setFormData(prev => ({ ...prev, responsible: value }));
-        }
-    };
-
-    const handleAddComment = async () => {
-        if (!opportunityId || !comment.trim()) return;
-        try {
-            await addTimelineComment(opportunityId, comment);
-            setComment('');
-            const entries = await getTimelineEntries(opportunityId);
-            setTimelineData(entries);
-            toast({ title: 'Comentário adicionado' });
-        } catch (error) {
-            toast({ title: 'Erro ao comentar', variant: 'destructive' });
-        }
-    };
+    const set = (key: keyof typeof formData) => (e: any) =>
+        setFormData(prev => ({ ...prev, [key]: e.target?.value ?? e }));
 
     const handleSubmit = async () => {
         setLoading(true);
         try {
-            const opportunity = {
+            await saveOpportunity({
                 id: opportunityId,
                 stage: formData.status,
                 lead_identification: formData.leadIdentification,
@@ -195,31 +144,16 @@ export const OpportunityModal = ({
                 contact_email: formData.email,
                 observation: formData.observation,
                 responsible_id: formData.responsible || undefined,
-                // REMOVIDO: total_value não é mais atualizado pelos produtos
                 products: [],
                 tasks: tasks.filter(t => t.title),
                 niche: formData.niche,
                 site_url: formData.siteUrl,
-            };
-
-            await saveOpportunity(opportunity as any);
-
-            toast({
-                title: '✓ Oportunidade salva',
-                description: 'A oportunidade foi salva com sucesso!',
-                duration: 3000,
-            });
-
+            } as any);
+            toast({ title: 'Salvo', description: 'Oportunidade atualizada.' });
             if (onSaved) onSaved();
             onClose();
-        } catch (error: any) {
-            console.error('Error saving opportunity:', error);
-            toast({
-                title: '✗ Erro ao salvar',
-                description: error.message || 'Não foi possível salvar a oportunidade.',
-                variant: 'destructive',
-                duration: 4000,
-            });
+        } catch (err: any) {
+            toast({ title: 'Erro', description: err.message, variant: 'destructive' });
         } finally {
             setLoading(false);
         }
@@ -230,430 +164,368 @@ export const OpportunityModal = ({
         setArchiving(true);
         try {
             await archiveOpportunity(opportunityId);
-            toast({
-                title: '📦 Oportunidade arquivada',
-                description: 'A oportunidade foi movida para o arquivo.',
-                duration: 3000,
-            });
+            toast({ title: 'Arquivado' });
             if (onSaved) onSaved();
             onClose();
-        } catch (error: any) {
-            toast({
-                title: '✗ Erro ao arquivar',
-                description: error.message || 'Não foi possível arquivar.',
-                variant: 'destructive',
-            });
+        } catch (err: any) {
+            toast({ title: 'Erro', description: err.message, variant: 'destructive' });
         } finally {
             setArchiving(false);
         }
     };
 
-    return (
-        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none bg-transparent shadow-none">
-                <DialogTitle className="sr-only">Detalhes da Oportunidade</DialogTitle>
-                <DialogDescription className="sr-only">Visualize e edite os detalhes desta oportunidade de negócio.</DialogDescription>
-                <Card className="border-none shadow-2xl bg-background/95 backdrop-blur-md overflow-hidden">
-                    <CardHeader className="bg-gradient-to-r from-primary/10 via-background to-background border-b pb-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-primary/10 rounded-xl">
-                                    <Target className="h-6 w-6 text-primary" />
-                                </div>
-                                <div>
-                                    <CardTitle className="text-2xl font-black tracking-tight">
-                                        {fetching ? 'Carregando...' : (formData.leadIdentification || 'Nova Oportunidade')}
-                                    </CardTitle>
-                                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                        <Info className="h-3.5 w-3.5" /> Detalhes da negociação comercial
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-6">
-                                <div className="text-right">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Valor Total</p>
-                                    <div className="flex items-center gap-2 text-3xl font-black text-green-500">
-                                        <DollarSign className="h-6 w-6" />
-                                        <span>{formatBRL(transactionsTotal)}</span>
-                                    </div>
-                                </div>
-                                <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-                                    <X className="h-5 w-5" />
-                                </Button>
-                            </div>
-                        </div>
-                    </CardHeader>
+    const handleAddComment = async () => {
+        if (!opportunityId || !comment.trim()) return;
+        try {
+            await addTimelineComment(opportunityId, comment);
+            setComment('');
+            setTimelineData(await getTimelineEntries(opportunityId));
+            toast({ title: 'Comentário adicionado' });
+        } catch {
+            toast({ title: 'Erro ao comentar', variant: 'destructive' });
+        }
+    };
 
-                    <Tabs defaultValue="general" className="w-full">
-                        <div className="px-6 border-b bg-muted/30">
-                            <TabsList className="h-12 bg-transparent gap-6">
-                                <TabsTrigger value="general" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 font-bold transition-all">
-                                    Geral
-                                </TabsTrigger>
-                                <TabsTrigger value="timeline" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 font-bold transition-all">
-                                    Linha do tempo
-                                </TabsTrigger>
+    return (
+        <Dialog open={open} onOpenChange={v => !v && onClose()}>
+            <DialogContent className="max-w-[90vw] w-[1100px] max-h-[92vh] p-0 border-0 bg-transparent shadow-none overflow-hidden">
+                <DialogTitle className="sr-only">Oportunidade</DialogTitle>
+                <DialogDescription className="sr-only">Detalhes da oportunidade de negócio</DialogDescription>
+
+                {/* ── Shell ─────────────────────────────────────────────────── */}
+                <div className="flex flex-col bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden h-[92vh]">
+
+                    {/* ── Header ─────────────────────────────────────────────── */}
+                    <div className="flex items-center justify-between px-8 py-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+                        <div>
+                            <h2 className="text-[17px] font-black tracking-tighter text-zinc-900 dark:text-zinc-100 leading-none">
+                                {fetching ? '...' : (formData.leadIdentification || 'Nova Oportunidade')}
+                            </h2>
+                            <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mt-0.5 leading-none">
+                                {formData.niche || 'Oportunidade'}
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-6">
+                            {/* KPI: valor */}
+                            <div className="text-right">
+                                <div className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 leading-none">
+                                    {formatBRL(transactionsTotal)}
+                                </div>
+                                <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
+                                    Valor
+                                </div>
+                            </div>
+
+                            {/* Priority pill */}
+                            {formData.priority && (
+                                <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
+                                    formData.priority === 'high' ? 'bg-red-50 text-red-500 dark:bg-red-950/30' :
+                                    formData.priority === 'medium' ? 'bg-amber-50 text-amber-500 dark:bg-amber-950/30' :
+                                    'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30'
+                                }`}>
+                                    {formData.priority === 'high' ? 'Alta' : formData.priority === 'medium' ? 'Média' : 'Baixa'}
+                                </span>
+                            )}
+
+                            <button
+                                onClick={onClose}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* ── Tabs ───────────────────────────────────────────────── */}
+                    <Tabs defaultValue="general" className="flex flex-col flex-1 overflow-hidden">
+                        <div className="flex items-center px-8 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+                            <TabsList className="h-10 bg-transparent gap-1 p-0">
+                                {[
+                                    { value: 'general', label: 'Geral' },
+                                    { value: 'finance', label: 'Financeiro' },
+                                    { value: 'timeline', label: 'Histórico' },
+                                ].map(tab => (
+                                    <TabsTrigger
+                                        key={tab.value}
+                                        value={tab.value}
+                                        className="h-10 px-4 text-[11px] font-black uppercase tracking-wider rounded-none border-b-2 border-transparent data-[state=active]:border-zinc-900 dark:data-[state=active]:border-white data-[state=active]:bg-transparent data-[state=active]:text-zinc-900 dark:data-[state=active]:text-zinc-100 text-zinc-400 hover:text-zinc-700 transition-all"
+                                    >
+                                        {tab.label}
+                                    </TabsTrigger>
+                                ))}
                             </TabsList>
                         </div>
 
-                        <TabsContent value="general" className="p-6 space-y-6 mt-0">
+                        {/* ── TAB: Geral ─────────────────────────────────────── */}
+                        <TabsContent value="general" className="flex-1 overflow-y-auto mt-0">
                             {fetching ? (
-                                <div className="h-64 flex items-center justify-center">
-                                    <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
+                                <div className="flex-1 flex items-center justify-center h-full">
+                                    <Loader2 className="h-8 w-8 animate-spin text-zinc-200" />
                                 </div>
                             ) : (
-                                <>
-                                    {/* ── Divisor: Seção Comercial ── */}
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-2 bg-blue-500/8 border border-blue-500/15 rounded-xl px-4 py-2.5">
-                                            <Handshake className="h-4 w-4 text-blue-600 shrink-0" />
-                                            <div>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-700 leading-none">Seção Comercial</p>
-                                                <p className="text-[10px] text-blue-500/70 mt-0.5">Informações do negócio, contato e proposta</p>
+                                <div className="grid grid-cols-2 gap-0 h-full divide-x divide-zinc-100 dark:divide-zinc-800">
+                                    {/* LEFT col */}
+                                    <div className="flex flex-col gap-6 p-8 overflow-y-auto">
+                                        <Section title="Negócio" />
+
+                                        <div className="grid grid-cols-2 gap-5">
+                                            <Field label="Status">
+                                                <Select value={formData.status} onValueChange={v => setFormData(p => ({...p, status: v}))}>
+                                                    <SelectTrigger className="h-9 text-[12px] font-semibold bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="new_contact">Novo contato</SelectItem>
+                                                        <SelectItem value="in_contact">Em contato</SelectItem>
+                                                        <SelectItem value="presentation">Apresentação</SelectItem>
+                                                        <SelectItem value="negotiation">Negociação</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </Field>
+
+                                            <Field label="Prioridade">
+                                                <Select value={formData.priority} onValueChange={v => setFormData(p => ({...p, priority: v}))}>
+                                                    <SelectTrigger className="h-9 text-[12px] font-semibold bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                                                        <SelectValue placeholder="Selecionar" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="low">Baixa</SelectItem>
+                                                        <SelectItem value="medium">Média</SelectItem>
+                                                        <SelectItem value="high">Alta</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </Field>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-5">
+                                            <Field label="Empresa / Lead">
+                                                <Input
+                                                    value={formData.leadIdentification}
+                                                    onChange={set('leadIdentification')}
+                                                    placeholder="Nome da empresa"
+                                                    className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                                                />
+                                            </Field>
+                                            <Field label="Nicho">
+                                                <Input
+                                                    value={formData.niche}
+                                                    onChange={set('niche')}
+                                                    placeholder="Ex: Clínicas, Advocacia"
+                                                    className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                                                />
+                                            </Field>
+                                        </div>
+
+                                        <Field label="Responsável">
+                                            <div className="flex gap-2">
+                                                <Select value={formData.responsible} onValueChange={v => setFormData(p => ({...p, responsible: v}))}>
+                                                    <SelectTrigger className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                                                        <SelectValue placeholder="Selecionar responsável" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {profiles?.filter(p => p.is_active).map(p => (
+                                                            <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
-                                        </div>
-                                        <div className="h-px flex-1 bg-blue-500/10" />
+                                        </Field>
+
+                                        <Section title="Observações" />
+
+                                        <Field label="Notas internas">
+                                            <Textarea
+                                                value={formData.observation}
+                                                onChange={set('observation')}
+                                                rows={4}
+                                                placeholder="Anotações sobre este negócio..."
+                                                className="text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 resize-none"
+                                            />
+                                        </Field>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        {/* Informações gerais */}
-                                        <Card className="bg-white/50 backdrop-blur-sm shadow-sm border-muted">
-                                            <CardHeader className="pb-3 pt-4">
-                                                <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
-                                                    <Info className="h-4 w-4" /> Informações do Negócio
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="space-y-4">
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-                                                            <CheckCircle2 className="h-3 w-3" /> Status
-                                                        </Label>
-                                                        <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                                                            <SelectTrigger className="h-9 text-xs font-semibold bg-white">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="new_contact">Novo contato</SelectItem>
-                                                                <SelectItem value="in_contact">Em contato</SelectItem>
-                                                                <SelectItem value="presentation">Apresentação</SelectItem>
-                                                                <SelectItem value="negotiation">Negociação</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
+                                    {/* RIGHT col */}
+                                    <div className="flex flex-col gap-6 p-8 overflow-y-auto">
+                                        <Section title="Contato" />
 
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-                                                            <Plus className="h-3 w-3" /> Prioridade
-                                                        </Label>
-                                                        <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
-                                                            <SelectTrigger className={cn(
-                                                                "h-9 text-xs font-bold bg-white transition-colors",
-                                                                formData.priority === 'high' && "text-red-500 border-red-200 bg-red-50",
-                                                                formData.priority === 'medium' && "text-yellow-600 border-yellow-200 bg-yellow-50",
-                                                                formData.priority === 'low' && "text-green-600 border-green-200 bg-green-50"
-                                                            )}>
-                                                                <SelectValue placeholder="Selecione" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="low" className="text-green-600 font-bold">Baixa</SelectItem>
-                                                                <SelectItem value="medium" className="text-yellow-600 font-bold">Média</SelectItem>
-                                                                <SelectItem value="high" className="text-red-600 font-bold">Alta</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-                                                            <User className="h-3 w-3" /> Identificação do Lead
-                                                        </Label>
-                                                        <Input
-                                                            value={formData.leadIdentification}
-                                                            onChange={(e) => setFormData({ ...formData, leadIdentification: e.target.value })}
-                                                            placeholder="Nome do cliente ou empresa"
-                                                            className="h-9 text-xs bg-white font-medium"
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-                                                            <Tag className="h-3 w-3" /> Nicho / Segmento
-                                                        </Label>
-                                                        <Input
-                                                            value={formData.niche}
-                                                            onChange={(e) => setFormData({ ...formData, niche: e.target.value })}
-                                                            placeholder="Ex: Clínicas, Advocacia..."
-                                                            className="h-9 text-xs bg-white font-medium"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-1.5">
-                                                    <Label className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-                                                        <Briefcase className="h-3 w-3" /> Responsável
-                                                    </Label>
-                                                    <div className="flex gap-2">
-                                                        <Select value={formData.responsible} onValueChange={(value) => setFormData({ ...formData, responsible: value })}>
-                                                            <SelectTrigger className="h-9 text-xs bg-white">
-                                                                <SelectValue placeholder="Escolha um responsável" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {profiles?.filter(p => p.is_active).map(profile => (
-                                                                    <SelectItem key={profile.id} value={profile.id}>{profile.full_name}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={handleAssignToMe}
-                                                            className="h-9 text-[10px] font-bold uppercase px-3 shadow-sm border-primary/20 hover:bg-primary/5 hover:text-primary transition-all shrink-0"
-                                                        >
-                                                            Me atribuir
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* Contato */}
-                                        <Card className="bg-white/50 backdrop-blur-sm shadow-sm border-muted">
-                                            <CardHeader className="pb-3 pt-4">
-                                                <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
-                                                    <Mail className="h-4 w-4" /> Dados de Contato
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="space-y-4">
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-                                                            <Phone className="h-3 w-3" /> Telefone / WhatsApp
-                                                        </Label>
-                                                        <Input
-                                                            value={formData.contact}
-                                                            onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-                                                            className="h-9 text-xs bg-white font-mono"
-                                                            placeholder="(00) 00000-0000"
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-                                                            <Globe className="h-3 w-3" /> Site / Landing Page
-                                                        </Label>
-                                                        <div className="flex gap-2">
-                                                            <Input
-                                                                value={formData.siteUrl}
-                                                                onChange={(e) => setFormData({ ...formData, siteUrl: e.target.value })}
-                                                                placeholder="https://..."
-                                                                className="h-9 text-xs bg-white font-medium"
-                                                            />
-                                                            {formData.siteUrl && (
-                                                                <Button 
-                                                                    variant="outline" 
-                                                                    size="icon" 
-                                                                    className="h-9 w-9 shrink-0"
-                                                                    onClick={() => window.open(formData.siteUrl, '_blank')}
-                                                                >
-                                                                    <ExternalLink className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-                                                            <Mail className="h-3 w-3" /> E-mail Comercial
-                                                        </Label>
-                                                        <Input
-                                                            type="email"
-                                                            value={formData.email}
-                                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                            placeholder="email@exemplo.com"
-                                                            className="h-9 text-xs bg-white font-medium"
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-                                                            <Bot className="h-3 w-3" /> Template para Deploy (Dani)
-                                                        </Label>
-                                                        <Select value={formData.template} onValueChange={(value) => setFormData({ ...formData, template: value })}>
-                                                            <SelectTrigger className="h-9 text-xs bg-white">
-                                                                <SelectValue placeholder="Selecione o template" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="saude">Saúde / Médicos</SelectItem>
-                                                                <SelectItem value="advocacia">Advocacia / Jurídico</SelectItem>
-                                                                <SelectItem value="construcao">Engenharia / Construção</SelectItem>
-                                                                <SelectItem value="varejo">Varejo / Ecommerce</SelectItem>
-                                                                <SelectItem value="beleza">Beleza / Estética</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-1.5">
-                                                    <Label className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-                                                        <Info className="h-3 w-3" /> Observações Internas
-                                                    </Label>
-                                                    <Textarea
-                                                        value={formData.observation}
-                                                        onChange={(e) => setFormData({ ...formData, observation: e.target.value })}
-                                                        rows={3}
-                                                        placeholder="Notas importantes sobre este negócio..."
-                                                        className="text-xs bg-white resize-none"
-                                                    />
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-
-                                    {/* ── Divisor: Seção Financeira ── */}
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-2 bg-emerald-500/8 border border-emerald-500/15 rounded-xl px-4 py-2.5">
-                                            <TrendingUp className="h-4 w-4 text-emerald-600 shrink-0" />
-                                            <div>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 leading-none">Seção Financeira</p>
-                                                <p className="text-[10px] text-emerald-500/70 mt-0.5">Receitas, lançamentos e controle de pagamentos</p>
-                                            </div>
-                                        </div>
-                                        <div className="h-px flex-1 bg-emerald-500/10" />
-                                    </div>
-
-                                    {/* Financeiro */}
-                                    {opportunityId ? (
-                                        <LeadFinanceTab
-                                            leadId={opportunityId}
-                                            leadName={formData.leadIdentification}
-
-                                            siteUrl={formData.siteUrl}
-                                        />
-                                    ) : (
-                                        <Card className="bg-white/50 backdrop-blur-sm shadow-sm border-muted">
-                                            <CardContent className="h-32 flex flex-col items-center justify-center opacity-40">
-                                                <DollarSign className="h-8 w-8 mb-2" />
-                                                <p className="text-xs font-black uppercase tracking-widest text-center">
-                                                    Ative o negócio primeiro para<br />acessar os recursos financeiros
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-                                    )}
-
-                                    <div className="flex items-center justify-between pt-4 border-t gap-4">
-                                        <div className="flex items-center gap-2">
-                                            {opportunityId && (
-                                                <Button
-                                                    variant="ghost"
-                                                    onClick={handleArchive}
-                                                    disabled={archiving || loading}
-                                                    className="h-10 text-[11px] font-bold uppercase tracking-tight text-muted-foreground hover:text-destructive hover:bg-destructive/5 gap-2 px-4 shadow-none"
-                                                >
-                                                    {archiving ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <Archive className="h-4 w-4" />
-                                                    )}
-                                                    Arquivar Negócio
-                                                </Button>
-                                            )}
+                                        <div className="grid grid-cols-2 gap-5">
+                                            <Field label="Telefone / WhatsApp">
+                                                <Input
+                                                    value={formData.contact}
+                                                    onChange={set('contact')}
+                                                    placeholder="(00) 00000-0000"
+                                                    className="h-9 text-[12px] font-mono bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                                                />
+                                            </Field>
+                                            <Field label="E-mail">
+                                                <Input
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={set('email')}
+                                                    placeholder="email@exemplo.com"
+                                                    className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                                                />
+                                            </Field>
                                         </div>
 
-                                        <div className="flex items-center gap-3">
-                                            <Button variant="outline" onClick={onClose} className="h-10 text-[11px] font-bold uppercase tracking-tight px-6 rounded-lg">
-                                                Cancelar
-                                            </Button>
-                                            <Button onClick={handleSubmit} size="lg" className="h-12 w-64 text-sm font-black uppercase tracking-tight rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
-                                                {loading ? (
-                                                    <>
-                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                        Processando...
-                                                    </>
-                                                ) : (
-                                                    opportunityId ? 'Atualizar Oportunidade' : 'Ativar Negócio'
+                                        <Field label="Site / Landing Page">
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    value={formData.siteUrl}
+                                                    onChange={set('siteUrl')}
+                                                    placeholder="https://..."
+                                                    className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                                                />
+                                                {formData.siteUrl && (
+                                                    <button
+                                                        onClick={() => window.open(formData.siteUrl, '_blank')}
+                                                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-zinc-900 hover:border-zinc-400 transition-all shrink-0"
+                                                    >
+                                                        <ExternalLink size={14} />
+                                                    </button>
                                                 )}
-                                            </Button>
-                                        </div>
+                                            </div>
+                                        </Field>
+
+                                        <Section title="Template" />
+
+                                        <Field label="Template para Deploy (Dani)">
+                                            <Select value={formData.template} onValueChange={v => setFormData(p => ({...p, template: v}))}>
+                                                <SelectTrigger className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                                                    <SelectValue placeholder="Selecione o template" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="saude">Saúde / Médicos</SelectItem>
+                                                    <SelectItem value="advocacia">Advocacia / Jurídico</SelectItem>
+                                                    <SelectItem value="construcao">Engenharia / Construção</SelectItem>
+                                                    <SelectItem value="varejo">Varejo / Ecommerce</SelectItem>
+                                                    <SelectItem value="beleza">Beleza / Estética</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </Field>
                                     </div>
-                                </>
+                                </div>
                             )}
                         </TabsContent>
 
-                        <TabsContent value="timeline" className="p-6 space-y-4 mt-0">
-                            <Card className="bg-white/50 backdrop-blur-sm border-muted shadow-sm overflow-hidden">
-                                <CardHeader className="pb-3 bg-muted/20">
-                                    <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                                        <Plus className="h-3.5 w-3.5 text-primary" /> Registrar Atividade Comercial
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="pt-4 space-y-4">
-                                    <Textarea
-                                        value={comment}
-                                        onChange={(e) => setComment(e.target.value)}
-                                        placeholder="Descreva o que aconteceu em sua última interação..."
-                                        rows={4}
-                                        className="text-xs bg-white border-muted/50 resize-none focus:ring-1 focus:ring-primary/20"
-                                    />
-                                    <div className="flex justify-end">
-                                        <Button 
-                                            onClick={handleAddComment}
-                                            disabled={!opportunityId || !comment.trim()}
-                                            className="h-9 px-6 text-[11px] font-bold uppercase tracking-tight rounded-lg"
-                                        >
-                                            Enviar Comentário
-                                        </Button>
+                        {/* ── TAB: Financeiro ────────────────────────────────── */}
+                        <TabsContent value="finance" className="flex-1 overflow-y-auto mt-0 p-8">
+                            {opportunityId ? (
+                                <LeadFinanceTab
+                                    leadId={opportunityId}
+                                    leadName={formData.leadIdentification}
+                                    siteUrl={formData.siteUrl}
+                                />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-48 text-zinc-300 gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center">
+                                        <Archive size={18} className="text-zinc-400" />
                                     </div>
-                                </CardContent>
-                            </Card>
-
-                            <div className="space-y-4 mt-6">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className="h-px flex-1 bg-border" />
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-2">Histórico Completo</span>
-                                    <div className="h-px flex-1 bg-border" />
+                                    <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 text-center">
+                                        Salve o negócio primeiro
+                                    </p>
                                 </div>
-                                
-                                {timelineData.length === 0 ? (
-                                    <Card className="border-dashed bg-muted/5">
-                                        <CardContent className="h-40 flex flex-col items-center justify-center opacity-40">
-                                            <Info className="h-8 w-8 mb-2" />
-                                            <p className="text-xs font-bold">Sem registros nesta linha do tempo</p>
-                                            <p className="text-[10px]">As ações dos agentes e comentários aparecerão aqui</p>
-                                        </CardContent>
-                                    </Card>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {timelineData.map((entry) => (
-                                            <div key={entry.id} className="relative pl-6 border-l-2 border-primary/20 pb-4 last:pb-0">
-                                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-background border-2 border-primary flex items-center justify-center">
-                                                    {entry.type === 'agent' ? <Bot className="w-2 h-2 text-primary" /> : <MessageSquare className="w-2 h-2 text-primary" />}
-                                                </div>
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-[10px] font-black uppercase text-primary tracking-widest">
-                                                            {entry.type === 'agent' ? `AGENTE ${entry.agent_id?.toUpperCase()}` : 'USUÁRIO'}
-                                                        </span>
-                                                        <span className="text-[10px] font-bold text-muted-foreground uppercase">
-                                                            {new Date(entry.created_at).toLocaleString('pt-BR')}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-xs text-foreground bg-muted/30 p-3 rounded-lg border border-muted/50">
-                                                        {entry.content}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            )}
                         </TabsContent>
 
+                        {/* ── TAB: Histórico ─────────────────────────────────── */}
+                        <TabsContent value="timeline" className="flex-1 overflow-y-auto mt-0">
+                            <div className="grid grid-cols-2 gap-0 divide-x divide-zinc-100 dark:divide-zinc-800 h-full">
+                                {/* Add comment */}
+                                <div className="p-8 flex flex-col gap-4">
+                                    <Section title="Nova atividade" />
+                                    <Textarea
+                                        value={comment}
+                                        onChange={e => setComment(e.target.value)}
+                                        placeholder="Descreva o que aconteceu..."
+                                        rows={6}
+                                        className="text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 resize-none"
+                                    />
+                                    <div className="flex justify-end">
+                                        <button
+                                            onClick={handleAddComment}
+                                            disabled={!opportunityId || !comment.trim()}
+                                            className="px-6 py-2 text-[11px] font-black uppercase tracking-wider bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg hover:opacity-90 disabled:opacity-30 transition-all"
+                                        >
+                                            Registrar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Timeline */}
+                                <div className="p-8 overflow-y-auto flex flex-col gap-4">
+                                    <Section title="Histórico" />
+                                    {timelineData.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-40 text-zinc-300 gap-2">
+                                            <MessageSquare size={20} />
+                                            <p className="text-[10px] font-bold uppercase tracking-widest">Sem registros</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {timelineData.map(entry => (
+                                                <div key={entry.id} className="flex gap-3">
+                                                    <div className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center shrink-0">
+                                                        {entry.type === 'agent'
+                                                            ? <Bot size={12} className="text-zinc-500" />
+                                                            : <MessageSquare size={12} className="text-zinc-500" />
+                                                        }
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                                                                {entry.type === 'agent' ? `Agente` : 'Usuário'}
+                                                            </span>
+                                                            <span className="text-[9px] text-zinc-400">
+                                                                {new Date(entry.created_at).toLocaleString('pt-BR')}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[12px] text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-lg px-3 py-2 leading-relaxed">
+                                                            {entry.content}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </TabsContent>
                     </Tabs>
-                </Card>
+
+                    {/* ── Footer ─────────────────────────────────────────────── */}
+                    <div className="flex items-center justify-between px-8 py-4 border-t border-zinc-100 dark:border-zinc-800 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/50">
+                        <div>
+                            {opportunityId && (
+                                <button
+                                    onClick={handleArchive}
+                                    disabled={archiving || loading}
+                                    className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-30"
+                                >
+                                    {archiving ? <Loader2 size={13} className="animate-spin" /> : <Archive size={13} />}
+                                    Arquivar
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={onClose}
+                                className="px-5 py-2 text-[11px] font-black uppercase tracking-wider text-zinc-500 hover:text-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-zinc-400 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="px-8 py-2 text-[11px] font-black uppercase tracking-wider bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2"
+                            >
+                                {loading && <Loader2 size={12} className="animate-spin" />}
+                                {opportunityId ? 'Salvar' : 'Criar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </DialogContent>
         </Dialog>
     );
