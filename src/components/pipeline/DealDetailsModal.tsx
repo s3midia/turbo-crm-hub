@@ -4,10 +4,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
-import { User, DollarSign } from "lucide-react";
+import { User, DollarSign, FileText } from "lucide-react";
 import { DealGeneralTab } from "./DealGeneralTab";
 import { LeadFinanceTab } from "../financeiro/LeadFinanceTab";
+import { LeadDocumentsTab } from "../financeiro/LeadDocumentsTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Product {
     id: string;
@@ -66,36 +67,63 @@ export function DealDetailsModal({ opportunity, open, onClose, onUpdate }: DealD
                     <DialogTitle className="text-2xl font-bold">{opportunity.title}</DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-8 mt-4">
-                    {/* Seção: Informações do Usuário / Contato */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-4 pb-2 border-b">
-                            <User className="h-5 w-5 text-primary" />
-                            <h2 className="text-lg font-bold uppercase tracking-wider text-primary">
-                                Informações do Usuário
-                            </h2>
-                        </div>
-                        <DealGeneralTab opportunity={opportunity} onUpdate={onUpdate} />
-                    </section>
+                <Tabs defaultValue="geral" className="mt-4">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="geral" className="flex items-center gap-2">
+                            <User className="h-4 w-4" /> Geral
+                        </TabsTrigger>
+                        <TabsTrigger value="financeiro" className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" /> Financeiro
+                        </TabsTrigger>
+                        <TabsTrigger value="documentos" className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" /> Documentos
+                        </TabsTrigger>
+                    </TabsList>
 
-                    <Separator className="my-2" />
+                    <TabsContent value="geral" className="mt-6 space-y-6">
+                        <section>
+                            <div className="flex items-center gap-2 mb-4 pb-2 border-b">
+                                <User className="h-5 w-5 text-primary" />
+                                <h2 className="text-lg font-bold uppercase tracking-wider text-primary">
+                                    Informações do Usuário
+                                </h2>
+                            </div>
+                            <DealGeneralTab opportunity={opportunity} onUpdate={onUpdate} />
+                        </section>
+                    </TabsContent>
 
-                    {/* Seção: Informações Financeiras */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-4 pb-2 border-b">
-                            <DollarSign className="h-5 w-5 text-emerald-600" />
-                            <h2 className="text-lg font-bold uppercase tracking-wider text-emerald-600">
-                                Informações Financeiras
-                            </h2>
-                        </div>
-                        <LeadFinanceTab
-                            leadId={opportunity.id}
-                            leadName={opportunity.client_name}
-                            products={opportunity.products}
-                            onUpdateProducts={(products) => onUpdate({ ...opportunity, products })}
-                        />
-                    </section>
-                </div>
+                    <TabsContent value="financeiro" className="mt-6">
+                        <section>
+                            <div className="flex items-center gap-2 mb-4 pb-2 border-b">
+                                <DollarSign className="h-5 w-5 text-emerald-600" />
+                                <h2 className="text-lg font-bold uppercase tracking-wider text-emerald-600">
+                                    Informações Financeiras
+                                </h2>
+                            </div>
+                            <LeadFinanceTab
+                                leadId={opportunity.id}
+                                leadName={opportunity.client_name}
+                                products={opportunity.products}
+                                onUpdateProducts={(products) => onUpdate({ ...opportunity, products })}
+                            />
+                        </section>
+                    </TabsContent>
+
+                    <TabsContent value="documentos" className="mt-6">
+                        <section>
+                            <div className="flex items-center gap-2 mb-4 pb-2 border-b">
+                                <FileText className="h-5 w-5 text-primary" />
+                                <h2 className="text-lg font-bold uppercase tracking-wider text-primary">
+                                    Documentação do Lead
+                                </h2>
+                            </div>
+                            <LeadDocumentsTab 
+                                leadId={opportunity.id} 
+                                leadName={opportunity.client_name} 
+                            />
+                        </section>
+                    </TabsContent>
+                </Tabs>
             </DialogContent>
         </Dialog>
     );

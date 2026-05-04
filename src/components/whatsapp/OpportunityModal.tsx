@@ -20,6 +20,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { LeadFinanceTab } from '@/components/financeiro/LeadFinanceTab';
 import { formatBRL } from '@/lib/formatters';
 import { useFinance } from '@/hooks/useFinance';
+import { LeadDocumentsTab } from '@/components/financeiro/LeadDocumentsTab';
 
 interface OpportunityModalProps {
     open: boolean;
@@ -255,6 +256,7 @@ export const OpportunityModal = ({
                                 {[
                                     { value: 'general', label: 'Geral' },
                                     { value: 'finance', label: 'Financeiro' },
+                                    { value: 'documents', label: 'Documentos' },
                                     { value: 'timeline', label: 'Histórico' },
                                 ].map(tab => (
                                     <TabsTrigger
@@ -472,6 +474,25 @@ export const OpportunityModal = ({
                                 <div className="flex flex-col items-center justify-center h-48 text-zinc-300 gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center">
                                         <Archive size={18} className="text-zinc-400" />
+                                    </div>
+                                    <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 text-center">
+                                        Salve o negócio primeiro
+                                    </p>
+                                </div>
+                            )}
+                        </TabsContent>
+                        
+                        {/* ── TAB: Documentos ────────────────────────────────── */}
+                        <TabsContent value="documents" className="flex-1 overflow-y-auto mt-0 p-8">
+                            {opportunityId ? (
+                                <LeadDocumentsTab
+                                    leadId={opportunityId}
+                                    leadName={formData.leadIdentification}
+                                />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-48 text-zinc-300 gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center">
+                                        <FileText size={18} className="text-zinc-400" />
                                     </div>
                                     <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 text-center">
                                         Salve o negócio primeiro

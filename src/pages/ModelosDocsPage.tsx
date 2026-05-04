@@ -24,6 +24,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { 
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ClientSearch } from "@/components/ClientSearch";
 
 interface Doc {
@@ -407,25 +413,33 @@ export default function ModelosDocsPage() {
                                     </button>
                                 </>
                             ) : (
-                                <>
-                                    <button 
-                                        onClick={handleAddLink}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-border text-foreground hover:bg-muted/80 text-[12px] font-bold transition-all"
-                                    >
-                                        <LinkIcon className="w-3.5 h-3.5" />
-                                        Vincular Link
-                                    </button>
-                                    <button 
-                                        onClick={() => {
-                                            setSelectedDoc(null);
-                                            setIsUploadPdfModalOpen(true);
-                                        }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[12px] font-bold border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer"
-                                    >
-                                        <Upload className="w-3.5 h-3.5" />
-                                        Subir PDF
-                                    </button>
-                                </>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-[12px] font-bold shadow-sm hover:bg-primary/90 transition-all">
+                                            <Plus className="w-4 h-4" />
+                                            Novo Documento
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48 bg-card border-border">
+                                        <DropdownMenuItem 
+                                            onClick={handleAddLink}
+                                            className="flex items-center gap-2 cursor-pointer py-2"
+                                        >
+                                            <LinkIcon className="w-4 h-4 text-primary" />
+                                            <span className="font-medium">Vincular Link</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem 
+                                            onClick={() => {
+                                                setSelectedDoc(null);
+                                                setIsUploadPdfModalOpen(true);
+                                            }}
+                                            className="flex items-center gap-2 cursor-pointer py-2"
+                                        >
+                                            <Upload className="w-4 h-4 text-emerald-500" />
+                                            <span className="font-medium">Subir PDF</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             )}
                         </div>
                     </div>
