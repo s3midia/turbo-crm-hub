@@ -13,7 +13,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { X, Loader2, Archive, ExternalLink, MessageSquare, Bot, Plus, Search } from 'lucide-react';
+import { X, Loader2, Archive, ExternalLink, MessageSquare, Bot, Plus, Search, FileText } from 'lucide-react';
 import { saveOpportunity, archiveOpportunity, getTimelineEntries, addTimelineComment, getOpportunityById, type Task, type TimelineEntry } from '@/hooks/useOpportunities';
 import { useToast } from '@/hooks/use-toast';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -330,7 +330,7 @@ export const OpportunityModal = ({
                                                         <div className="absolute z-[100] mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                                                             <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                                                                 {allLeads.filter(l => 
-                                                                    l.company_name.toLowerCase().includes(formData.leadIdentification.toLowerCase())
+                                                                    (l.company_name || "").toLowerCase().includes(formData.leadIdentification.toLowerCase())
                                                                 ).map(l => (
                                                                     <button
                                                                         key={l.id}

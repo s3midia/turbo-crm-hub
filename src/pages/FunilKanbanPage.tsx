@@ -272,8 +272,13 @@ export default function FunilKanbanPage() {
     const [transactions, setTransactions] = useState<any[]>([]);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [stages, setStages]       = useState(() => {
-        const saved = localStorage.getItem('turbo_crm_stages');
-        return saved ? JSON.parse(saved) : DEFAULT_STAGES;
+        try {
+            const saved = localStorage.getItem('turbo_crm_stages');
+            return saved ? JSON.parse(saved) : DEFAULT_STAGES;
+        } catch (e) {
+            console.error("Erro ao carregar estágios do pipeline:", e);
+            return DEFAULT_STAGES;
+        }
     });
 
     const fetchData = async () => {
@@ -335,7 +340,7 @@ export default function FunilKanbanPage() {
     });
 
     const filtered = leadsWithRealValues.filter(l => 
-        l.company_name.toLowerCase().includes(search.toLowerCase()) || 
+        (l.company_name || "").toLowerCase().includes(search.toLowerCase()) || 
         (l.niche && l.niche.toLowerCase().includes(search.toLowerCase()))
     );
 
