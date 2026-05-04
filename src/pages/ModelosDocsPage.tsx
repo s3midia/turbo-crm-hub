@@ -31,7 +31,7 @@ const MOCK_DOCS: Doc[] = [
 ];
 
 export default function ModelosDocsPage() {
-    const [docs, setDocs] = useState<Doc[]>(MOCK_DOCS);
+    const [docs, setDocs] = useState<Doc[]>([]);
     const [searchParams, setSearchParams] = useSearchParams();
     const currentLeadId = searchParams.get("leadId");
     const currentClientName = searchParams.get("cliente");
@@ -39,6 +39,22 @@ export default function ModelosDocsPage() {
     const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     const [isManualProposalOpen, setIsManualProposalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+    // Persistência Local
+    useEffect(() => {
+        const savedDocs = localStorage.getItem("crm_documents");
+        if (savedDocs) {
+            setDocs(JSON.parse(savedDocs));
+        } else {
+            setDocs(MOCK_DOCS);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (docs.length > 0) {
+            localStorage.setItem("crm_documents", JSON.stringify(docs));
+        }
+    }, [docs]);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
     const [isPdfViewOpen, setIsPdfViewOpen] = useState(false);
@@ -218,7 +234,8 @@ export default function ModelosDocsPage() {
                             )}
                         </h1>
                         <p className="text-[13px] text-muted-foreground mt-1">
-                            Gerencie propostas, contratos e arquivos em um só lugar.
+                            Gerencie propostas, contratos e arquivos em um só lugar. 
+                            <span className="text-[11px] text-primary ml-2 font-medium">💡 Dica: Use links (Zapsign/S3) para economizar espaço no banco de dados.</span>
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
