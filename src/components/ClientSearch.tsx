@@ -43,7 +43,16 @@ export function ClientSearch({ value, onChange, placeholder = "Selecionar client
         .order('company_name');
       
       if (!error && data) {
-        setClients(data);
+        // Remover duplicatas baseadas no nome da empresa
+        const uniqueClients = data.reduce((acc: Client[], current) => {
+          const x = acc.find(item => item.company_name === current.company_name);
+          if (!x) {
+            return acc.concat([current]);
+          } else {
+            return acc;
+          }
+        }, []);
+        setClients(uniqueClients);
       }
       setLoading(false);
     };
