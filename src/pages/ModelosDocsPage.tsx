@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { ClientSearch } from "@/components/ClientSearch";
 
 interface Doc {
     id: number;
@@ -58,6 +59,7 @@ export default function ModelosDocsPage() {
     const [isPdfViewOpen, setIsPdfViewOpen] = useState(false);
     const [isAddLinkModalOpen, setIsAddLinkModalOpen] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
+    const [isUploadPdfModalOpen, setIsUploadPdfModalOpen] = useState(false);
 
     const setActiveTab = (tab: "propostas" | "contratos") => {
         setSearchParams(prev => {
@@ -103,15 +105,28 @@ export default function ModelosDocsPage() {
         url: "",
         titulo: "Contrato de Prestação de Serviços",
         cliente: "",
+        leadId: "",
         valor: 0,
         status: "pendente" as const
+    });
+    
+    const [uploadForm, setUploadForm] = useState({
+        cliente: "",
+        leadId: "",
+        file: null as File | null,
+        titulo: ""
     });
 
     useEffect(() => {
         if (currentClientName) {
             setLinkForm(prev => ({ ...prev, cliente: currentClientName }));
+            setUploadForm(prev => ({ ...prev, cliente: currentClientName }));
         }
-    }, [currentClientName]);
+        if (currentLeadId) {
+            setLinkForm(prev => ({ ...prev, leadId: currentLeadId }));
+            setUploadForm(prev => ({ ...prev, leadId: currentLeadId }));
+        }
+    }, [currentClientName, currentLeadId]);
 
     const handleAIProposalGenerated = (proposal: { titulo: string; cliente: string; conteudo: string }) => {
         const newDoc: Doc = {
@@ -228,8 +243,7 @@ export default function ModelosDocsPage() {
         toast.success("Abrindo WhatsApp...");
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+    const handleFileUpload = async (file: File, cliente: string, leadId?: string, titulo?: string) => {
         if (file) {
             try {
                 const loadingToast = toast.loading("Enviando arquivo para o servidor...");
@@ -259,9 +273,10 @@ export default function ModelosDocsPage() {
 
                 const newDoc: Doc = {
                     id: Math.floor(Math.random() * 1000),
-                    titulo: file.name,
+                    titulo: titulo || file.name,
                     subtipo: "Upload PDF",
-                    cliente: "N/A",
+                    cliente: cliente || "N/A",
+                    leadId: leadId,
                     valor: 0,
                     status: "pendente",
                     data: new Date().toLocaleDateString("pt-BR"),
@@ -273,6 +288,8 @@ export default function ModelosDocsPage() {
                 setActiveTab("contratos");
                 toast.dismiss(loadingToast);
                 toast.success("Arquivo salvo permanentemente!");
+                setIsUploadPdfModalOpen(false);
+                setUploadForm({ cliente: currentClientName || "", leadId: currentLeadId || "", file: null, titulo: "" });
             } catch (error: any) {
                 toast.error("Erro inesperado: " + error.message);
             }
@@ -294,7 +311,7 @@ export default function ModelosDocsPage() {
             titulo: linkForm.titulo,
             subtipo: "Link Externo",
             cliente: linkForm.cliente,
-            leadId: currentLeadId || undefined,
+            leadId: linkForm.leadId || currentLeadId || undefined,
             valor: linkForm.valor,
             status: linkForm.status as any,
             data: new Date().toLocaleDateString("pt-BR"),
@@ -397,11 +414,13 @@ export default function ModelosDocsPage() {
                                         <LinkIcon className="w-3.5 h-3.5" />
                                         Vincular Link
                                     </button>
-                                    <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[12px] font-bold border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer">
+                                    <button 
+                                        onClick={() => setIsUploadPdfModalOpen(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[12px] font-bold border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer"
+                                    >
                                         <Upload className="w-3.5 h-3.5" />
                                         Subir PDF
-                                        <input type="file" className="hidden" accept=".pdf" onChange={handleFileUpload} />
-                                    </label>
+                                    </button>
                                 </>
                             )}
                         </div>
@@ -553,10 +572,10 @@ export default function ModelosDocsPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Cliente</Label>
-                                <Input 
-                                    placeholder="Nome do Cliente" 
+                                <ClientSearch 
                                     value={linkForm.cliente} 
-                                    onChange={e => setLinkForm(f => ({ ...f, cliente: e.target.value }))}
+                                    onChange={(name, leadId) => setLinkForm(f => ({ ...f, cliente: name, leadId: leadId || "" }))} 
+                                    placeholder="Pesquisar..."
                                 />
                             </div>
                             <div className="space-y-2">
@@ -588,6 +607,82 @@ export default function ModelosDocsPage() {
                         <Button variant="outline" onClick={() => setIsAddLinkModalOpen(false)}>Cancelar</Button>
                         <Button onClick={handleSaveLink} className="bg-primary text-primary-foreground gap-2">
                             <Check className="w-4 h-4" /> Vincular Contrato
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Subir PDF */}
+            <Dialog open={isUploadPdfModalOpen} onOpenChange={setIsUploadPdfModalOpen}>
+                <DialogContent className="sm:max-w-[500px] bg-card border-border">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Upload className="w-5 h-5 text-emerald-500" />
+                            Subir Contrato PDF
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Cliente</Label>
+                            <ClientSearch 
+                                value={uploadForm.cliente} 
+                                onChange={(name, leadId) => setUploadForm(f => ({ ...f, cliente: name, leadId: leadId || "" }))} 
+                                placeholder="Pesquisar cliente..."
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Título do Documento</Label>
+                            <Input 
+                                placeholder="Ex: Contrato de Prestação de Serviços" 
+                                value={uploadForm.titulo} 
+                                onChange={e => setUploadForm(f => ({ ...f, titulo: e.target.value }))}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Arquivo PDF</Label>
+                            <div className="flex items-center gap-4">
+                                <Button 
+                                    variant="outline" 
+                                    className="w-full border-dashed border-2 h-20 flex flex-col gap-2 hover:bg-muted/50 transition-all"
+                                    onClick={() => document.getElementById('pdf-upload-input')?.click()}
+                                >
+                                    {uploadForm.file ? (
+                                        <>
+                                            <Check className="w-6 h-6 text-emerald-500" />
+                                            <span className="text-xs font-semibold">{uploadForm.file.name}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Upload className="w-6 h-6 text-muted-foreground" />
+                                            <span className="text-xs text-muted-foreground">Clique para selecionar o PDF</span>
+                                        </>
+                                    )}
+                                </Button>
+                                <input 
+                                    id="pdf-upload-input"
+                                    type="file" 
+                                    className="hidden" 
+                                    accept=".pdf" 
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setUploadForm(f => ({ ...f, file, titulo: f.titulo || file.name }));
+                                        }
+                                    }} 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsUploadPdfModalOpen(false)}>Cancelar</Button>
+                        <Button 
+                            disabled={!uploadForm.file || !uploadForm.cliente}
+                            onClick={() => uploadForm.file && handleFileUpload(uploadForm.file, uploadForm.cliente, uploadForm.leadId, uploadForm.titulo)} 
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                        >
+                            <Upload className="w-4 h-4" /> Finalizar Upload
                         </Button>
                     </DialogFooter>
                 </DialogContent>

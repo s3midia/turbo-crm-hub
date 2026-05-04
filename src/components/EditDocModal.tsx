@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, Plus } from "lucide-react";
+import { ClientSearch } from "./ClientSearch";
 
 interface EditDocModalProps {
   open: boolean;
@@ -78,11 +79,10 @@ export function EditDocModal({ open, onOpenChange, doc, onSave }: EditDocModalPr
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-cliente" className="text-foreground">Cliente</Label>
-            <Input 
-              id="edit-cliente" 
-              value={cliente}
-              onChange={(e) => setCliente(e.target.value)}
-              className="bg-background border-border text-foreground"
+            <ClientSearch 
+              value={cliente} 
+              onChange={(name) => setCliente(name)} 
+              placeholder="Pesquisar cliente..."
             />
           </div>
           <div className="space-y-2">

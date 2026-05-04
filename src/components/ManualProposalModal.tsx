@@ -15,6 +15,7 @@ import { FileEdit, Plus, Trash2, Check, Sparkles, Loader2, ChevronRight, Chevron
 import { RichTextEditor } from "./ui/RichTextEditor";
 import { generateMarketingProposal } from "@/lib/proposalGenerator";
 import { toast } from "sonner";
+import { ClientSearch } from "./ClientSearch";
 
 interface ServiceItem {
   nome: string;
@@ -210,7 +211,11 @@ export function ManualProposalModal({ open, onOpenChange, onSave, doc }: ManualP
                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Nome do Cliente / Empresa</Label>
-                        <Input placeholder="Casa Mineira Doces" value={data.cliente} onChange={(e) => updateField("cliente", e.target.value)} />
+                        <ClientSearch 
+                          value={data.cliente} 
+                          onChange={(name) => updateField("cliente", name)} 
+                          placeholder="Pesquisar cliente..."
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Nicho (E-commerce, etc)</Label>
