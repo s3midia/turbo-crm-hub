@@ -461,7 +461,7 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Documentos do Cliente</p>
                 <button 
-                  onClick={() => navigate("/modelos-docs")}
+                  onClick={() => navigate(`/modelos-docs?leadId=${leadId}&cliente=${leadName}`)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold shadow-sm hover:bg-primary/90 transition-all"
                 >
                   <Plus size={12} /> Novo Documento
@@ -478,7 +478,7 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                   localDocs.map((doc) => (
                     <div 
                       key={doc.id} 
-                      onClick={() => navigate("/modelos-docs")}
+                      onClick={() => navigate(`/modelos-docs?leadId=${leadId}&cliente=${leadName}`)}
                       className="flex items-center gap-3 p-3.5 rounded-xl border border-border/30 bg-card hover:border-primary/30 hover:bg-primary/5 transition-all group cursor-pointer"
                     >
                       <div className={cn(
@@ -512,7 +512,7 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
               </div>
 
               <button 
-                onClick={() => navigate("/modelos-docs")}
+                onClick={() => navigate(`/modelos-docs?leadId=${leadId}&cliente=${leadName}`)}
                 className="w-full mt-4 p-4 rounded-2xl border border-dashed border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group flex flex-col items-center gap-2 text-center"
               >
                 <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all">

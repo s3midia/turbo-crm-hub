@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Eye, Pencil, Trash2, Send, FileEdit, Settings, Sparkles } from "lucide-react";
 import { ProposalViewModal } from "@/components/ProposalViewModal";
 import { AIProposalModal } from "@/components/AIProposalModal";
@@ -21,18 +22,20 @@ interface Doc {
     data: string;
     conteudo?: string;
     arquivoUrl?: string;
+    leadId?: string;
 }
 
 const MOCK_DOCS: Doc[] = [
-    { id: 43, titulo: "Proposta de Serviços", subtipo: "Contrato", cliente: "Giovanna", valor: 4956400, status: "pendente", data: "19/12/2025" },
+    { id: 43, titulo: "Proposta de Serviços", subtipo: "Contrato", cliente: "Giovanna", valor: 4956400, status: "pendente", data: "19/12/2025", leadId: "1" },
     { id: 23, titulo: "Proposta de Serviços", subtipo: "Contrato", cliente: "Cliente Avulso", valor: 300, status: "pendente", data: "10/12/2025" },
-    { id: 22, titulo: "Proposta de Serviços", subtipo: "Proposta", cliente: "Cliente Avulso", valor: 5000, status: "pendente", data: "10/12/2025" },
-    { id: 21, titulo: "Proposta de Serviços", subtipo: "Contrato", cliente: "Cliente Avulso", valor: 200, status: "pendente", data: "10/12/2025" },
-    { id: 20, titulo: "Proposta de Serviços", subtipo: "Contrato", cliente: "Cliente Avulso", valor: 200, status: "aprovado", data: "10/12/2025" },
 ];
 
 export default function ModelosDocsPage() {
     const [docs, setDocs] = useState<Doc[]>(MOCK_DOCS);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const currentLeadId = searchParams.get("leadId");
+    const currentClientName = searchParams.get("cliente");
+
     const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     const [isManualProposalOpen, setIsManualProposalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -47,7 +50,8 @@ export default function ModelosDocsPage() {
             id: Math.floor(Math.random() * 1000),
             titulo: proposal.titulo,
             subtipo: "Proposta Premium",
-            cliente: proposal.cliente,
+            cliente: proposal.cliente || currentClientName || "Desconhecido",
+            leadId: currentLeadId || undefined,
             valor: 0,
             status: "pendente",
             data: new Date().toLocaleDateString("pt-BR"),
@@ -70,7 +74,8 @@ export default function ModelosDocsPage() {
                 id: Math.floor(Math.random() * 1000) + 2000,
                 titulo: proposal.titulo,
                 subtipo: "Proposta Premium",
-                cliente: proposal.cliente,
+                cliente: proposal.cliente || currentClientName || "Desconhecido",
+                leadId: currentLeadId || undefined,
                 valor: 0,
                 status: "pendente",
                 data: new Date().toLocaleDateString("pt-BR"),
@@ -181,7 +186,8 @@ export default function ModelosDocsPage() {
                 id: Math.floor(Math.random() * 1000) + 3000,
                 titulo: "Contrato via Link",
                 subtipo: "Link Externo",
-                cliente: "N/A",
+                cliente: currentClientName || "N/A",
+                leadId: currentLeadId || undefined,
                 valor: 0,
                 status: "pendente",
                 data: new Date().toLocaleDateString("pt-BR"),
@@ -204,6 +210,12 @@ export default function ModelosDocsPage() {
                     <div>
                         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                             📄 Central de Documentos
+                            {currentClientName && (
+                                <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-lg flex items-center gap-2">
+                                    Filtrado por: <b className="text-primary">{currentClientName}</b>
+                                    <button onClick={() => setSearchParams({})} className="hover:text-rose-500 transition-colors">×</button>
+                                </span>
+                            )}
                         </h1>
                         <p className="text-[13px] text-muted-foreground mt-1">
                             Gerencie propostas, contratos e arquivos em um só lugar.
@@ -285,6 +297,7 @@ export default function ModelosDocsPage() {
                         <tbody>
                             {docs
                                 .filter(d => activeTab === "propostas" ? d.subtipo.includes("Proposta") : !d.subtipo.includes("Proposta"))
+                                .filter(d => currentLeadId ? d.leadId === currentLeadId : true)
                                 .map((doc) => (
                                 <tr key={doc.id} className="border-b border-[hsl(224,18%,15%)] hover:bg-card transition-colors">
                                     <td className="px-4 py-3.5 pl-5 text-[13px] font-bold text-muted-foreground">{doc.id}</td>
