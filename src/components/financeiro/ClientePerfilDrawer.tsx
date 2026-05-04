@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
 import { useNavigate } from "react-router-dom";
-import { formatBRL } from "@/lib/formatters";
+import { formatBRL, formatDisplayId } from "@/lib/formatters";
 import { TransacaoModal } from "./LancamentosTab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -183,7 +183,7 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                     <span className="flex items-center gap-1"><Building2 size={11} />{cliente.empresa || cliente.company_name}</span>
                   )}
                   {cliente.clientId && (
-                    <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded">{cliente.clientId}</span>
+                    <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded">{formatDisplayId(cliente.clientId || cliente.id)}</span>
                   )}
                   <button onClick={() => setIsEditing(true)} className="flex items-center gap-0.5 text-primary hover:underline">
                     <Edit2 size={10} /> editar

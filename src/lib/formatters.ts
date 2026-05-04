@@ -35,3 +35,19 @@ export const formatDateTime = (date: string | null | undefined): string => {
     return "Data Inválida";
   }
 };
+
+/**
+ * Shortens long UUIDs or IDs for display purposes.
+ * Example: "f78c9d..." -> "#F78C"
+ */
+export const formatDisplayId = (id: string | null | undefined): string => {
+  if (!id) return "N/A";
+  
+  // If it's already a short ID or doesn't look like a UUID, just return it with #
+  if (id.length <= 6) {
+    return id.startsWith("#") ? id : `#${id}`;
+  }
+
+  // For long IDs (UUIDs), take the first 4 characters
+  return `#${id.substring(0, 4).toUpperCase()}`;
+};

@@ -12,7 +12,7 @@ import { toast } from "sonner";
 const CATEGORIAS_ENTRADA = ["Software", "Web Design", "Consultoria", "Manutenção", "Licença", "Outros"];
 const CATEGORIAS_SAIDA = ["Infraestrutura", "Marketing", "Salários", "Impostos", "Escritório", "Ferramentas", "Outros"];
 
-import { formatBRL } from '@/lib/formatters';
+import { formatBRL, formatDisplayId } from '@/lib/formatters';
 
 const recorrenciaLabel = { unica: "Única", mensal: "Mensal", trimestral: "Trimestral", anual: "Anual" };
 const recorrenciaColor = { unica: "bg-muted text-muted-foreground", mensal: "bg-blue-500/10 text-blue-500", trimestral: "bg-violet-500/10 text-violet-500", anual: "bg-emerald-500/10 text-emerald-500" };
@@ -190,7 +190,7 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
           <div className="col-span-2 space-y-1 relative">
             <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
               <span>Cliente / Lead</span>
-              {form.lead_id && <span className="text-[9px] font-mono text-primary/60">ID: {form.lead_id}</span>}
+              {form.lead_id && <span className="text-[9px] font-mono text-primary/60">ID: {formatDisplayId(form.lead_id)}</span>}
             </label>
             <div className="relative">
               <input 
@@ -250,7 +250,7 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
                               {lead.niche}
                             </span>
                           )}
-                          <span className="text-[9px] text-muted-foreground/60 font-mono">ID: {lead.id}</span>
+                          <span className="text-[9px] text-muted-foreground/60 font-mono">ID: {formatDisplayId(lead.id)}</span>
                         </div>
                       </div>
                       <Plus size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -433,7 +433,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                           className="text-[10px] text-primary hover:underline font-medium mt-0.5 flex items-center gap-1"
                         >
                           <Users size={10} />
-                          {t.lead_nome} {t.lead_id && <span className="opacity-50 text-[8px] font-mono">({t.lead_id})</span>}
+                          {t.lead_nome} {t.lead_id && <span className="opacity-50 text-[8px] font-mono">({formatDisplayId(t.lead_id)})</span>}
                         </button>
                       )}
                     </div>

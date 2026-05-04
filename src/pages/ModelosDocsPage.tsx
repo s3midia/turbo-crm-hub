@@ -128,25 +128,14 @@ export default function ModelosDocsPage() {
         }
     }, [currentClientName, currentLeadId]);
 
-    const handleAIProposalGenerated = (proposal: { titulo: string; cliente: string; conteudo: string }) => {
-        const newDoc: Doc = {
-            id: Math.floor(Math.random() * 1000),
-            titulo: proposal.titulo,
-            subtipo: "Proposta Premium",
-            cliente: proposal.cliente || currentClientName || "Desconhecido",
-            leadId: currentLeadId || undefined,
-            valor: 0,
-            status: "pendente",
-            data: new Date().toLocaleDateString("pt-BR"),
-            conteudo: proposal.conteudo
         };
-        setDocs([newDoc, ...docs]);
+        setDocs(prev => [newDoc, ...prev]);
         toast.success("Proposta IA gerada e salva com sucesso!");
     };
 
     const handleManualProposalSaved = (proposal: { id?: number; titulo: string; cliente: string; conteudo: string }) => {
         if (proposal.id) {
-            setDocs(docs.map(doc => 
+            setDocs(prev => prev.map(doc => 
                 doc.id === proposal.id 
                     ? { ...doc, titulo: proposal.titulo, cliente: proposal.cliente, conteudo: proposal.conteudo } 
                     : doc
@@ -164,14 +153,14 @@ export default function ModelosDocsPage() {
                 data: new Date().toLocaleDateString("pt-BR"),
                 conteudo: proposal.conteudo
             };
-            setDocs([newDoc, ...docs]);
+            setDocs(prev => [newDoc, ...prev]);
             toast.success("Proposta construída e pronta!");
         }
     };
 
     const handleDelete = (id: number) => {
         if (confirm("Tem certeza que deseja excluir este documento?")) {
-            setDocs(docs.filter(doc => doc.id !== id));
+            setDocs(prev => prev.filter(doc => doc.id !== id));
             toast.success("Documento excluído!");
         }
     };
@@ -224,10 +213,10 @@ export default function ModelosDocsPage() {
                 status: "pendente",
                 data: new Date().toLocaleDateString("pt-BR")
             };
-            setDocs([newDoc, ...docs]);
+            setDocs(prev => [newDoc, ...prev]);
             toast.success("Documento criado!");
         } else {
-            setDocs(docs.map(doc => 
+            setDocs(prev => prev.map(doc => 
                 doc.id === updatedDoc.id 
                     ? { ...doc, titulo: updatedDoc.titulo, cliente: updatedDoc.cliente, conteudo: updatedDoc.conteudo } 
                     : doc
@@ -284,7 +273,7 @@ export default function ModelosDocsPage() {
                     arquivoUrl: publicUrl
                 };
                 
-                setDocs([newDoc, ...docs]);
+                setDocs(prev => [newDoc, ...prev]);
                 setActiveTab("contratos");
                 toast.dismiss(loadingToast);
                 toast.success("Arquivo salvo permanentemente!");
@@ -297,6 +286,7 @@ export default function ModelosDocsPage() {
     };
 
     const handleAddLink = () => {
+        setSelectedDoc(null);
         setIsAddLinkModalOpen(true);
     };
 
@@ -318,11 +308,11 @@ export default function ModelosDocsPage() {
             arquivoUrl: linkForm.url
         };
 
-        setDocs([newDoc, ...docs]);
+        setDocs(prev => [newDoc, ...prev]);
         setActiveTab("contratos");
         toast.success("Documento vinculado com sucesso!");
         setIsAddLinkModalOpen(false);
-        setLinkForm({ url: "", titulo: "Contrato de Prestação de Serviços", cliente: currentClientName || "", valor: 0, status: "pendente" });
+        setLinkForm({ url: "", titulo: "Contrato de Prestação de Serviços", cliente: currentClientName || "", leadId: "", valor: 0, status: "pendente" });
     };
 
     return (
@@ -415,7 +405,10 @@ export default function ModelosDocsPage() {
                                         Vincular Link
                                     </button>
                                     <button 
-                                        onClick={() => setIsUploadPdfModalOpen(true)}
+                                        onClick={() => {
+                                            setSelectedDoc(null);
+                                            setIsUploadPdfModalOpen(true);
+                                        }}
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[12px] font-bold border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer"
                                     >
                                         <Upload className="w-3.5 h-3.5" />

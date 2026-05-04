@@ -28,7 +28,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription 
 } from "@/components/ui/dialog";
 
-import { formatBRL, formatDateTime } from "@/lib/formatters";
+import { formatBRL, formatDateTime, formatDisplayId } from "@/lib/formatters";
 
 interface TimelineEvent {
   id: string;
@@ -412,7 +412,7 @@ export default function CobrancasFiscalTab({
                     <>
                       <span className="flex items-center gap-1.5"><Building2 size={14} className="text-primary/60" /> {selectedClient?.empresa || "N/A"}</span>
                       <span className="flex items-center gap-1.5"><Calendar size={14} className="text-primary/60" /> Início: {selectedClient?.dataInicio || "N/A"}</span>
-                      <span className="bg-muted px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">ID: {selectedClient?.clientId || "N/A"}</span>
+                      <span className="bg-muted px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">ID: {formatDisplayId(selectedClient?.clientId || selectedClient?.id)}</span>
                       <button 
                         onClick={() => setIsEditing(true)}
                         className="flex items-center gap-1 text-primary hover:underline ml-2"
