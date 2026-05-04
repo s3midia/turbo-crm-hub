@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import {
   DollarSign, LayoutDashboard, List, GitMerge, FileBarChart2,
-  Users, TrendingUp, Building2, FileText, Settings2, Download, Plus,
-  RefreshCw
+  Users, TrendingUp, Building2, FileText, Settings2, Download,
+  Plus, RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ClientePerfilDrawer, ClientePerfilData } from "@/components/financeiro/ClientePerfilDrawer";
+
 import FinanceiroDashboard from "@/components/financeiro/FinanceiroDashboard";
-import DashboardFinanceiro from "@/components/financeiro/DashboardFinanceiro";
 import LancamentosTab from "@/components/financeiro/LancamentosTab";
 import ConciliacaoTab from "@/components/financeiro/ConciliacaoTab";
 import RelatoriosTab from "@/components/financeiro/RelatoriosTab";
@@ -18,7 +19,6 @@ import CobrancasFiscalTab from "@/components/financeiro/CobrancasFiscalTab";
 import ConfiguracoesFinanceiroTab from "@/components/financeiro/ConfiguracoesFinanceiroTab";
 
 type TabId =
-  | "painel"
   | "dashboard"
   | "lancamentos"
   | "conciliacao"
@@ -37,81 +37,77 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { id: "painel", label: "Dashboard", icon: LayoutDashboard, badge: "NEW" },
-  { id: "dashboard", label: "Saúde Financeira", icon: LayoutDashboard },
-  { id: "lancamentos", label: "Receitas & Despesas", icon: List },
-  { id: "conciliacao", label: "Conciliação", icon: GitMerge },
-  { id: "relatorios", label: "Relatórios", icon: FileBarChart2 },
-  { id: "equipe", label: "Equipe & Pagamentos", icon: Users },
-  { id: "investimentos", label: "Investimentos", icon: TrendingUp },
-  { id: "valuation", label: "Valuation", icon: Building2, badge: "NOVO" },
-  { id: "cobrancas", label: "Cobranças & Fiscal", icon: FileText },
-  { id: "configuracoes", label: "Backup & Config.", icon: Settings2 },
+  { id: "dashboard",     label: "Visão Geral",        icon: LayoutDashboard },
+  { id: "lancamentos",   label: "Receitas & Despesas", icon: List },
+  { id: "conciliacao",   label: "Conciliação",         icon: GitMerge },
+  { id: "relatorios",    label: "Relatórios",          icon: FileBarChart2 },
+  { id: "equipe",        label: "Equipe",              icon: Users },
+  { id: "investimentos", label: "Investimentos",       icon: TrendingUp },
+  { id: "valuation",     label: "Valuation",           icon: Building2, badge: "NOVO" },
+  { id: "cobrancas",     label: "Cobranças & Fiscal",  icon: FileText },
+  { id: "configuracoes", label: "Configurações",       icon: Settings2 },
 ];
 
 export default function FinanceiroPage() {
-  const [activeTab, setActiveTab] = useState<TabId>("painel");
-  const [selectedClient, setSelectedClient] = useState<any | null>(null);
-  const [showProfile, setShowProfile] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+
+  // Estado unificado do drawer de perfil — compartilhado entre TODAS as abas
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerCliente, setDrawerCliente] = useState<ClientePerfilData | null>(null);
+
+  // Qualquer aba pode chamar isso para abrir o perfil de um cliente
+  function openClienteDrawer(client: any) {
+    if (!client) return;
+    // Normaliza qualquer formato de objeto de cliente
+    const normalized: ClientePerfilData = {
+      id: client.id || client.lead_id,
+      lead_id: client.lead_id || client.id,
+      cliente: client.cliente || client.company_name || client.lead_nome,
+      company_name: client.company_name || client.empresa || client.cliente,
+      email: client.email,
+      telefone: client.telefone || client.phone,
+      phone: client.phone || client.telefone,
+      empresa: client.empresa || client.company_name,
+      plano: client.plano,
+      valor: client.valor,
+      kanbanStage: client.kanbanStage || client.status,
+      dataInicio: client.dataInicio,
+      totalPago: client.totalPago,
+      clientId: client.clientId,
+    };
+    setDrawerCliente(normalized);
+    setDrawerOpen(true);
+  }
 
   function handleTabChange(tab: string) {
-    if (TABS.some(t => t.id === tab)) {
-      setActiveTab(tab as TabId);
-    }
-  }
-
-  function handleExport() {
-    // Navigate to relatorios tab where exports live
-    setActiveTab("relatorios");
-  }
-
-  function handleNovaTransacao() {
-    setActiveTab("lancamentos");
-  }
-
-  function handleOpenProfile(client: any) {
-    setSelectedClient(client);
-    setShowProfile(true);
-    setActiveTab("cobrancas");
+    if (TABS.some(t => t.id === tab)) setActiveTab(tab as TabId);
   }
 
   return (
-    <div className="flex flex-col h-full bg-background animate-in fade-in duration-300">
-      {/* Top Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border/30 sticky top-0 z-20 bg-background/95 backdrop-blur-sm">
-        <div className="space-y-0.5">
-          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <DollarSign className="w-4 h-4 text-primary" />
-            </div>
-            Hub Financeiro
-          </h1>
-          <p className="text-[11px] text-muted-foreground pl-9">
-            Gestão completa · Relatórios · Valuation · Backup automático
-          </p>
+    <div className="flex flex-col h-full bg-background">
+
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border/30 sticky top-0 z-20 bg-background/95 backdrop-blur-sm shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <DollarSign className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-foreground leading-none">Hub Financeiro</h1>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Gestão completa · Sincronizado em tempo real</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all text-[11px] font-bold text-primary"
-            onClick={() => {
-              toast.info("Sincronizando todos os módulos financeiros...");
-              // This is a global trigger that tabs can listen to via a shared state or just a refresh
-              window.location.reload(); 
-            }}
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Sincronizar Global
-          </button>
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/60 bg-card hover:bg-accent transition-all text-[11px] font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => { setActiveTab("relatorios"); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/50 bg-card hover:bg-muted text-[11px] font-medium text-muted-foreground hover:text-foreground transition-all"
           >
             <Download className="w-3.5 h-3.5" />
             Exportar
           </button>
           <button
-            onClick={handleNovaTransacao}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all text-[11px] font-semibold"
+            onClick={() => { setActiveTab("lancamentos"); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all text-[11px] font-semibold"
           >
             <Plus className="w-3.5 h-3.5" />
             Nova Transação
@@ -119,18 +115,18 @@ export default function FinanceiroPage() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-border/30 bg-background/80 px-4 sticky top-[57px] z-10 backdrop-blur-sm">
+      {/* ── Tab Navigation ─────────────────────────────────────── */}
+      <div className="border-b border-border/30 bg-background px-4 sticky top-[52px] z-10 shrink-0">
         <div className="flex gap-0 overflow-x-auto scrollbar-none">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-1.5 px-4 py-3 text-[11px] font-medium whitespace-nowrap transition-all duration-200 relative border-b-2",
+                "flex items-center gap-1.5 px-4 py-3 text-[11px] font-medium whitespace-nowrap transition-all duration-150 relative border-b-2 shrink-0",
                 activeTab === tab.id
                   ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border/50"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border/40"
               )}
             >
               <tab.icon className="w-3.5 h-3.5" />
@@ -145,36 +141,39 @@ export default function FinanceiroPage() {
         </div>
       </div>
 
-      {/* Tab Content */}
+      {/* ── Tab Content ────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-        {activeTab === "painel" && <FinanceiroDashboard onTabChange={handleTabChange} />}
-        {activeTab === "dashboard" && <DashboardFinanceiro onTabChange={handleTabChange} />}
+        {activeTab === "dashboard" && (
+          <FinanceiroDashboard onTabChange={handleTabChange} />
+        )}
         {activeTab === "lancamentos" && (
-          <LancamentosTab 
-            onOpenProfile={handleOpenProfile} 
-          />
+          <LancamentosTab onOpenProfile={openClienteDrawer} />
         )}
         {activeTab === "conciliacao" && <ConciliacaoTab />}
         {activeTab === "relatorios" && <RelatoriosTab onTabChange={handleTabChange} />}
         {activeTab === "equipe" && (
-          <EquipeFinanceiroTab 
-            onOpenProfile={handleOpenProfile} 
-          />
+          <EquipeFinanceiroTab onOpenProfile={openClienteDrawer} />
         )}
         {activeTab === "investimentos" && <InvestimentosTab onTabChange={handleTabChange} />}
         {activeTab === "valuation" && <ValuationTab onTabChange={handleTabChange} />}
         {activeTab === "cobrancas" && (
-          <CobrancasFiscalTab 
-            externalSelectedClient={selectedClient}
-            externalShowProfile={showProfile}
+          <CobrancasFiscalTab
+            externalSelectedClient={null}
+            externalShowProfile={false}
             onProfileChange={(show, client) => {
-              setShowProfile(show);
-              if (client) setSelectedClient(client);
+              if (show && client) openClienteDrawer(client);
             }}
           />
         )}
         {activeTab === "configuracoes" && <ConfiguracoesFinanceiroTab />}
       </div>
+
+      {/* ── Drawer de Perfil — compartilhado por todas as abas ── */}
+      <ClientePerfilDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        cliente={drawerCliente}
+      />
     </div>
   );
 }

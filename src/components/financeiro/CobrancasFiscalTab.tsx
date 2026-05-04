@@ -138,6 +138,7 @@ export default function CobrancasFiscalTab({
   const showTimeline = externalShowProfile;
   
   const handleOpenProfile = (client: any) => {
+    // Delegate to the unified drawer in FinanceiroPage
     onProfileChange?.(true, client);
   };
 
@@ -331,8 +332,8 @@ export default function CobrancasFiscalTab({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Robust Client Profile Command Center - NOW IN A MODAL */}
-      <Dialog open={showTimeline} onOpenChange={handleCloseProfile}>
+      {/* Profile is now handled by the unified ClientePerfilDrawer in FinanceiroPage */}
+      <Dialog open={false} onOpenChange={handleCloseProfile}>
         <DialogContent className="max-w-[95vw] w-[1200px] p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl bg-card">
           <DialogHeader className="sr-only">
             <DialogTitle>Perfil do Cliente: {selectedClient?.cliente || "Cliente"}</DialogTitle>
