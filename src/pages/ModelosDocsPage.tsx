@@ -128,6 +128,17 @@ export default function ModelosDocsPage() {
         }
     }, [currentClientName, currentLeadId]);
 
+    const handleAIProposalGenerated = (proposal: { titulo: string; cliente: string; conteudo: string }) => {
+        const newDoc: Doc = {
+            id: Math.floor(Math.random() * 1000),
+            titulo: proposal.titulo,
+            subtipo: "Proposta Premium",
+            cliente: proposal.cliente || currentClientName || "Desconhecido",
+            leadId: currentLeadId || undefined,
+            valor: 0,
+            status: "pendente",
+            data: new Date().toLocaleDateString("pt-BR"),
+            conteudo: proposal.conteudo
         };
         setDocs(prev => [newDoc, ...prev]);
         toast.success("Proposta IA gerada e salva com sucesso!");
