@@ -528,8 +528,6 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
         </div>
       </div>
 
-      </div>
-
       {/* Modal de transação */}
       {showModal && (
         <TransacaoModal
