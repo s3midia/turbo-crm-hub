@@ -10,7 +10,19 @@ import { S3_PROPOSAL_TEMPLATE } from "@/lib/documentTemplates";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/formatters";
 import { PdfViewModal } from "@/components/PdfViewModal";
-import { Link } from "lucide-react";
+import { Link as LinkIcon, Upload, Check } from "lucide-react";
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle,
+    DialogFooter
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 interface Doc {
     id: number;
@@ -58,8 +70,24 @@ export default function ModelosDocsPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
     const [isPdfViewOpen, setIsPdfViewOpen] = useState(false);
+    const [isAddLinkModalOpen, setIsAddLinkModalOpen] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
     const [activeTab, setActiveTab] = useState<"propostas" | "contratos">("propostas");
+
+    // Form states for adding link
+    const [linkForm, setLinkForm] = useState({
+        url: "",
+        titulo: "Contrato de Prestação de Serviços",
+        cliente: "",
+        valor: 0,
+        status: "pendente" as const
+    });
+
+    useEffect(() => {
+        if (currentClientName) {
+            setLinkForm(prev => ({ ...prev, cliente: currentClientName }));
+        }
+    }, [currentClientName]);
 
     const handleAIProposalGenerated = (proposal: { titulo: string; cliente: string; conteudo: string }) => {
         const newDoc: Doc = {
@@ -196,22 +224,31 @@ export default function ModelosDocsPage() {
     };
 
     const handleAddLink = () => {
-        const url = prompt("Cole o link do PDF (Zapsign, S3, etc):");
-        if (url) {
-            const newDoc: Doc = {
-                id: Math.floor(Math.random() * 1000) + 3000,
-                titulo: "Contrato via Link",
-                subtipo: "Link Externo",
-                cliente: currentClientName || "N/A",
-                leadId: currentLeadId || undefined,
-                valor: 0,
-                status: "pendente",
-                data: new Date().toLocaleDateString("pt-BR"),
-                arquivoUrl: url
-            };
-            setDocs([newDoc, ...docs]);
-            toast.success("Link do contrato adicionado!");
+        setIsAddLinkModalOpen(true);
+    };
+
+    const handleSaveLink = () => {
+        if (!linkForm.url || !linkForm.titulo || !linkForm.cliente) {
+            toast.error("Preencha todos os campos obrigatórios.");
+            return;
         }
+
+        const newDoc: Doc = {
+            id: Math.floor(Math.random() * 1000) + 3000,
+            titulo: linkForm.titulo,
+            subtipo: "Link Externo",
+            cliente: linkForm.cliente,
+            leadId: currentLeadId || undefined,
+            valor: linkForm.valor,
+            status: linkForm.status as any,
+            data: new Date().toLocaleDateString("pt-BR"),
+            arquivoUrl: linkForm.url
+        };
+
+        setDocs([newDoc, ...docs]);
+        toast.success("Documento vinculado com sucesso!");
+        setIsAddLinkModalOpen(false);
+        setLinkForm({ url: "", titulo: "Contrato de Prestação de Serviços", cliente: currentClientName || "", valor: 0, status: "pendente" });
     };
 
     return (
@@ -221,82 +258,97 @@ export default function ModelosDocsPage() {
             </div>
 
             <div className="flex-1 p-6 space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                            📄 Central de Documentos
-                            {currentClientName && (
-                                <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-lg flex items-center gap-2">
-                                    Filtrado por: <b className="text-primary">{currentClientName}</b>
-                                    <button onClick={() => setSearchParams({})} className="hover:text-rose-500 transition-colors">×</button>
-                                </span>
-                            )}
-                        </h1>
-                        <p className="text-[13px] text-muted-foreground mt-1">
-                            Gerencie propostas, contratos e arquivos em um só lugar. 
-                            <span className="text-[11px] text-primary ml-2 font-medium">💡 Dica: Use links (Zapsign/S3) para economizar espaço no banco de dados.</span>
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button 
-                            onClick={() => setIsVisualSettingsOpen(true)}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-transparent border border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 text-[12px] font-semibold transition-colors"
-                        >
-                            <Settings className="w-4 h-4" />
-                            Configuração Visual
-                        </button>
+                {/* Header Superior com Abas e Botões */}
+                <div className="flex flex-col gap-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                                📄 Central de Documentos
+                                {currentClientName && (
+                                    <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-2 py-1 rounded-lg flex items-center gap-2 border border-border/50">
+                                        Contexto: <b className="text-primary">{currentClientName}</b>
+                                        <button onClick={() => setSearchParams({})} className="hover:text-rose-500 transition-colors">×</button>
+                                    </span>
+                                )}
+                            </h1>
+                            <p className="text-[13px] text-muted-foreground mt-1">
+                                Gerencie propostas e contratos em uma interface unificada.
+                            </p>
+                        </div>
                         
-                        {activeTab === "propostas" ? (
-                            <>
-                                <button 
-                                    onClick={() => setIsAIModalOpen(true)}
-                                    className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-transparent border border-[hsl(265,85%,60%)] text-[hsl(265,85%,60%)] hover:bg-[hsl(265,85%,60%,0.1)] text-[12px] font-semibold transition-colors"
-                                >
-                                    <Sparkles className="w-4 h-4" />
-                                    Gerar com IA
-                                </button>
-                                <button 
-                                    onClick={handleCreatePremium}
-                                    className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[#00bcd4] hover:bg-[#0097a7] text-white text-[12px] font-semibold transition-colors shadow-sm"
-                                >
-                                    <FileEdit className="w-4 h-4" />
-                                    Nova Proposta Premium
-                                </button>
-                            </>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <button 
-                                    onClick={handleAddLink}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-muted border border-border text-foreground hover:bg-muted/80 text-[12px] font-semibold transition-colors shadow-sm"
-                                >
-                                    <Link className="w-4 h-4" />
-                                    Adicionar por Link
-                                </button>
-                                <label className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold transition-colors shadow-sm cursor-pointer">
-                                    <Plus className="w-4 h-4" />
-                                    Subir Arquivo PDF
-                                    <input type="file" className="hidden" accept=".pdf" onChange={handleFileUpload} />
-                                </label>
-                            </div>
+                        {activeTab === "propostas" && (
+                            <button 
+                                onClick={() => setIsVisualSettingsOpen(true)}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-transparent border border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 text-[12px] font-semibold transition-colors"
+                            >
+                                <Settings className="w-4 h-4" />
+                                Configuração Visual
+                            </button>
                         )}
                     </div>
-                </div>
 
-                {/* Tabs de Documentos */}
-                <div className="flex border-b border-border">
-                    <button 
-                        onClick={() => setActiveTab("propostas")}
-                        className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "propostas" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-                    >
-                        Propostas Geradas
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab("contratos")}
-                        className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "contratos" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-                    >
-                        Gerenciamento de Contratos
-                    </button>
+                    <div className="flex items-center justify-between border-b border-border pb-0">
+                        <div className="flex gap-1">
+                            <button 
+                                onClick={() => setActiveTab("propostas")}
+                                className={cn(
+                                    "px-6 py-3 text-[13px] font-bold transition-all relative",
+                                    activeTab === "propostas" 
+                                        ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary" 
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Propostas Geradas
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab("contratos")}
+                                className={cn(
+                                    "px-6 py-3 text-[13px] font-bold transition-all relative",
+                                    activeTab === "contratos" 
+                                        ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary" 
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Gerenciamento de Contratos
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 mb-2">
+                            {activeTab === "propostas" ? (
+                                <>
+                                    <button 
+                                        onClick={() => setIsAIModalOpen(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(265,85%,60%)]/10 text-[hsl(265,85%,60%)] text-[12px] font-bold border border-[hsl(265,85%,60%)]/20 hover:bg-[hsl(265,85%,60%)]/20 transition-all"
+                                    >
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        Gerar com IA
+                                    </button>
+                                    <button 
+                                        onClick={handleCreatePremium}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[12px] font-bold shadow-sm hover:bg-primary/90 transition-all"
+                                    >
+                                        <FileEdit className="w-3.5 h-3.5" />
+                                        Nova Proposta
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button 
+                                        onClick={handleAddLink}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-border text-foreground hover:bg-muted/80 text-[12px] font-bold transition-all"
+                                    >
+                                        <LinkIcon className="w-3.5 h-3.5" />
+                                        Vincular Link
+                                    </button>
+                                    <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[12px] font-bold border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer">
+                                        <Upload className="w-3.5 h-3.5" />
+                                        Subir PDF
+                                        <input type="file" className="hidden" accept=".pdf" onChange={handleFileUpload} />
+                                    </label>
+                                </>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Table */}
@@ -413,6 +465,76 @@ export default function ModelosDocsPage() {
                 url={selectedDoc?.arquivoUrl || ""}
                 title={selectedDoc?.titulo || "Documento"}
             />
+
+            {/* Modal Adicionar Link */}
+            <Dialog open={isAddLinkModalOpen} onOpenChange={setIsAddLinkModalOpen}>
+                <DialogContent className="sm:max-w-[500px] bg-card border-border">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <LinkIcon className="w-5 h-5 text-primary" />
+                            Vincular Documento Externo
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>URL do Documento (Zapsign/PDF)</Label>
+                            <Input 
+                                placeholder="https://..." 
+                                value={linkForm.url} 
+                                onChange={e => setLinkForm(f => ({ ...f, url: e.target.value }))}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Título do Documento</Label>
+                            <Input 
+                                placeholder="Ex: Contrato de Mentoria" 
+                                value={linkForm.titulo} 
+                                onChange={e => setLinkForm(f => ({ ...f, titulo: e.target.value }))}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Cliente</Label>
+                                <Input 
+                                    placeholder="Nome do Cliente" 
+                                    value={linkForm.cliente} 
+                                    onChange={e => setLinkForm(f => ({ ...f, cliente: e.target.value }))}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Status</Label>
+                                <Select value={linkForm.status} onValueChange={(val: any) => setLinkForm(f => ({ ...f, status: val }))}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="pendente">Pendente</SelectItem>
+                                        <SelectItem value="aprovado">Aprovado</SelectItem>
+                                        <SelectItem value="cancelado">Cancelado</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Valor do Contrato (Opcional)</Label>
+                            <Input 
+                                type="number" 
+                                placeholder="0,00" 
+                                value={linkForm.valor || ""} 
+                                onChange={e => setLinkForm(f => ({ ...f, valor: parseFloat(e.target.value) || 0 }))}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddLinkModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleSaveLink} className="bg-primary text-primary-foreground gap-2">
+                            <Check className="w-4 h-4" /> Vincular Contrato
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
