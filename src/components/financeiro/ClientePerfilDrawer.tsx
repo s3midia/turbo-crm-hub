@@ -15,12 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ProposalViewModal } from "@/components/ProposalViewModal";
-import { AIProposalModal } from "@/components/AIProposalModal";
-import { ManualProposalModal } from "@/components/ManualProposalModal";
-import { EditDocModal } from "@/components/EditDocModal";
-import { FileEdit, Eye, Pencil, Trash2, FileText, Upload, Sparkles, FolderOpen, FileCheck } from "lucide-react";
-
 const PIPELINE_STAGES = [
   { key: "novo", label: "Novo" },
   { key: "qualificacao", label: "Qualif." },
@@ -68,13 +62,6 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
   const [editForm, setEditForm] = useState({ email: "", telefone: "", empresa: "" });
   const navigate = useNavigate();
 
-  // Document Management States
-  const [docSubTab, setDocSubTab] = useState<"propostas" | "contratos">("propostas");
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
-  const [isManualProposalOpen, setIsManualProposalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [localDocs, setLocalDocs] = useState<any[]>([]);
 
   useEffect(() => {
@@ -140,35 +127,6 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
     } catch { toast.error("Erro ao salvar"); }
     setShowModal(false);
   }
-
-  // Document Handlers
-  const handleSaveDoc = (doc: any) => {
-    const newDoc = {
-      ...doc,
-      id: Math.floor(Math.random() * 1000),
-      data: new Date().toLocaleDateString("pt-BR"),
-      status: "pendente"
-    };
-    setLocalDocs([newDoc, ...localDocs]);
-    toast.success("Documento gerado e salvo no perfil do cliente!");
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const newDoc = {
-        id: Math.floor(Math.random() * 1000),
-        titulo: file.name,
-        subtipo: "Upload",
-        data: new Date().toLocaleDateString("pt-BR"),
-        status: "pendente",
-        valor: 0,
-        arquivo: file.name
-      };
-      setLocalDocs([newDoc, ...localDocs]);
-      toast.success("Arquivo enviado com sucesso!");
-    }
-  };
 
   async function handleMarkPaid(t: FinancialTransaction) {
     try {
@@ -500,66 +458,29 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
           {activeTab === "documentos" && (
             <div className="p-6 space-y-5">
               
-              {/* Header de Documentos */}
               <div className="flex items-center justify-between">
-                <div className="flex bg-muted/30 p-1 rounded-xl border border-border/30">
-                  <button 
-                    onClick={() => setDocSubTab("propostas")}
-                    className={cn(
-                      "px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all",
-                      docSubTab === "propostas" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Propostas
-                  </button>
-                  <button 
-                    onClick={() => setDocSubTab("contratos")}
-                    className={cn(
-                      "px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all",
-                      docSubTab === "contratos" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Contratos & Arquivos
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {docSubTab === "propostas" ? (
-                    <>
-                      <button 
-                        onClick={() => setIsAIModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(265,85%,60%)]/10 text-[hsl(265,85%,60%)] text-[11px] font-bold border border-[hsl(265,85%,60%)]/20 hover:bg-[hsl(265,85%,60%)]/20 transition-all"
-                      >
-                        <Sparkles size={12} /> Gerar com IA
-                      </button>
-                      <button 
-                        onClick={() => { setSelectedDoc(null); setIsManualProposalOpen(true); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold shadow-sm hover:bg-primary/90 transition-all"
-                      >
-                        <FileEdit size={12} /> Nova Proposta
-                      </button>
-                    </>
-                  ) : (
-                    <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[11px] font-bold border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer">
-                      <Upload size={12} /> Adicionar PDF
-                      <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleFileUpload} />
-                    </label>
-                  )}
-                </div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Documentos do Cliente</p>
+                <button 
+                  onClick={() => navigate("/modelos-docs")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold shadow-sm hover:bg-primary/90 transition-all"
+                >
+                  <Plus size={12} /> Novo Documento
+                </button>
               </div>
 
-              {/* Lista de Documentos */}
               <div className="space-y-2">
-                {localDocs.filter(d => docSubTab === "propostas" ? d.subtipo.includes("Proposta") : !d.subtipo.includes("Proposta")).length === 0 ? (
+                {localDocs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 opacity-30">
                     <FolderOpen size={32} className="mb-2" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest">Nenhum documento nesta categoria</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest">Nenhum documento anexado</p>
                   </div>
                 ) : (
-                  localDocs
-                    .filter(d => docSubTab === "propostas" ? d.subtipo.includes("Proposta") : !d.subtipo.includes("Proposta"))
-                    .map((doc) => (
-                    <div key={doc.id} className="flex items-center gap-3 p-3.5 rounded-xl border border-border/30 bg-card hover:border-border/60 transition-all group">
+                  localDocs.map((doc) => (
+                    <div 
+                      key={doc.id} 
+                      onClick={() => navigate("/modelos-docs")}
+                      className="flex items-center gap-3 p-3.5 rounded-xl border border-border/30 bg-card hover:border-primary/30 hover:bg-primary/5 transition-all group cursor-pointer"
+                    >
                       <div className={cn(
                         "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
                         doc.subtipo.includes("Proposta") ? "bg-primary/5 text-primary" : "bg-emerald-500/5 text-emerald-600"
@@ -581,41 +502,15 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                           <span className="text-[10px] text-muted-foreground">{doc.subtipo}</span>
                           <span className="text-[10px] text-muted-foreground/50">·</span>
                           <span className="text-[10px] text-muted-foreground">{doc.data}</span>
-                          {doc.valor > 0 && (
-                            <>
-                              <span className="text-[10px] text-muted-foreground/50">·</span>
-                              <span className="text-[10px] font-bold text-foreground">{formatBRL(doc.valor)}</span>
-                            </>
-                          )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => { setSelectedDoc(doc); setIsViewModalOpen(true); }}
-                          className="p-2 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button 
-                          onClick={() => { setSelectedDoc(doc); setIsEditModalOpen(true); }}
-                          className="p-2 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button 
-                          onClick={() => setLocalDocs(localDocs.filter(d => d.id !== doc.id))}
-                          className="p-2 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 transition-all"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                      <ChevronRight size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                   ))
                 )}
               </div>
 
-              {/* Botão para Central de Modelos */}
               <button 
                 onClick={() => navigate("/modelos-docs")}
                 className="w-full mt-4 p-4 rounded-2xl border border-dashed border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group flex flex-col items-center gap-2 text-center"
@@ -624,8 +519,8 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                   <FileText size={14} />
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold text-foreground">Abrir Central de Modelos</p>
-                  <p className="text-[10px] text-muted-foreground">Acesse todos os modelos e gerador completo</p>
+                  <p className="text-[11px] font-bold text-foreground">Abrir Central de Documentos</p>
+                  <p className="text-[10px] text-muted-foreground">Gerencie todos os arquivos e contratos</p>
                 </div>
               </button>
             </div>
@@ -633,36 +528,7 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
         </div>
       </div>
 
-      {/* Modais de Documentos */}
-      <AIProposalModal 
-        open={isAIModalOpen}
-        onOpenChange={setIsAIModalOpen}
-        onProposalGenerated={(p) => handleSaveDoc({ ...p, subtipo: "Proposta Premium" })}
-      />
-
-      <ManualProposalModal 
-        open={isManualProposalOpen}
-        onOpenChange={setIsManualProposalOpen}
-        onSave={handleSaveDoc}
-        doc={selectedDoc}
-      />
-
-      <ProposalViewModal 
-        open={isViewModalOpen}
-        onOpenChange={setIsViewModalOpen}
-        proposal={selectedDoc}
-      />
-
-      <EditDocModal 
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        doc={selectedDoc}
-        onSave={(updated) => {
-          setLocalDocs(localDocs.map(d => d.id === updated.id ? { ...d, ...updated } : d));
-          setIsEditModalOpen(false);
-          toast.success("Documento atualizado!");
-        }}
-      />
+      </div>
 
       {/* Modal de transação */}
       {showModal && (

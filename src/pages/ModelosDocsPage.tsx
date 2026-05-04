@@ -36,6 +36,7 @@ export default function ModelosDocsPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
+    const [activeTab, setActiveTab] = useState<"propostas" | "contratos">("propostas");
 
     const handleAIProposalGenerated = (proposal: { titulo: string; cliente: string; conteudo: string }) => {
         const newDoc: Doc = {
@@ -146,6 +147,24 @@ export default function ModelosDocsPage() {
         toast.success("Abrindo WhatsApp...");
     };
 
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const newDoc: Doc = {
+                id: Math.floor(Math.random() * 1000),
+                titulo: file.name,
+                subtipo: "Upload PDF",
+                cliente: "N/A",
+                valor: 0,
+                status: "pendente",
+                data: new Date().toLocaleDateString("pt-BR"),
+                conteudo: ""
+            };
+            setDocs([newDoc, ...docs]);
+            toast.success("Arquivo anexado com sucesso!");
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-background">
             <div className="flex items-center justify-between px-6 py-3 border-b border-border">
@@ -157,10 +176,10 @@ export default function ModelosDocsPage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                            📄 Gerenciador de Documentos
+                            📄 Central de Documentos
                         </h1>
                         <p className="text-[13px] text-muted-foreground mt-1">
-                            Crie, gerencie e compartilhe orçamentos e contratos.
+                            Gerencie propostas, contratos e arquivos em um só lugar.
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -171,28 +190,48 @@ export default function ModelosDocsPage() {
                             <Settings className="w-4 h-4" />
                             Configuração Visual
                         </button>
-                        <button 
-                            onClick={() => setIsAIModalOpen(true)}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-transparent border border-[hsl(265,85%,60%)] text-[hsl(265,85%,60%)] hover:bg-[hsl(265,85%,60%,0.1)] text-[12px] font-semibold transition-colors"
-                        >
-                            <Sparkles className="w-4 h-4" />
-                            Gerar com IA
-                        </button>
-                        <button 
-                            onClick={handleCreatePremium}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[#00bcd4] hover:bg-[#0097a7] text-white text-[12px] font-semibold transition-colors shadow-sm"
-                        >
-                            <FileEdit className="w-4 h-4" />
-                            Nova Proposta Premium
-                        </button>
-                        <button 
-                            onClick={handleCreateManual}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[hsl(265,85%,60%)] hover:bg-[hsl(265,85%,52%)] text-white text-[12px] font-semibold transition-colors"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Texto Básico (Antigo)
-                        </button>
+                        
+                        {activeTab === "propostas" ? (
+                            <>
+                                <button 
+                                    onClick={() => setIsAIModalOpen(true)}
+                                    className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-transparent border border-[hsl(265,85%,60%)] text-[hsl(265,85%,60%)] hover:bg-[hsl(265,85%,60%,0.1)] text-[12px] font-semibold transition-colors"
+                                >
+                                    <Sparkles className="w-4 h-4" />
+                                    Gerar com IA
+                                </button>
+                                <button 
+                                    onClick={handleCreatePremium}
+                                    className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-[#00bcd4] hover:bg-[#0097a7] text-white text-[12px] font-semibold transition-colors shadow-sm"
+                                >
+                                    <FileEdit className="w-4 h-4" />
+                                    Nova Proposta Premium
+                                </button>
+                            </>
+                        ) : (
+                            <label className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold transition-colors shadow-sm cursor-pointer">
+                                <Plus className="w-4 h-4" />
+                                Adicionar Contrato PDF
+                                <input type="file" className="hidden" accept=".pdf" onChange={handleFileUpload} />
+                            </label>
+                        )}
                     </div>
+                </div>
+
+                {/* Tabs de Documentos */}
+                <div className="flex border-b border-border">
+                    <button 
+                        onClick={() => setActiveTab("propostas")}
+                        className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "propostas" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                    >
+                        Propostas Geradas
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab("contratos")}
+                        className={`px-6 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "contratos" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                    >
+                        Gerenciamento de Contratos
+                    </button>
                 </div>
 
                 {/* Table */}
@@ -208,7 +247,9 @@ export default function ModelosDocsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {docs.map((doc) => (
+                            {docs
+                                .filter(d => activeTab === "propostas" ? d.subtipo.includes("Proposta") : !d.subtipo.includes("Proposta"))
+                                .map((doc) => (
                                 <tr key={doc.id} className="border-b border-[hsl(224,18%,15%)] hover:bg-card transition-colors">
                                     <td className="px-4 py-3.5 pl-5 text-[13px] font-bold text-muted-foreground">{doc.id}</td>
                                     <td className="px-4 py-3.5">
