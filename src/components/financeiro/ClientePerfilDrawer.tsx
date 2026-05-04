@@ -4,7 +4,7 @@ import {
   ArrowUpCircle, ArrowDownCircle, AlertTriangle, Check,
   Zap, ChevronRight, RefreshCw, Edit3, Receipt, History,
   Paperclip, MessageSquare, Send, Plus, Trash2, FileText,
-  Edit2
+  Edit2, FolderOpen, FileCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
