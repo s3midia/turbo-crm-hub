@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { TransacaoModal } from './LancamentosTab';
 import { formatBRL } from '@/lib/formatters';
+import { toast } from "sonner";
 
 interface LeadFinanceTabProps {
   leadId: string;
@@ -81,8 +82,14 @@ export const LeadFinanceTab = ({
   };
 
   const handleSave = async (t: Partial<FinancialTransaction>) => {
-    await saveTransaction(t);
-    setShowModal(false);
+    try {
+      await saveTransaction(t);
+      toast.success("Transação salva com sucesso!");
+      setShowModal(false);
+    } catch (err: any) {
+      console.error("Error saving transaction:", err);
+      toast.error(err.message || "Erro ao salvar transação.");
+    }
   };
 
   if (loading && transactions.length === 0) {

@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const CATEGORIAS_ENTRADA = ["Software", "Web Design", "Consultoria", "Manutenção", "Licença", "Outros"];
 const CATEGORIAS_SAIDA = ["Infraestrutura", "Marketing", "Salários", "Impostos", "Escritório", "Ferramentas", "Outros"];
@@ -84,7 +85,7 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
     const payload: any = {
       descricao: form.descricao,
       tipo: form.tipo,
-      valor: parseFloat(form.valor.replace(",", ".")),
+      valor: parseFloat(String(form.valor).replace(",", ".")),
       data_lancamento: form.data_lancamento || new Date().toISOString().split('T')[0],
       vencimento: form.vencimento,
       recebimento: form.recebimento || undefined,
@@ -303,8 +304,9 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     try {
       await saveTransaction(t);
       toast.success("Transação salva com sucesso!");
-    } catch (err) {
-      // Error is handled in useFinance toast
+    } catch (err: any) {
+      console.error("Error saving transaction:", err);
+      toast.error(err.message || "Erro ao salvar transação.");
     }
   }
 
@@ -314,8 +316,9 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
       try {
         await saveTransaction({ ...t, status: "pago" });
         toast.success("Transação marcada como paga!");
-      } catch (err) {
-        // Error is handled in useFinance toast
+      } catch (err: any) {
+        console.error("Error marking paid:", err);
+        toast.error(err.message || "Erro ao atualizar status.");
       }
     }
   }
