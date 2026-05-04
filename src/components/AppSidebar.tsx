@@ -53,13 +53,13 @@ const NAV_SECTIONS = [
             { label: "Agenda", icon: Calendar, to: "/agenda" },
             { label: "Atendimentos", icon: MessageSquare, to: "/atendimentos" },
             { label: "Modelos de Docs", icon: FileText, to: "/modelos-docs" },
+            { label: "Serviços", icon: Briefcase, to: "/servicos" },
         ]
     },
     {
         label: "Financeiro",
         items: [
             { label: "Financeiro", icon: DollarSign, to: "/financeiro" },
-            { label: "Meu Plano", icon: CreditCard, to: "/meu-plano" },
         ]
     },
     {
@@ -75,7 +75,6 @@ const NAV_SECTIONS = [
                     { label: "Perfil da Empresa", icon: Building2, to: "/perfil-empresa" },
                 ]
             },
-            { label: "Serviços", icon: Briefcase, to: "/servicos" },
             { label: "Gerador de Sites", icon: Scan, to: "/generator" },
         ]
     }
