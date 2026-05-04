@@ -11,6 +11,7 @@ import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
 import { useNavigate } from "react-router-dom";
 import { formatBRL, formatDisplayId } from "@/lib/formatters";
 import { TransacaoModal } from "./LancamentosTab";
+import { LeadDocumentsTab } from "./LeadDocumentsTab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -454,75 +455,9 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
             </div>
           )}
 
-          {/* ── Documentos ── */}
           {activeTab === "documentos" && (
-            <div className="p-6 space-y-5">
-              
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Documentos do Cliente</p>
-                <button 
-                  onClick={() => navigate(`/modelos-docs?leadId=${leadId}&cliente=${leadName}`)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold shadow-sm hover:bg-primary/90 transition-all"
-                >
-                  <Plus size={12} /> Novo Documento
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {localDocs.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 opacity-30">
-                    <FolderOpen size={32} className="mb-2" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest">Nenhum documento anexado</p>
-                  </div>
-                ) : (
-                  localDocs.map((doc) => (
-                    <div 
-                      key={doc.id} 
-                      onClick={() => navigate(`/modelos-docs?leadId=${leadId}&cliente=${leadName}`)}
-                      className="flex items-center gap-3 p-3.5 rounded-xl border border-border/30 bg-card hover:border-primary/30 hover:bg-primary/5 transition-all group cursor-pointer"
-                    >
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                        doc.subtipo.includes("Proposta") ? "bg-primary/5 text-primary" : "bg-emerald-500/5 text-emerald-600"
-                      )}>
-                        {doc.subtipo.includes("Proposta") ? <FileText size={18} /> : <FileCheck size={18} />}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-semibold text-foreground truncate">{doc.titulo}</p>
-                          <span className={cn(
-                            "text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider",
-                            doc.status === "aprovado" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
-                          )}>
-                            {doc.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground">{doc.subtipo}</span>
-                          <span className="text-[10px] text-muted-foreground/50">·</span>
-                          <span className="text-[10px] text-muted-foreground">{doc.data}</span>
-                        </div>
-                      </div>
-
-                      <ChevronRight size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <button 
-                onClick={() => navigate(`/modelos-docs?leadId=${leadId}&cliente=${leadName}`)}
-                className="w-full mt-4 p-4 rounded-2xl border border-dashed border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group flex flex-col items-center gap-2 text-center"
-              >
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                  <FileText size={14} />
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold text-foreground">Abrir Central de Documentos</p>
-                  <p className="text-[10px] text-muted-foreground">Gerencie todos os arquivos e contratos</p>
-                </div>
-              </button>
+            <div className="p-6">
+              <LeadDocumentsTab leadId={leadId} leadName={leadName} />
             </div>
           )}
         </div>
