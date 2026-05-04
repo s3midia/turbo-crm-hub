@@ -8,6 +8,8 @@ import { VisualSettingsModal } from "@/components/VisualSettingsModal";
 import { S3_PROPOSAL_TEMPLATE } from "@/lib/documentTemplates";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/formatters";
+import { PdfViewModal } from "@/components/PdfViewModal";
+import { Link } from "lucide-react";
 
 interface Doc {
     id: number;
@@ -18,6 +20,7 @@ interface Doc {
     status: "pendente" | "aprovado" | "cancelado";
     data: string;
     conteudo?: string;
+    arquivoUrl?: string;
 }
 
 const MOCK_DOCS: Doc[] = [
@@ -35,6 +38,7 @@ export default function ModelosDocsPage() {
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
+    const [isPdfViewOpen, setIsPdfViewOpen] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
     const [activeTab, setActiveTab] = useState<"propostas" | "contratos">("propostas");
 
@@ -86,7 +90,11 @@ export default function ModelosDocsPage() {
 
     const handleView = (doc: Doc) => {
         setSelectedDoc(doc);
-        setIsViewModalOpen(true);
+        if (doc.arquivoUrl) {
+            setIsPdfViewOpen(true);
+        } else {
+            setIsViewModalOpen(true);
+        }
     };
 
     const handleEdit = (doc: Doc) => {
@@ -158,10 +166,29 @@ export default function ModelosDocsPage() {
                 valor: 0,
                 status: "pendente",
                 data: new Date().toLocaleDateString("pt-BR"),
-                conteudo: ""
+                conteudo: "",
+                arquivoUrl: URL.createObjectURL(file)
             };
             setDocs([newDoc, ...docs]);
             toast.success("Arquivo anexado com sucesso!");
+        }
+    };
+
+    const handleAddLink = () => {
+        const url = prompt("Cole o link do PDF (Zapsign, S3, etc):");
+        if (url) {
+            const newDoc: Doc = {
+                id: Math.floor(Math.random() * 1000) + 3000,
+                titulo: "Contrato via Link",
+                subtipo: "Link Externo",
+                cliente: "N/A",
+                valor: 0,
+                status: "pendente",
+                data: new Date().toLocaleDateString("pt-BR"),
+                arquivoUrl: url
+            };
+            setDocs([newDoc, ...docs]);
+            toast.success("Link do contrato adicionado!");
         }
     };
 
@@ -209,11 +236,20 @@ export default function ModelosDocsPage() {
                                 </button>
                             </>
                         ) : (
-                            <label className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold transition-colors shadow-sm cursor-pointer">
-                                <Plus className="w-4 h-4" />
-                                Adicionar Contrato PDF
-                                <input type="file" className="hidden" accept=".pdf" onChange={handleFileUpload} />
-                            </label>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={handleAddLink}
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-muted border border-border text-foreground hover:bg-muted/80 text-[12px] font-semibold transition-colors shadow-sm"
+                                >
+                                    <Link className="w-4 h-4" />
+                                    Adicionar por Link
+                                </button>
+                                <label className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold transition-colors shadow-sm cursor-pointer">
+                                    <Plus className="w-4 h-4" />
+                                    Subir Arquivo PDF
+                                    <input type="file" className="hidden" accept=".pdf" onChange={handleFileUpload} />
+                                </label>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -339,6 +375,13 @@ export default function ModelosDocsPage() {
             <VisualSettingsModal 
                 open={isVisualSettingsOpen}
                 onOpenChange={setIsVisualSettingsOpen}
+            />
+
+            <PdfViewModal 
+                open={isPdfViewOpen}
+                onOpenChange={setIsPdfViewOpen}
+                url={selectedDoc?.arquivoUrl || ""}
+                title={selectedDoc?.titulo || "Documento"}
             />
         </div>
     );
