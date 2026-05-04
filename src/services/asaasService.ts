@@ -1,130 +1,68 @@
-import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
- * EXEMPLO DE USO DA API ASAAS (GERAÇÃO DE BOLETO)
- * 
- * Como vai ficar a chamada da API:
- * 
- * const asaas = new AsaasService(API_KEY, false); // false para Sandbox
- * 
- * 1. Criar/Buscar Cliente:
- * const customerId = await asaas.findOrCreateCustomer("Nome do Cliente", "email@cliente.com", "4799999999");
- * 
- * 2. Gerar Boleto:
- * const payment = await asaas.createBoleto(
- *   customerId, 
- *   150.00,        // Valor
- *   "2024-12-30",  // Vencimento
- *   "Serviço de Mentoria" // Descrição
- * );
- * 
- * Resposta esperada (payment):
- * {
- *   id: "pay_123456789",
- *   invoiceUrl: "https://www.asaas.com/i/123456789",
- *   bankSlipUrl: "https://www.asaas.com/b/123456789",
- *   identificationField: "00190.00009 02661.123000 00000.000010 1 95810000015000",
- *   status: "PENDING"
- * }
+ * AsaasService — Geração de Boletos via Asaas
+ *
+ * ⚠️ ARQUITETURA DE SEGURANÇA:
+ * O frontend NÃO chama a API do Asaas diretamente (causaria erro de CORS).
+ * Todas as chamadas passam pela Supabase Edge Function "asaas-proxy",
+ * que roda no servidor e mantém a API Key protegida.
+ *
+ * Fluxo:
+ *   Browser → supabase.functions.invoke("asaas-proxy") → Asaas API
  */
 
-interface AsaasPaymentResponse {
+export interface AsaasPaymentResponse {
   id: string;
   invoiceUrl: string;
   bankSlipUrl: string;
-  identificationField: string; // Barcode
+  identificationField: string; // Linha digitável (código de barras)
   status: string;
 }
 
-interface AsaasCustomerResponse {
-  id: string;
-  name: string;
-  email: string;
-}
-
 export class AsaasService {
-  private apiKey: string;
-  private baseUrl: string;
-
-  constructor(apiKey: string, isProduction: boolean = false) {
-    this.apiKey = apiKey;
-    // ✅ URLs corretas conforme documentação oficial Asaas v3:
-    // Produção:  https://api.asaas.com/v3
-    // Sandbox:   https://api-sandbox.asaas.com/v3  (NÃO é sandbox.asaas.com)
-    this.baseUrl = isProduction ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
-  }
-
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers: {
-        ...options.headers,
-        "access_token": this.apiKey,
-        "Content-Type": "application/json",
-        // ✅ User-Agent obrigatório para contas criadas após 13/06/2024
-        "User-Agent": "TurboCRM-S3Midia",
+  /**
+   * Encontra um cliente existente pelo e-mail ou cria um novo.
+   * Retorna o customerId do Asaas.
+   */
+  async findOrCreateCustomer(
+    name: string,
+    email: string,
+    phone?: string
+  ): Promise<string> {
+    const { data, error } = await supabase.functions.invoke("asaas-proxy", {
+      body: {
+        action: "find_or_create_customer",
+        payload: { name, email, phone },
       },
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.errors?.[0]?.description || "Erro na comunicação com Asaas");
-    }
+    if (error) throw new Error(error.message || "Erro ao processar cliente no Asaas");
+    if (data?.error) throw new Error(data.error);
 
-    return response.json();
+    return data.customerId;
   }
 
-  async findOrCreateCustomer(name: string, email: string, phone?: string): Promise<string> {
-    try {
-      // First, try to find by email
-      const search = await this.request<{ data: AsaasCustomerResponse[] }>(`/customers?email=${encodeURIComponent(email)}`);
-      
-      if (search.data && search.data.length > 0) {
-        return search.data[0].id;
-      }
+  /**
+   * Gera um boleto bancário para o cliente.
+   * dueDate pode ser "DD/MM/YYYY" ou "YYYY-MM-DD" — a Edge Function converte.
+   */
+  async createBoleto(
+    customerId: string,
+    value: number,
+    dueDate: string,
+    description: string
+  ): Promise<AsaasPaymentResponse> {
+    const { data, error } = await supabase.functions.invoke("asaas-proxy", {
+      body: {
+        action: "create_boleto",
+        payload: { customerId, value, dueDate, description },
+      },
+    });
 
-      // Create if not found
-      const customer = await this.request<AsaasCustomerResponse>("/customers", {
-        method: "POST",
-        body: JSON.stringify({
-          name,
-          email,
-          phone,
-          notificationDisabled: false
-        }),
-      });
+    if (error) throw new Error(error.message || "Erro ao gerar boleto no Asaas");
+    if (data?.error) throw new Error(data.error);
 
-      return customer.id;
-    } catch (error: any) {
-      console.error("Asaas Customer Error:", error);
-      throw error;
-    }
-  }
-
-  async createBoleto(customerId: string, value: number, dueDate: string, description: string): Promise<AsaasPaymentResponse> {
-    try {
-      // Format date from DD/MM/YYYY to YYYY-MM-DD if needed
-      let formattedDate = dueDate;
-      if (dueDate.includes("/")) {
-        const [day, month, year] = dueDate.split("/");
-        formattedDate = `${year}-${month}-${day}`;
-      }
-
-      const payment = await this.request<AsaasPaymentResponse>("/payments", {
-        method: "POST",
-        body: JSON.stringify({
-          customer: customerId,
-          billingType: "BOLETO",
-          value,
-          dueDate: formattedDate,
-          description,
-        }),
-      });
-
-      return payment;
-    } catch (error: any) {
-      console.error("Asaas Payment Error:", error);
-      throw error;
-    }
+    return data as AsaasPaymentResponse;
   }
 }
