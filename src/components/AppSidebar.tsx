@@ -44,6 +44,7 @@ const NAV_SECTIONS = [
             { label: "Agentes S3", icon: Bot, to: "/agentes-s3" },
             { label: "Treinamento IA", icon: Brain, to: "/treinamento-ia" },
             { label: "Radar de Leads", icon: Scan, to: "/radar-leads" },
+            { label: "Gerador de Sites", icon: Scan, to: "/generator" },
         ]
     },
     {
@@ -75,7 +76,6 @@ const NAV_SECTIONS = [
                     { label: "Perfil da Empresa", icon: Building2, to: "/perfil-empresa" },
                 ]
             },
-            { label: "Gerador de Sites", icon: Scan, to: "/generator" },
         ]
     }
 ];
