@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Plus, Eye, Pencil, Trash2, Send, FileEdit, Settings, Sparkles } from "lucide-react";
 import { ProposalViewModal } from "@/components/ProposalViewModal";
 import { AIProposalModal } from "@/components/AIProposalModal";
@@ -47,32 +48,55 @@ export default function ModelosDocsPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const currentLeadId = searchParams.get("leadId");
     const currentClientName = searchParams.get("cliente");
+    const activeTab = (searchParams.get("tab") as "propostas" | "contratos") || "propostas";
 
     const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     const [isManualProposalOpen, setIsManualProposalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
+    const [isPdfViewOpen, setIsPdfViewOpen] = useState(false);
+    const [isAddLinkModalOpen, setIsAddLinkModalOpen] = useState(false);
+    const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
+
+    const setActiveTab = (tab: "propostas" | "contratos") => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set("tab", tab);
+            return next;
+        });
+    };
 
     // Persistência Local
     useEffect(() => {
         const savedDocs = localStorage.getItem("crm_documents");
         if (savedDocs) {
-            setDocs(JSON.parse(savedDocs));
+            try {
+                const parsed = JSON.parse(savedDocs);
+                if (Array.isArray(parsed)) {
+                    // Limpar URLs temporárias que expiram
+                    const cleanedDocs = parsed.map(doc => ({
+                        ...doc,
+                        arquivoUrl: doc.arquivoUrl?.startsWith('blob:') ? undefined : doc.arquivoUrl
+                    }));
+                    setDocs(cleanedDocs);
+                } else {
+                    setDocs(MOCK_DOCS);
+                }
+            } catch (e) {
+                console.error("Erro ao carregar documentos", e);
+                setDocs(MOCK_DOCS);
+            }
         } else {
             setDocs(MOCK_DOCS);
         }
     }, []);
 
     useEffect(() => {
-        if (docs.length > 0) {
+        if (docs.length > 0 || localStorage.getItem("crm_documents")) {
             localStorage.setItem("crm_documents", JSON.stringify(docs));
         }
     }, [docs]);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isVisualSettingsOpen, setIsVisualSettingsOpen] = useState(false);
-    const [isPdfViewOpen, setIsPdfViewOpen] = useState(false);
-    const [isAddLinkModalOpen, setIsAddLinkModalOpen] = useState(false);
-    const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
-    const [activeTab, setActiveTab] = useState<"propostas" | "contratos">("propostas");
 
     // Form states for adding link
     const [linkForm, setLinkForm] = useState({
@@ -204,22 +228,54 @@ export default function ModelosDocsPage() {
         toast.success("Abrindo WhatsApp...");
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const newDoc: Doc = {
-                id: Math.floor(Math.random() * 1000),
-                titulo: file.name,
-                subtipo: "Upload PDF",
-                cliente: "N/A",
-                valor: 0,
-                status: "pendente",
-                data: new Date().toLocaleDateString("pt-BR"),
-                conteudo: "",
-                arquivoUrl: URL.createObjectURL(file)
-            };
-            setDocs([newDoc, ...docs]);
-            toast.success("Arquivo anexado com sucesso!");
+            try {
+                const loadingToast = toast.loading("Enviando arquivo para o servidor...");
+                
+                // Gerar nome único para o arquivo
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+                const filePath = `contracts/${fileName}`;
+
+                const { data, error } = await supabase.storage
+                    .from('documents')
+                    .upload(filePath, file);
+
+                if (error) {
+                    toast.dismiss(loadingToast);
+                    if (error.message.includes("bucket not found")) {
+                        toast.error("Erro: O bucket 'documents' não foi encontrado no Supabase.");
+                    } else {
+                        toast.error("Erro ao subir arquivo: " + error.message);
+                    }
+                    return;
+                }
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('documents')
+                    .getPublicUrl(filePath);
+
+                const newDoc: Doc = {
+                    id: Math.floor(Math.random() * 1000),
+                    titulo: file.name,
+                    subtipo: "Upload PDF",
+                    cliente: "N/A",
+                    valor: 0,
+                    status: "pendente",
+                    data: new Date().toLocaleDateString("pt-BR"),
+                    conteudo: "",
+                    arquivoUrl: publicUrl
+                };
+                
+                setDocs([newDoc, ...docs]);
+                setActiveTab("contratos");
+                toast.dismiss(loadingToast);
+                toast.success("Arquivo salvo permanentemente!");
+            } catch (error: any) {
+                toast.error("Erro inesperado: " + error.message);
+            }
         }
     };
 
@@ -246,6 +302,7 @@ export default function ModelosDocsPage() {
         };
 
         setDocs([newDoc, ...docs]);
+        setActiveTab("contratos");
         toast.success("Documento vinculado com sucesso!");
         setIsAddLinkModalOpen(false);
         setLinkForm({ url: "", titulo: "Contrato de Prestação de Serviços", cliente: currentClientName || "", valor: 0, status: "pendente" });
