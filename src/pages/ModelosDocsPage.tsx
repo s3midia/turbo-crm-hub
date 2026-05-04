@@ -7,7 +7,7 @@ import { AIProposalModal } from "@/components/AIProposalModal";
 import { EditDocModal } from "@/components/EditDocModal";
 import { ManualProposalModal } from "@/components/ManualProposalModal";
 import { VisualSettingsModal } from "@/components/VisualSettingsModal";
-import { S3_PROPOSAL_TEMPLATE } from "@/lib/documentTemplates";
+import { S3_PROPOSAL_TEMPLATE, ASAAS_BOLETO_API_TEMPLATE } from "@/lib/documentTemplates";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/formatters";
 import { PdfViewModal } from "@/components/PdfViewModal";
@@ -46,6 +46,16 @@ interface Doc {
 }
 
 const MOCK_DOCS: Doc[] = [
+    { 
+        id: 99, 
+        titulo: "Exemplo API Asaas (Boleto)", 
+        subtipo: "Documentação", 
+        cliente: "Sistema", 
+        valor: 15000, 
+        status: "aprovado", 
+        data: "04/05/2026", 
+        conteudo: ASAAS_BOLETO_API_TEMPLATE
+    },
     { id: 43, titulo: "Proposta de Serviços", subtipo: "Contrato", cliente: "Giovanna", valor: 4956400, status: "pendente", data: "19/12/2025", leadId: "1" },
     { id: 23, titulo: "Proposta de Serviços", subtipo: "Contrato", cliente: "Cliente Avulso", valor: 300, status: "pendente", data: "10/12/2025" },
 ];

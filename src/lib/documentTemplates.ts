@@ -22,3 +22,32 @@ Valor Sugerido: R$ 1.584,00 (Este valor é apenas uma base e deve ser ajustado c
 7. **Call to Action**
 Próximos passos para fechamento com Jeferson Santos (Sócio S3 Mídia). Estamos ansiosos para iniciar esta parceria de sucesso!
 `;
+
+export const ASAAS_BOLETO_API_TEMPLATE = `
+# EXEMPLO DE INTEGRAÇÃO ASAAS (GERAÇÃO DE BOLETO)
+
+Este é um exemplo de como os dados são enviados para a API do Asaas para gerar um boleto bancário.
+
+### 1. Endpoint
+POST https://sandbox.asaas.com/v3/payments
+
+### 2. Payload (O que enviamos)
+{
+  "customer": "cus_000005118237",
+  "billingType": "BOLETO",
+  "value": 150.00,
+  "dueDate": "2024-12-30",
+  "description": "Serviços de Mentoria CRM - S3 Mídia",
+  "externalReference": "CONTRATO_123",
+  "postalService": false
+}
+
+### 3. Resposta (O que recebemos)
+{
+  "id": "pay_923817263544",
+  "invoiceUrl": "https://sandbox.asaas.com/i/923817263544",
+  "bankSlipUrl": "https://sandbox.asaas.com/b/923817263544",
+  "identificationField": "00190.00009 02661.123000 00000.000010 1 95810000015000",
+  "status": "PENDING"
+}
+`;
