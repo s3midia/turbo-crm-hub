@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/formatters";
-
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -30,6 +31,7 @@ import {
   Star,
   User,
   History,
+  Download
 } from "lucide-react";
 
 
@@ -47,63 +49,59 @@ interface Contact {
 
 export default function Contacts() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [contacts] = useState<Contact[]>([
-    {
-      id: "1",
-      clientId: "CL-001",
-      name: "João Silva",
-      email: "joao@empresa.com",
-      phone: "(11) 99999-9999",
-      company: "Tech Solutions Ltd",
-      status: "client",
-      lastInteraction: "2024-01-15",
-      value: 15000,
-    },
-    {
-      id: "2",
-      clientId: "CL-002",
-      name: "Maria Santos",
-      email: "maria@startup.com",
-      phone: "(11) 88888-8888",
-      company: "Startup Inovadora",
-      status: "lead",
-      lastInteraction: "2024-01-14",
-      value: 8500,
-    },
-    {
-      id: "3",
-      clientId: "CL-003",
-      name: "Pedro Costa",
-      email: "pedro@consultoria.com",
-      phone: "(11) 77777-7777",
-      company: "Costa Consultoria",
-      status: "prospect",
-      lastInteraction: "2024-01-13",
-      value: 25000,
-    },
-    {
-      id: "4",
-      clientId: "CL-004",
-      name: "Ana Oliveira",
-      email: "ana@digital.com",
-      phone: "(11) 66666-6666",
-      company: "Digital Marketing Pro",
-      status: "client",
-      lastInteraction: "2024-01-12",
-      value: 5500,
-    },
-    {
-      id: "5",
-      clientId: "CL-005",
-      name: "Carlos Ferreira",
-      email: "carlos@ecommerce.com",
-      phone: "(11) 55555-5555",
-      company: "E-commerce Plus",
-      status: "lead",
-      lastInteraction: "2024-01-11",
-      value: 12000,
-    },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+
+  const fetchContacts = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mapped: Contact[] = (data || []).map(l => ({
+        id: l.id,
+        clientId: `CL-${l.id.substring(0, 4).toUpperCase()}`,
+        name: l.company_name || "Sem Nome",
+        email: l.contact_email || "N/A",
+        phone: l.phone || l.contact_phone || "N/A",
+        company: l.company_name || "N/A",
+        status: (l.status === 'ganhou' ? 'client' : (l.status === 'perdeu' ? 'prospect' : 'lead')) as any,
+        lastInteraction: l.updated_at || l.created_at,
+        value: Number(l.value || l.total_value || 0)
+      }));
+
+      setContacts(mapped);
+    } catch (error: any) {
+      toast.error("Erro ao carregar contatos: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContacts();
+  }, []);
+
+  const handleImportCSV = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (file) {
+        toast.info("Processando arquivo CSV...");
+        // Simulação de processamento
+        setTimeout(() => {
+          toast.success("Importação concluída! (Simulado)");
+        }, 2000);
+      }
+    };
+    input.click();
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -153,10 +151,16 @@ export default function Contacts() {
             Gestão unificada de IDs e histórico de interações
           </p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-bold px-6 shadow-lg shadow-primary/20">
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Registro
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleImportCSV} variant="outline" className="border-primary/20 hover:bg-primary/5 rounded-2xl font-bold px-6">
+            <Download className="mr-2 h-4 w-4" />
+            Importar CSV
+          </Button>
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-bold px-6 shadow-lg shadow-primary/20">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Registro
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}

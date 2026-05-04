@@ -13,7 +13,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { X, Loader2, Archive, ExternalLink, MessageSquare, Bot, Plus } from 'lucide-react';
+import { X, Loader2, Archive, ExternalLink, MessageSquare, Bot, Plus, Search } from 'lucide-react';
 import { saveOpportunity, archiveOpportunity, getTimelineEntries, addTimelineComment, getOpportunityById, type Task, type TimelineEntry } from '@/hooks/useOpportunities';
 import { useToast } from '@/hooks/use-toast';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -86,6 +86,17 @@ export const OpportunityModal = ({
         siteUrl: '',
         template: '',
     });
+
+    const [allLeads, setAllLeads] = useState<any[]>([]);
+    const [isSearchingLeads, setIsSearchingLeads] = useState(false);
+
+    useEffect(() => {
+        const fetchLeads = async () => {
+            const { data } = await supabase.from('leads').select('id, company_name, phone, niche').order('company_name');
+            if (data) setAllLeads(data);
+        };
+        fetchLeads();
+    }, []);
 
     const [tasks, setTasks] = useState<Task[]>([]);
     const [comment, setComment] = useState('');
@@ -300,12 +311,52 @@ export const OpportunityModal = ({
 
                                         <div className="grid grid-cols-2 gap-5">
                                             <Field label="Empresa / Lead">
-                                                <Input
-                                                    value={formData.leadIdentification}
-                                                    onChange={set('leadIdentification')}
-                                                    placeholder="Nome da empresa"
-                                                    className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                                                />
+                                                <div className="relative group">
+                                                    <Input
+                                                        value={formData.leadIdentification}
+                                                        onChange={(e) => {
+                                                            set('leadIdentification')(e);
+                                                            setIsSearchingLeads(true);
+                                                        }}
+                                                        onFocus={() => setIsSearchingLeads(true)}
+                                                        placeholder="Nome da empresa"
+                                                        className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 pr-8"
+                                                    />
+                                                    <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-zinc-400 opacity-50" />
+                                                    
+                                                    {isSearchingLeads && formData.leadIdentification.length > 1 && (
+                                                        <div className="absolute z-[100] mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                                            <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
+                                                                {allLeads.filter(l => 
+                                                                    l.company_name.toLowerCase().includes(formData.leadIdentification.toLowerCase())
+                                                                ).map(l => (
+                                                                    <button
+                                                                        key={l.id}
+                                                                        onClick={() => {
+                                                                            setFormData(prev => ({
+                                                                                ...prev,
+                                                                                leadIdentification: l.company_name,
+                                                                                contact: l.phone || prev.contact,
+                                                                                niche: l.niche || prev.niche
+                                                                            }));
+                                                                            setIsSearchingLeads(false);
+                                                                        }}
+                                                                        className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-zinc-50 dark:hover:bg-zinc-800 flex flex-col gap-0.5 border-b border-zinc-50 dark:border-zinc-800/50 last:border-0"
+                                                                    >
+                                                                        <span className="font-bold text-zinc-900 dark:text-zinc-100">{l.company_name}</span>
+                                                                        <span className="text-[10px] text-zinc-400">{l.phone || 'Sem telefone'} • {l.niche || 'Geral'}</span>
+                                                                    </button>
+                                                                ))}
+                                                                {allLeads.filter(l => l.company_name.toLowerCase().includes(formData.leadIdentification.toLowerCase())).length === 0 && (
+                                                                    <div className="px-4 py-3 text-[11px] text-zinc-400 italic">Nenhum cliente encontrado.</div>
+                                                                )}
+                                                            </div>
+                                                            <div className="p-2 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 flex justify-end">
+                                                                <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold" onClick={() => setIsSearchingLeads(false)}>Fechar</Button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </Field>
                                             <Field label="Nicho">
                                                 <Input
