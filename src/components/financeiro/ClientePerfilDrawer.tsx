@@ -162,11 +162,11 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-border/30 shrink-0">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <User className="w-6 h-6 text-primary" />
+            <div className="w-11 h-11 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center shrink-0">
+              <User className="w-5 h-5 text-primary/70" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-foreground leading-tight">{leadName || "Cliente"}</h2>
+              <h2 className="text-xl font-semibold text-foreground leading-tight tracking-tight">{leadName || "Cliente"}</h2>
               {isEditing ? (
                 <div className="flex items-center gap-2 mt-1">
                   <Input

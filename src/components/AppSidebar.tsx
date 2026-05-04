@@ -33,7 +33,13 @@ import { useEffect, useState } from "react";
 
 const NAV_SECTIONS = [
     {
-        label: "Inteligência",
+        label: "Principal",
+        items: [
+            { label: "Visão Geral", icon: Home, to: "/" },
+        ]
+    },
+    {
+        label: "AI (Visão Geral)",
         items: [
             { label: "Agentes S3", icon: Bot, to: "/agentes-s3" },
             { label: "Treinamento IA", icon: Brain, to: "/treinamento-ia" },
@@ -42,7 +48,6 @@ const NAV_SECTIONS = [
     {
         label: "Vendas & Leads",
         items: [
-            { label: "Visão Geral", icon: Home, to: "/" },
             { label: "Radar de Leads", icon: Scan, to: "/radar-leads" },
             { label: "Funil Kanban", icon: Columns3, to: "/pipeline" },
             { label: "Agenda", icon: Calendar, to: "/agenda" },
@@ -50,10 +55,9 @@ const NAV_SECTIONS = [
         ]
     },
     {
-        label: "Operacional",
+        label: "Documentos",
         items: [
-            { label: "Serviços", icon: Briefcase, to: "/servicos" },
-            { label: "Gerador de Sites", icon: Scan, to: "/generator" },
+            { label: "Modelos de Docs", icon: FileText, to: "/modelos-docs" },
         ]
     },
     {
@@ -61,7 +65,6 @@ const NAV_SECTIONS = [
         items: [
             { label: "Financeiro", icon: DollarSign, to: "/financeiro" },
             { label: "Meu Plano", icon: CreditCard, to: "/meu-plano" },
-            { label: "Painel Afiliado", icon: Star, to: "/painel-afiliado" },
         ]
     },
     {
@@ -77,14 +80,8 @@ const NAV_SECTIONS = [
                     { label: "Perfil da Empresa", icon: Building2, to: "/perfil-empresa" },
                 ]
             },
-            {
-                label: "Modelos de Docs",
-                icon: FileText,
-                subItems: [
-                    { label: "Meus Modelos", icon: FileText, to: "/modelos-docs" },
-                    { label: "Calculadora", icon: Calculator, to: "/calculadora" },
-                ]
-            },
+            { label: "Serviços", icon: Briefcase, to: "/servicos" },
+            { label: "Gerador de Sites", icon: Scan, to: "/generator" },
         ]
     }
 ];
