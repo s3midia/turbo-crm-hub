@@ -43,20 +43,15 @@ const NAV_SECTIONS = [
         items: [
             { label: "Agentes S3", icon: Bot, to: "/agentes-s3" },
             { label: "Treinamento IA", icon: Brain, to: "/treinamento-ia" },
+            { label: "Radar de Leads", icon: Scan, to: "/radar-leads" },
         ]
     },
     {
         label: "Vendas & Leads",
         items: [
-            { label: "Radar de Leads", icon: Scan, to: "/radar-leads" },
             { label: "Funil Kanban", icon: Columns3, to: "/pipeline" },
             { label: "Agenda", icon: Calendar, to: "/agenda" },
             { label: "Atendimentos", icon: MessageSquare, to: "/atendimentos" },
-        ]
-    },
-    {
-        label: "Documentos",
-        items: [
             { label: "Modelos de Docs", icon: FileText, to: "/modelos-docs" },
         ]
     },
