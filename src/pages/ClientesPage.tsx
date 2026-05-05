@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { UserPlus, Search, Filter, MoreHorizontal, User, ShieldCheck, AlertCircle, Building2, Users } from "lucide-react";
+import { UserPlus, Search, Filter, MoreHorizontal, User, ShieldCheck, AlertCircle, Building2, Users, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientePerfilDrawer, ClientePerfilData } from "@/components/financeiro/ClientePerfilDrawer";
+import { deleteOpportunity } from "@/hooks/useOpportunities";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ export default function ClientesPage() {
   const [filter, setFilter] = useState<"todos" | "ativos" | "inativos">("todos");
   
   const [selectedCliente, setSelectedCliente] = useState<ClientePerfilData | null>(null);
+  const [selectedIdForEdit, setSelectedIdForEdit] = useState<string | undefined>(undefined);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
 
@@ -71,6 +73,26 @@ export default function ClientesPage() {
   const handleOpenCliente = (cliente: ClientePerfilData) => {
     setSelectedCliente(cliente);
     setIsDrawerOpen(true);
+  };
+
+  const handleEditCliente = (id: string) => {
+    setSelectedIdForEdit(id);
+    setIsNewModalOpen(true);
+  };
+
+  const handleDeleteCliente = async (id: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.")) {
+      return;
+    }
+
+    try {
+      await deleteOpportunity(id);
+      toast.success("Cliente excluído com sucesso.");
+      fetchClientes();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao excluir cliente. Verifique se ele possui dados vinculados.");
+    }
   };
 
   const filteredClientes = clientes.filter(c => {
@@ -221,11 +243,20 @@ export default function ClientesPage() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40 rounded-xl shadow-xl">
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenCliente(c); }} className="text-xs cursor-pointer">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenCliente(c); }} className="text-xs cursor-pointer gap-2">
+                            <User size={14} className="text-muted-foreground" />
                             Ver Perfil Completo
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation()} className="text-xs cursor-pointer">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditCliente(c.id); }} className="text-xs cursor-pointer gap-2">
+                            <Pencil size={14} className="text-muted-foreground" />
                             Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteCliente(c.id); }} 
+                            className="text-xs cursor-pointer gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+                          >
+                            <Trash2 size={14} />
+                            Deletar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -248,9 +279,11 @@ export default function ClientesPage() {
         open={isNewModalOpen}
         onClose={() => {
           setIsNewModalOpen(false);
-          fetchClientes(); // Recarrega após possivelmente criar um novo
+          setSelectedIdForEdit(undefined);
+          fetchClientes();
         }}
-        stage="ganhou" // Preenche como 'ganhou' para cair direto como cliente
+        opportunityId={selectedIdForEdit}
+        stage="ganhou" 
       />
     </div>
   );
