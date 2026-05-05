@@ -187,6 +187,7 @@ export const LeadFinanceTab = ({
           <Button
             size="sm"
             onClick={handleOpenNew}
+            disabled={!leadId}
             className="h-7 text-[10px] font-black uppercase tracking-tight gap-1 shadow-sm"
           >
             <Plus className="h-3 w-3" /> Novo Lançamento
@@ -194,7 +195,14 @@ export const LeadFinanceTab = ({
         </CardHeader>
 
         <CardContent className="p-0">
-          {transactions.length === 0 ? (
+          {!leadId ? (
+            <div className="flex flex-col items-center justify-center py-12 opacity-60 bg-muted/5">
+              <Zap className="h-8 w-8 mb-3 text-amber-500" />
+              <p className="text-xs font-black uppercase tracking-widest text-center px-6">
+                Salve os dados gerais primeiro<br/>para liberar o financeiro
+              </p>
+            </div>
+          ) : transactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 opacity-40">
               <Banknote className="h-10 w-10 mb-3 text-muted-foreground" />
               <p className="text-xs font-black uppercase tracking-widest">Nenhum lançamento</p>
