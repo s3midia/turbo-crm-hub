@@ -53,7 +53,7 @@ export default function ConciliacaoTab() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Upload Area */}
       {!uploaded ? (
         <div
@@ -61,7 +61,7 @@ export default function ConciliacaoTab() {
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           className={cn(
-            "border-2 border-dashed rounded-3xl p-12 flex flex-col items-center gap-4 transition-all cursor-pointer",
+            "border-2 border-dashed rounded-3xl p-8 lg:p-12 flex flex-col items-center gap-4 transition-all cursor-pointer",
             isDragging ? "border-primary bg-primary/5 scale-[1.01]" : "border-border/50 hover:border-primary/40 hover:bg-muted/10"
           )}
           onClick={() => setUploaded(true)}
@@ -126,7 +126,7 @@ export default function ConciliacaoTab() {
               <thead>
                 <tr className="border-b border-border/30">
                   {["Data", "Descrição do Banco", "Tipo", "Valor", "Lançamento Vinculado", "Status", "Ação"].map(h => (
-                    <th key={h} className="px-5 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">{h}</th>
+                    <th key={h} className="px-4 py-2.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -135,27 +135,27 @@ export default function ConciliacaoTab() {
                   const cfg = statusConfig[e.status];
                   return (
                     <tr key={e.id} className={cn("border-b border-border/20 hover:bg-muted/10 transition-all group", idx === entries.length - 1 && "border-0")}>
-                      <td className="px-5 py-4 text-[12px] font-semibold text-muted-foreground">{e.data}</td>
-                      <td className="px-5 py-4 text-[13px] font-bold text-foreground">{e.descricao}</td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-2.5 text-[12px] font-semibold text-muted-foreground">{e.data}</td>
+                      <td className="px-4 py-2.5 text-[13px] font-bold text-foreground">{e.descricao}</td>
+                      <td className="px-4 py-2.5">
                         <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-lg uppercase",
                           e.tipo === "credito" ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
                         )}>
                           {e.tipo === "credito" ? "Crédito" : "Débito"}
                         </span>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-2.5">
                         <span className={cn("text-[14px] font-black", e.tipo === "credito" ? "text-emerald-500" : "text-rose-500")}>
                           {e.tipo === "credito" ? "+" : "-"} {formatBRL(e.valor)}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-[12px] text-muted-foreground">{e.vinculadoA ?? "—"}</td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-2.5 text-[12px] text-muted-foreground">{e.vinculadoA ?? "—"}</td>
+                      <td className="px-4 py-2.5">
                         <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-full border flex items-center gap-1.5 w-fit", cfg.bg)}>
                           <cfg.icon size={11} className={cfg.color} /> {cfg.label}
                         </span>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-2.5">
                         {e.status !== "conciliado" && (
                           <button onClick={() => handleVincular(e.id)} className="flex items-center gap-1.5 text-[11px] font-bold text-primary hover:text-primary/80 transition-colors opacity-0 group-hover:opacity-100">
                             <Link2 size={12} /> Vincular
