@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Eye, Pencil, Trash2, Send, FileEdit, Link as LinkIcon, Upload, Check, ExternalLink, FileText } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, Send, FileEdit, Link as LinkIcon, Upload, Check, ExternalLink, FileText, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/formatters";
