@@ -147,7 +147,7 @@ export default function FinanceiroPage() {
       </div>
 
       {/* ── Tab Navigation ─────────────────────────────────────── */}
-      <div className="px-6 py-4 sticky top-[65px] z-10 shrink-0 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
+      <div className="px-6 py-4 sticky top-[65px] z-10 shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
         <div 
           ref={scrollRef}
           onMouseMove={handleMouseMove}
