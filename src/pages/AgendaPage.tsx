@@ -13,6 +13,34 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
+
+// --- Componente do Botão do Google ---
+const GoogleButtonLogic = ({ googleConnected, setGoogleConnected }: { googleConnected: boolean, setGoogleConnected: (v: boolean) => void }) => {
+  const login = useGoogleLogin({
+    onSuccess: (codeResponse) => {
+      console.log('Login Success:', codeResponse);
+      setGoogleConnected(true);
+    },
+    onError: (error) => console.log('Login Failed:', error),
+    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+  });
+
+  return (
+    <Button 
+      variant={googleConnected ? "outline" : "default"} 
+      size="sm" 
+      className={cn(
+        "rounded-xl font-bold transition-all",
+        !googleConnected && "bg-blue-600 hover:bg-blue-700 text-white shadow-sm",
+        googleConnected && "border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+      )}
+      onClick={() => !googleConnected ? login() : setGoogleConnected(false)}
+    >
+      {googleConnected ? <><CheckCircle2 size={14} className="mr-1.5" /> Conectado</> : "Conectar"}
+    </Button>
+  );
+};
 
 // --- Tipos de Eventos ---
 type FilterMode = "all" | "meetings" | "finance";
@@ -475,48 +503,34 @@ export default function AgendaPage() {
 
       {/* --- MODAL DE INTEGRAÇÕES DE CALENDÁRIO --- */}
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="sm:max-w-[500px] border-border/50 rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black flex items-center gap-2">
-              <Settings className="text-primary" size={24} />
-              Integrações de Calendário
-            </DialogTitle>
-            <DialogDescription className="font-medium text-slate-500 mt-2">
-              Conecte suas contas do Google e Apple para sincronizar seus compromissos automaticamente com o Turbo CRM.
-            </DialogDescription>
-          </DialogHeader>
+        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "dummy"}>
+          <DialogContent className="sm:max-w-[500px] border-border/50 rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black flex items-center gap-2">
+                <Settings className="text-primary" size={24} />
+                Integrações de Calendário
+              </DialogTitle>
+              <DialogDescription className="font-medium text-slate-500 mt-2">
+                Conecte suas contas do Google e Apple para sincronizar seus compromissos automaticamente com o Turbo CRM.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            {/* Google Calendar */}
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white dark:bg-card border border-slate-200 dark:border-border/50 flex items-center justify-center shadow-sm">
-                  <Mail size={24} className="text-red-500" />
+            <div className="space-y-4 py-4">
+              {/* Google Calendar */}
+              <div className="p-4 rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white dark:bg-card border border-slate-200 dark:border-border/50 flex items-center justify-center shadow-sm">
+                    <Mail size={24} className="text-red-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-200">Google Calendar</h4>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {googleConnected ? "Sincronizado com sua conta Gmail" : "Sincronize com sua conta Gmail"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 dark:text-slate-200">Google Calendar</h4>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {googleConnected ? "Sincronizado com sua conta Gmail" : "Sincronize com sua conta Gmail"}
-                  </p>
-                </div>
+                <GoogleButtonLogic googleConnected={googleConnected} setGoogleConnected={setGoogleConnected} />
               </div>
-              <Button 
-                variant={googleConnected ? "outline" : "default"} 
-                size="sm" 
-                className={cn(
-                  "rounded-xl font-bold transition-all",
-                  !googleConnected && "bg-blue-600 hover:bg-blue-700 text-white shadow-sm",
-                  googleConnected && "border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                )}
-                onClick={() => setGoogleConnected(!googleConnected)}
-              >
-                {googleConnected ? (
-                  <><CheckCircle2 size={14} className="mr-1.5" /> Conectado</>
-                ) : (
-                  "Conectar"
-                )}
-              </Button>
-            </div>
 
             {/* Apple Calendar */}
             <div className="p-4 rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 flex items-center justify-between">
@@ -550,9 +564,10 @@ export default function AgendaPage() {
           </div>
           
           <div className="flex justify-end pt-4 border-t border-border/40">
-            <Button variant="ghost" onClick={() => setIsSettingsOpen(false)} className="rounded-xl font-bold">Fechar</Button>
-          </div>
-        </DialogContent>
+              <Button variant="ghost" onClick={() => setIsSettingsOpen(false)} className="rounded-xl font-bold">Fechar</Button>
+            </div>
+          </DialogContent>
+        </GoogleOAuthProvider>
       </Dialog>
 
       {/* --- MODAL DE NOVO EVENTO --- */}
