@@ -61,11 +61,9 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         niche: opportunity.niche,
         site_url: opportunity.site_url,
         updated_at: new Date().toISOString(),
-        user_id: user.id,
     };
 
     const opportunityData: any = {
-        user_id: user.id,
         lead_identification: opportunity.lead_identification,
         contact_phone: opportunity.contact_phone,
         contact_name: opportunity.contact_name,
