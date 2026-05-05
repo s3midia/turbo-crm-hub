@@ -49,7 +49,7 @@ export default function ClientesPage() {
       // Filtrando localmente apenas aqueles que consideramos "clientes" (ex: status ganhou)
       // Se você criar uma flag no banco `is_client`, use-a na query supabase.
       const clientesFiltrados = data
-        .filter(lead => lead.status === 'ganhou' || lead.is_client === true)
+        .filter(lead => lead.status === 'ganhou' || lead.status === 'inativo' || lead.is_client === true)
         .map(lead => ({
           id: lead.id,
           cliente: lead.company_name,
@@ -184,8 +184,10 @@ export default function ClientesPage() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all ${
-                filter === f ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg capitalize transition-all ${
+                filter === f 
+                  ? "bg-zinc-900 text-white shadow-md dark:bg-white dark:text-zinc-900" 
+                  : "text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
               {f}
