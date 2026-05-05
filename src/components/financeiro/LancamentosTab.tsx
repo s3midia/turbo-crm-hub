@@ -13,6 +13,7 @@ const CATEGORIAS_ENTRADA = ["Software", "Web Design", "Consultoria", "Manutenç�
 const CATEGORIAS_SAIDA = ["Infraestrutura", "Marketing", "Salários", "Impostos", "Escritório", "Ferramentas", "Outros"];
 
 import { formatBRL, formatDisplayId } from '@/lib/formatters';
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 const recorrenciaLabel = { unica: "Única", mensal: "Mensal", trimestral: "Trimestral", anual: "Anual" };
 const recorrenciaColor = { unica: "bg-muted text-muted-foreground", mensal: "bg-blue-500/10 text-blue-500", trimestral: "bg-violet-500/10 text-violet-500", anual: "bg-emerald-500/10 text-emerald-500" };
@@ -29,7 +30,7 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
   const [form, setForm] = useState({
     tipo: (transaction?.tipo ?? "entrada") as "entrada" | "saida",
     descricao: transaction?.descricao ?? "",
-    valor: transaction?.valor?.toString() ?? "",
+    valor: transaction?.valor ?? 0,
     data_lancamento: transaction?.data_lancamento ?? "",
     vencimento: transaction?.vencimento ?? "",
     recebimento: transaction?.recebimento ?? "",
@@ -116,7 +117,7 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
     const payload: any = {
       descricao: form.descricao,
       tipo: form.tipo,
-      valor: parseFloat(String(form.valor).replace(",", ".")),
+      valor: form.valor,
       data_lancamento: form.data_lancamento || new Date().toISOString().split('T')[0],
       vencimento: form.vencimento,
       recebimento: form.recebimento || undefined,
@@ -170,9 +171,12 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
 
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Valor (R$) *</label>
-            <input value={form.valor} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))}
-              type="number" className="w-full px-4 py-3 bg-muted/30 border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-              placeholder="0,00" />
+            <CurrencyInput 
+              value={Number(form.valor)} 
+              onChange={val => setForm(f => ({ ...f, valor: val }))}
+              className="w-full px-4 py-3 bg-muted/30 border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              placeholder="0,00" 
+            />
           </div>
 
           <div className="space-y-1">
