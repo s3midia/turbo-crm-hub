@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { TrendingUp, Plus, Building2, BarChart3, Percent, ArrowUpRight, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 import { formatBRL } from "@/lib/formatters";
 function formatPct(v: number) { return `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`; }
@@ -29,33 +31,87 @@ const evolutionData: any[] = [];
 const maxEvol = Math.max(...evolutionData.map(d => d.valor));
 
 export default function InvestimentosTab() {
-  const [investimentos, setInvestimentos] = useState<Investimento[]>(() => {
-    const saved = localStorage.getItem("crm_investimentos");
-    return saved ? JSON.parse(saved) : INITIAL;
-  });
+  const [investimentos, setInvestimentos] = useState<Investimento[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem("crm_investimentos", JSON.stringify(investimentos));
-  }, [investimentos]);
+    const fetchInvestimentos = async () => {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('company_investments')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (data) {
+        setInvestimentos(data.map(i => ({
+          id: i.id,
+          nome: i.nome,
+          tipo: i.tipo as Investimento["tipo"],
+          aporte: Number(i.aporte),
+          rendimentoPct: Number(i.rendimento_pct),
+          dataAporte: i.data_aporte,
+          saldoAtual: Number(i.saldo_atual)
+        })));
+      }
+      setLoading(false);
+    };
+
+    fetchInvestimentos();
+  }, []);
+
   const [form, setForm] = useState({ nome: "", tipo: "Renda Fixa" as Investimento["tipo"], aporte: "", rendimento: "", data: "" });
 
   const totalAporte = investimentos.reduce((s, i) => s + i.aporte, 0);
   const totalAtual = investimentos.reduce((s, i) => s + i.saldoAtual, 0);
-  const rentabilidade = ((totalAtual - totalAporte) / totalAporte) * 100;
+  const rentabilidade = totalAporte > 0 ? ((totalAtual - totalAporte) / totalAporte) * 100 : 0;
 
-  function handleAdd() {
+  async function handleAdd() {
     if (!form.nome || !form.aporte) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     const aporte = parseFloat(form.aporte);
     const rendPct = parseFloat(form.rendimento) || 0;
-    setInvestimentos(prev => [...prev, {
-      id: Date.now(), nome: form.nome, tipo: form.tipo, aporte,
-      rendimentoPct: rendPct, dataAporte: form.data || new Date().toLocaleDateString("pt-BR"),
-      saldoAtual: aporte * (1 + rendPct / 100)
-    }]);
-    setShowForm(false);
-    setForm({ nome: "", tipo: "Renda Fixa", aporte: "", rendimento: "", data: "" });
+    const saldoAtual = aporte * (1 + rendPct / 100);
+
+    const { data, error } = await supabase.from('company_investments').insert([{
+      user_id: user.id,
+      nome: form.nome,
+      tipo: form.tipo,
+      aporte: aporte,
+      rendimento_pct: rendPct,
+      data_aporte: form.data || new Date().toISOString().split('T')[0],
+      saldo_atual: saldoAtual
+    }]).select();
+
+    if (data) {
+      const inv = data[0];
+      setInvestimentos(prev => [...prev, {
+        id: inv.id,
+        nome: inv.nome,
+        tipo: inv.tipo as Investimento["tipo"],
+        aporte: Number(inv.aporte),
+        rendimentoPct: Number(inv.rendimento_pct),
+        dataAporte: inv.data_aporte,
+        saldoAtual: Number(inv.saldo_atual)
+      }]);
+      setShowForm(false);
+      setForm({ nome: "", tipo: "Renda Fixa", aporte: "", rendimento: "", data: "" });
+      toast.success("Investimento salvo com sucesso!");
+    }
   }
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('company_investments').delete().eq('id', id);
+    if (!error) {
+      setInvestimentos(prev => prev.filter(i => String(i.id) !== String(id)));
+      toast.success("Investimento removido!");
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -169,7 +225,7 @@ export default function InvestimentosTab() {
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <button onClick={() => setInvestimentos(prev => prev.filter(i => i.id !== inv.id))}
+                    <button onClick={() => handleDelete(String(inv.id))}
                       className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 transition-all">
                       <Trash2 size={13} />
                     </button>
