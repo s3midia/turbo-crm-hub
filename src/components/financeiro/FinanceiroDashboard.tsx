@@ -333,13 +333,13 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         <div className="lg:col-span-3 p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
           <div className="flex items-center justify-between mb-10 relative z-10">
             <div>
-              <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-tight">
-                <BarChart3 size={18} className="text-zinc-900 dark:text-zinc-100" />
+              <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-tight">
+                <BarChart3 size={20} className="text-zinc-900 dark:text-zinc-100" />
                 Desempenho Financeiro
               </h3>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Análise Comparativa • 6 Meses</p>
+              <p className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-1">Análise Comparativa • 6 Meses</p>
             </div>
-            <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+            <div className="flex items-center gap-6 text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">
               <span className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20" />Receitas
               </span>
