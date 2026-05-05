@@ -20,6 +20,7 @@ import { PdfViewModal } from "@/components/PdfViewModal";
 import { ProposalViewModal } from "@/components/ProposalViewModal";
 import { EditDocModal } from "@/components/EditDocModal";
 import { ManualProposalModal } from "@/components/ManualProposalModal";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { 
     DropdownMenu,
     DropdownMenuContent,
