@@ -83,7 +83,6 @@ export default function FinanceiroPage() {
     if (TABS.some(t => t.id === tab)) setActiveTab(tab as TabId);
   }
 
-  return (
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [isScrolling, setIsScrolling] = useState<"left" | "right" | null>(null);
 
