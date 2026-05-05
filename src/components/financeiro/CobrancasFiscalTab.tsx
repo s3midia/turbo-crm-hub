@@ -1094,12 +1094,6 @@ export default function CobrancasFiscalTab({
                           return;
                         }
 
-                        if (!generatedBoleto?.value || generatedBoleto.value <= 0) {
-                          toast.error("Obrigatório: O valor da cobrança deve ser maior que zero.");
-                          setLoadingAction(null);
-                          return;
-                        }
-
                         // 3. Find or Create Customer
                         const customerId = await asaas.findOrCreateCustomer(
                           generatedBoleto?.client || selectedClient?.cliente,
@@ -1119,7 +1113,7 @@ export default function CobrancasFiscalTab({
                         setGeneratedBoleto(prev => prev ? {
                           ...prev,
                           url: payment.bankSlipUrl,
-                          barcode: payment.identificationField
+                          barcode: payment.identificationField || "Aguardando registro bancário (CIP)... Acesse o Boleto Oficial abaixo para copiar."
                         } : null);
                         
                         const newEvent: TimelineEvent = {
@@ -1182,16 +1176,18 @@ export default function CobrancasFiscalTab({
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Linha Digitável</p>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Linha Digitável / PIX</p>
                   <div className="bg-muted/50 p-3 rounded-xl border border-border/40 font-mono text-[11px] break-all leading-relaxed">
                     {generatedBoleto?.barcode}
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full text-[10px] font-black h-8 gap-2" onClick={() => {
-                    navigator.clipboard.writeText(generatedBoleto?.barcode || "");
-                    toast.success("Código copiado!");
-                  }}>
-                    COPIAR CÓDIGO DE BARRAS
-                  </Button>
+                  {generatedBoleto?.barcode && !generatedBoleto.barcode.includes("Aguardando") && (
+                    <Button variant="ghost" size="sm" className="w-full text-[10px] font-black h-8 gap-2" onClick={() => {
+                      navigator.clipboard.writeText(generatedBoleto?.barcode || "");
+                      toast.success("Código copiado!");
+                    }}>
+                      COPIAR CÓDIGO DE BARRAS
+                    </Button>
+                  )}
                 </div>
 
                 {/* Off-screen Invoice for PDF Generation (must be in DOM but not visible to user) */}
@@ -1252,48 +1248,18 @@ export default function CobrancasFiscalTab({
 
                 <div className="flex gap-3">
                   <Button 
-                    className="flex-1 rounded-2xl font-black h-12 shadow-lg shadow-primary/20" 
-                    onClick={async () => {
-                      if (invoiceRef.current && generatedBoleto) {
-                        try {
-                          setLoadingAction("downloading-pdf");
-                          toast.loading("Gerando PDF profissional...");
-                          
-                          await new Promise(r => setTimeout(r, 500));
-                          
-                          const element = invoiceRef.current;
-                          const canvas = await html2canvas(element, {
-                            scale: 2,
-                            logging: false,
-                            useCORS: true,
-                            backgroundColor: "#ffffff"
-                          });
-                          
-                          const imgData = canvas.toDataURL("image/png");
-                          const pdf = new jsPDF({
-                            orientation: "portrait",
-                            unit: "px",
-                            format: [canvas.width, canvas.height]
-                          });
-                          
-                          pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-                          pdf.save(`fatura_${generatedBoleto.client.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
-                          
-                          toast.dismiss();
-                          toast.success("Download concluído com sucesso!");
-                        } catch (error) {
-                          console.error("Erro ao gerar PDF:", error);
-                          toast.dismiss();
-                          toast.error("Falha ao gerar o arquivo PDF.");
-                        } finally {
-                          setLoadingAction(null);
-                        }
+                    className="flex-1 rounded-2xl font-black h-12 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground" 
+                    onClick={() => {
+                      if (generatedBoleto?.url && generatedBoleto.url !== "#") {
+                        window.open(generatedBoleto.url, "_blank");
+                        toast.success("Boleto oficial aberto em nova guia!");
+                      } else {
+                        toast.error("Link do boleto não disponível.");
                       }
                     }}
-                    disabled={loadingAction === "downloading-pdf"}
                   >
-                    {loadingAction === "downloading-pdf" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download size={16} className="mr-2" />}
-                    BAIXAR PDF REAL
+                    <Download size={16} className="mr-2" />
+                    VER BOLETO OFICIAL (ASAAS)
                   </Button>
                   <Button variant="outline" className="flex-1 rounded-2xl font-black h-12" onClick={() => {
                     setShowBoletoModal(false);
