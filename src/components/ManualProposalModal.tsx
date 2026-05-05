@@ -16,6 +16,7 @@ import { RichTextEditor } from "./ui/RichTextEditor";
 import { generateMarketingProposal } from "@/lib/proposalGenerator";
 import { toast } from "sonner";
 import { ClientSearch } from "./ClientSearch";
+import { CurrencyInput } from "./ui/currency-input";
 
 interface ServiceItem {
   nome: string;
