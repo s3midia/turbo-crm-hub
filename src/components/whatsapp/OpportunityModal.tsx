@@ -308,6 +308,15 @@ export const OpportunityModal = ({
                                             </div>
                                         </Field>
 
+                                        <Field label="Valor da Oportunidade (R$)">
+                                            <CurrencyInput 
+                                                value={formData.totalValue} 
+                                                onChange={val => setFormData(p => ({ ...p, totalValue: val }))}
+                                                placeholder="0,00"
+                                                className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                                            />
+                                        </Field>
+
                                         <div className="grid grid-cols-2 gap-5">
                                             <Field label="Status">
                                                 <Select value={formData.status} onValueChange={v => setFormData(p => ({...p, status: v}))}>
