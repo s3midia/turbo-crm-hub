@@ -84,7 +84,7 @@ export default function FinanceiroPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-20 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shrink-0">
