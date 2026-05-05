@@ -82,6 +82,10 @@ export default {
           "text-muted": "hsl(var(--wa-text-muted))",
         },
       },
+      fontFamily: {
+        jakarta: ["'Plus Jakarta Sans'", "sans-serif"],
+        outfit: ["Outfit", "sans-serif"],
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
