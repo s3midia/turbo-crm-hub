@@ -243,38 +243,56 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
 
       {/* --- KPI STRIP --- */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {kpis.map((kpi, i) => (
           <div
             key={i}
-            className={cn(
-              "group p-4 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 cursor-default relative overflow-hidden"
-            )}
+            className="group relative p-5 rounded-[24px] bg-white dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.04)] dark:hover:shadow-[0_20px_50px_rgba(0,0,0,0.2)] hover:-translate-y-1 overflow-hidden"
           >
-            <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-3 border", 
-              kpi.color === "emerald" ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20" :
-              kpi.color === "rose" ? "text-rose-500 bg-rose-500/10 border-rose-500/20" :
-              kpi.color === "blue" ? "text-blue-500 bg-blue-500/10 border-blue-500/20" :
-              kpi.color === "amber" ? "text-amber-500 bg-amber-500/10 border-amber-500/20" :
-              kpi.color === "violet" ? "text-violet-500 bg-violet-500/10 border-violet-500/20" :
-              "text-cyan-500 bg-cyan-500/10 border-cyan-500/20"
-            )}>
-              <kpi.icon size={16} />
+            <div className="flex items-center justify-between mb-5 relative z-10">
+              <div className={cn(
+                "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110",
+                kpi.color === "emerald" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 shadow-sm shadow-emerald-500/10" :
+                kpi.color === "rose" ? "bg-rose-50 dark:bg-rose-500/10 text-rose-500 shadow-sm shadow-rose-500/10" :
+                kpi.color === "blue" ? "bg-blue-50 dark:bg-blue-500/10 text-blue-500 shadow-sm shadow-blue-500/10" :
+                kpi.color === "amber" ? "bg-amber-50 dark:bg-amber-500/10 text-amber-500 shadow-sm shadow-amber-500/10" :
+                kpi.color === "violet" ? "bg-violet-50 dark:bg-violet-500/10 text-violet-500 shadow-sm shadow-violet-500/10" :
+                "bg-cyan-50 dark:bg-cyan-500/10 text-cyan-500 shadow-sm shadow-cyan-500/10"
+              )}>
+                <kpi.icon size={20} strokeWidth={2.5} />
+              </div>
+              
+              <div className={cn(
+                "px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 transition-all duration-300",
+                kpi.up === true ? "bg-emerald-50/80 text-emerald-600 dark:bg-emerald-500/20" : 
+                kpi.up === false ? "bg-rose-50/80 text-rose-600 dark:bg-rose-500/20" : 
+                "bg-zinc-50/80 text-zinc-500 dark:bg-zinc-500/20"
+              )}>
+                {kpi.up === true && <ArrowUpRight size={12} strokeWidth={3} />}
+                {kpi.up === false && <ArrowDownRight size={12} strokeWidth={3} />}
+                <span>{kpi.trend}</span>
+              </div>
             </div>
-            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1 leading-none">
-              {kpi.label}
-            </p>
-            <p className="text-[17px] font-black text-zinc-900 dark:text-zinc-100 tracking-tight leading-none">
-              {kpi.display ?? formatBRL(kpi.value!)}
-            </p>
+
+            <div className="relative z-10">
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] mb-1">
+                {kpi.label}
+              </p>
+              <h4 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight truncate">
+                {kpi.display ?? formatBRL(kpi.value!)}
+              </h4>
+            </div>
+            
+            {/* Elegant glass decoration */}
             <div className={cn(
-              "mt-2 text-[10px] font-bold flex items-center gap-0.5",
-              kpi.up === true ? "text-emerald-500" : kpi.up === false ? "text-rose-500" : "text-amber-500"
-            )}>
-              {kpi.up === true && <ArrowUpRight size={10} />}
-              {kpi.up === false && <ArrowDownRight size={10} />}
-              {kpi.trend}
-            </div>
+              "absolute -bottom-6 -right-6 w-24 h-24 blur-[40px] opacity-[0.08] rounded-full transition-opacity duration-500 group-hover:opacity-[0.15]",
+              kpi.color === "emerald" ? "bg-emerald-500" :
+              kpi.color === "rose" ? "bg-rose-500" :
+              kpi.color === "blue" ? "bg-blue-500" :
+              kpi.color === "amber" ? "bg-amber-500" :
+              kpi.color === "violet" ? "bg-violet-500" :
+              "bg-cyan-500"
+            )} />
           </div>
         ))}
       </div>
