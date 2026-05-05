@@ -349,7 +349,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                   className="w-12 h-12 rounded-full border-4 border-white bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 shadow-sm"
                   title={client.name}
                 >
-                  {client.name.substring(0, 1)}
+                  {client.name?.substring(0, 1) || "?"}
                 </div>
               ))}
               <button className="w-12 h-12 rounded-full border-4 border-white bg-gray-50 border-dashed flex items-center justify-center text-gray-400 hover:text-black transition-colors">
