@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Users, Check, AlertCircle, Plus, Trash2, Calendar } from "lucide-react";
+import { Users, Check, AlertCircle, Plus, Trash2, Calendar, FileText, Upload, MoreVertical, ExternalLink } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,13 +29,14 @@ interface Funcionario {
 }
 
 interface Despesa {
-  id: number;
+  id: string;
   descricao: string;
   tipo: "fixa" | "variavel";
   valor: number;
   vencimento: string;
   status: "pago" | "pendente";
   categoria: string;
+  document_url?: string;
 }
 
 const FUNCIONARIOS: Funcionario[] = [];
@@ -92,7 +99,8 @@ export default function EquipeFinanceiroTab() {
         valor: Number(d.valor),
         vencimento: d.vencimento,
         status: d.status === 'pago' ? 'pago' : 'pendente',
-        categoria: d.categoria
+        categoria: d.categoria,
+        document_url: d.document_url
       })));
     }
 
@@ -191,6 +199,7 @@ export default function EquipeFinanceiroTab() {
       vencimento: data.vencimento,
       tipo: 'saida',
       classificacao: data.tipo === 'fixa' ? 'recorrente' : 'nao_recorrente',
+      document_url: data.document_url,
       user_id: user.id
     };
 
@@ -224,19 +233,51 @@ export default function EquipeFinanceiroTab() {
     setEditingFuncId(tempId);
   }
 
-  function handleAddDesp() {
+  function handleAddDesp(preset?: Partial<Despesa>) {
     const tempId = Date.now().toString();
     const newDesp: Despesa = {
-      id: tempId as any,
-      descricao: "Nova Despesa",
-      tipo: "variavel",
-      valor: 0,
+      id: tempId,
+      descricao: preset?.descricao || "Nova Despesa",
+      tipo: preset?.tipo || "variavel",
+      valor: preset?.valor || 0,
       vencimento: new Date().toISOString().split('T')[0],
       status: "pendente",
-      categoria: "Geral",
+      categoria: preset?.categoria || "Geral",
     };
     setDespesas(prev => [...prev, newDesp]);
     setEditingDespId(tempId);
+  }
+
+  async function handleFileUpload(file: File, despId: string) {
+    try {
+      const loadingToast = toast.loading("Enviando comprovante...");
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `receipts/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        toast.dismiss(loadingToast);
+        toast.error("Erro ao subir arquivo: " + uploadError.message);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+
+      // Update local state
+      setDespesas(prev => prev.map(d => String(d.id) === String(despId) ? { ...d, document_url: publicUrl } : d));
+      
+      toast.dismiss(loadingToast);
+      toast.success("Comprovante anexado!");
+    } catch (error: any) {
+      toast.error("Erro inesperado: " + error.message);
+    }
   }
 
   async function handleDeleteFunc(id: string) {
@@ -476,12 +517,32 @@ export default function EquipeFinanceiroTab() {
               Despesas Operacionais
             </h3>
             <div className="flex items-center gap-2">
-              <button 
-                onClick={handleAddDesp}
-                className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center gap-1.5"
-              >
-                <Plus size={12} /> Nova
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button 
+                    className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 transition-all border border-rose-500/20 flex items-center gap-1.5"
+                  >
+                    <Plus size={12} /> Nova
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "fixa", categoria: "Aluguel", descricao: "Aluguel / Condomínio" })}>
+                    Aluguel / Condomínio
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "fixa", categoria: "Software", descricao: "Software / SaaS" })}>
+                    Software / SaaS
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "variavel", categoria: "Marketing", descricao: "Marketing / Ads" })}>
+                    Marketing / Ads
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "fixa", categoria: "Contabilidade", descricao: "Serviços Contábeis" })}>
+                    Contabilidade
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "variavel", categoria: "Geral", descricao: "Nova Despesa" })}>
+                    Outra Despesa
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <button 
                 onClick={() => setShowDespesasModal(true)}
                 className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-all border border-amber-500/20"
@@ -512,6 +573,38 @@ export default function EquipeFinanceiroTab() {
                         defaultValue={d.categoria}
                         onChange={e => d.categoria = e.target.value}
                       />
+                    </div>
+                    <div className="flex flex-col gap-2 p-2 rounded-lg bg-muted/20 border border-dashed border-border/50">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase">Comprovante / Anexo</p>
+                      <div className="flex items-center gap-2">
+                        {d.document_url ? (
+                          <div className="flex items-center gap-2 flex-1">
+                            <div className="p-1.5 rounded bg-emerald-500/10 text-emerald-600">
+                              <FileText size={12} />
+                            </div>
+                            <span className="text-[10px] font-bold truncate flex-1">Arquivo anexado</span>
+                            <button 
+                              onClick={() => d.document_url = undefined}
+                              className="text-[10px] text-rose-500 hover:underline"
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center justify-center gap-2 w-full py-2 border border-dashed border-primary/30 rounded-lg cursor-pointer hover:bg-primary/5 transition-all text-primary">
+                            <Upload size={12} />
+                            <span className="text-[10px] font-bold uppercase">Anexar Documento</span>
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, String(d.id));
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-2 justify-end">
                       <button 
@@ -548,12 +641,22 @@ export default function EquipeFinanceiroTab() {
                       <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                         <Calendar size={10} /> {d.vencimento} · {d.categoria}
                       </p>
-                      <button 
-                        onClick={() => setEditingDespId(String(d.id))}
-                        className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-bold text-primary hover:underline"
-                      >
-                        Editar despesa
-                      </button>
+                      <div className="flex items-center gap-3 mt-2">
+                        <button 
+                          onClick={() => setEditingDespId(String(d.id))}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-bold text-primary hover:underline"
+                        >
+                          Editar despesa
+                        </button>
+                        {d.document_url && (
+                          <button 
+                            onClick={() => window.open(d.document_url, "_blank")}
+                            className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 hover:underline"
+                          >
+                            <FileText size={10} /> Ver Comprovante
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="text-right flex flex-col items-end gap-2">
                       <span className="font-black text-rose-500 text-sm">{formatBRL(d.valor)}</span>
