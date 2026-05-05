@@ -497,7 +497,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                 )}
                 onClick={() => openEdit(t)}
               >
-                <td className="px-5 py-4">
+                <td className="px-4 py-2.5">
                   <div className="flex items-start gap-2">
                     <div className={cn("mt-1.5 w-2 h-2 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500" : "bg-rose-500")} />
                     <div>
@@ -529,27 +529,27 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                     </div>
                   </div>
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-2.5">
                   <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-secondary/50 border border-border/40 text-muted-foreground flex items-center gap-1 w-fit">
                     <Tag size={10} /> {t.categoria}
                   </span>
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-2.5">
                   <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 w-fit", recorrenciaColor[t.recorrencia])}>
                     <RefreshCw size={9} /> {recorrenciaLabel[t.recorrencia]}
                   </span>
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-2.5">
                   <span className={cn("text-[14px] font-black", t.tipo === "entrada" ? "text-emerald-500" : "text-rose-500")}>
                     {t.tipo === "entrada" ? "+" : "-"} {formatBRL(t.valor)}
                   </span>
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-2.5">
                   <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
                     <Calendar size={12} /> {t.vencimento}
                   </div>
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-2.5">
                   <span className={cn("text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit border",
                     t.status === "pago" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
                       t.status === "pendente" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
