@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 import { formatBRL } from "@/lib/formatters";
+import { CurrencyInput } from "@/components/ui/currency-input";
 function formatPct(v: number) { return `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`; }
 
 interface Investimento {
@@ -63,7 +64,7 @@ export default function InvestimentosTab() {
     fetchInvestimentos();
   }, []);
 
-  const [form, setForm] = useState({ nome: "", tipo: "Renda Fixa" as Investimento["tipo"], aporte: "", rendimento: "", data: "" });
+  const [form, setForm] = useState({ nome: "", tipo: "Renda Fixa" as Investimento["tipo"], aporte: 0, rendimento: "", data: "" });
 
   const totalAporte = investimentos.reduce((s, i) => s + i.aporte, 0);
   const totalAtual = investimentos.reduce((s, i) => s + i.saldoAtual, 0);
@@ -74,7 +75,7 @@ export default function InvestimentosTab() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const aporte = parseFloat(form.aporte);
+    const aporte = form.aporte;
     const rendPct = parseFloat(form.rendimento) || 0;
     const saldoAtual = aporte * (1 + rendPct / 100);
 
@@ -100,7 +101,7 @@ export default function InvestimentosTab() {
         saldoAtual: Number(inv.saldo_atual)
       }]);
       setShowForm(false);
-      setForm({ nome: "", tipo: "Renda Fixa", aporte: "", rendimento: "", data: "" });
+      setForm({ nome: "", tipo: "Renda Fixa", aporte: 0, rendimento: "", data: "" });
       toast.success("Investimento salvo com sucesso!");
     }
   }
@@ -177,8 +178,8 @@ export default function InvestimentosTab() {
                 className="px-3 py-2.5 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all">
                 {Object.keys(TIPOS_COLOR).map(t => <option key={t}>{t}</option>)}
               </select>
-              <input placeholder="Aporte (R$)" type="number" value={form.aporte} onChange={e => setForm(f => ({ ...f, aporte: e.target.value }))}
-                className="px-3 py-2.5 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all" />
+              <CurrencyInput placeholder="Aporte (R$)" value={form.aporte} onChange={val => setForm(f => ({ ...f, aporte: val }))}
+                className="px-3 py-2.5 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all h-[42px]" />
               <input placeholder="Rendimento (%)" type="number" value={form.rendimento} onChange={e => setForm(f => ({ ...f, rendimento: e.target.value }))}
                 className="px-3 py-2.5 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all" />
             </div>
