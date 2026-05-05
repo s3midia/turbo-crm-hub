@@ -259,10 +259,16 @@ export default function CobrancasFiscalTab({
     }
 
     if (action === "boleto") {
+      // Garante que a data seja um formato válido DD/MM/YYYY
+      let defaultDate = new Date().toLocaleDateString("pt-BR");
+      if (contrato.proximoVencimento && contrato.proximoVencimento.includes("/")) {
+        defaultDate = contrato.proximoVencimento;
+      }
+      
       setGeneratedBoleto({
         url: "#",
         barcode: "", 
-        date: contrato.proximoVencimento || new Date().toLocaleDateString("pt-BR"),
+        date: defaultDate,
         value: contrato.valor,
         client: contrato.cliente
       });
