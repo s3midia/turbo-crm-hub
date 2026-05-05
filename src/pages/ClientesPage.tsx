@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { UserPlus, Search, Filter, MoreHorizontal, User, ShieldCheck, AlertCircle, Building2, Users, Pencil, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { ClientePerfilDrawer, ClientePerfilData } from "@/components/financeiro/ClientePerfilDrawer";
-import { deleteOpportunity } from "@/hooks/useOpportunities";
+import { deleteOpportunity, updateOpportunityStage } from "@/hooks/useOpportunities";
+import { UserPlus, Search, Filter, MoreHorizontal, User, ShieldCheck, AlertCircle, Building2, Users, Pencil, Trash2, UserMinus, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -92,6 +91,25 @@ export default function ClientesPage() {
     } catch (err) {
       console.error(err);
       toast.error("Erro ao excluir cliente. Verifique se ele possui dados vinculados.");
+    }
+  };
+
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const isAtivo = currentStatus === "ativo";
+    const newStage = isAtivo ? "inativo" : "ganhou";
+    const label = isAtivo ? "inativar" : "ativar";
+
+    if (!window.confirm(`Tem certeza que deseja ${label} este cliente?`)) {
+      return;
+    }
+
+    try {
+      await updateOpportunityStage(id, newStage);
+      toast.success(`Cliente ${isAtivo ? "inativado" : "ativado"} com sucesso.`);
+      fetchClientes();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao alterar status do cliente.");
     }
   };
 
@@ -250,6 +268,19 @@ export default function ClientesPage() {
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditCliente(c.id); }} className="text-xs cursor-pointer gap-2">
                             <Pencil size={14} className="text-muted-foreground" />
                             Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleStatus(c.id, c.status); }} className="text-xs cursor-pointer gap-2">
+                            {c.status === "ativo" ? (
+                              <>
+                                <UserMinus size={14} className="text-muted-foreground" />
+                                Marcar como Inativo
+                              </>
+                            ) : (
+                              <>
+                                <UserCheck size={14} className="text-muted-foreground" />
+                                Marcar como Ativo
+                              </>
+                            )}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={(e) => { e.stopPropagation(); handleDeleteCliente(c.id); }} 
