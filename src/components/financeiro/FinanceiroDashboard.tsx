@@ -242,59 +242,88 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
 
-      {/* --- KPI STRIP --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {kpis.map((kpi, i) => (
-          <div
-            key={i}
-            className="group relative p-5 rounded-[24px] bg-white dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.04)] dark:hover:shadow-[0_20px_50px_rgba(0,0,0,0.2)] hover:-translate-y-1 overflow-hidden"
-          >
-            <div className="flex items-center justify-between mb-5 relative z-10">
-              <div className={cn(
-                "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110",
-                kpi.color === "emerald" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 shadow-sm shadow-emerald-500/10" :
-                kpi.color === "rose" ? "bg-rose-50 dark:bg-rose-500/10 text-rose-500 shadow-sm shadow-rose-500/10" :
-                kpi.color === "blue" ? "bg-blue-50 dark:bg-blue-500/10 text-blue-500 shadow-sm shadow-blue-500/10" :
-                kpi.color === "amber" ? "bg-amber-50 dark:bg-amber-500/10 text-amber-500 shadow-sm shadow-amber-500/10" :
-                kpi.color === "violet" ? "bg-violet-50 dark:bg-violet-500/10 text-violet-500 shadow-sm shadow-violet-500/10" :
-                "bg-cyan-50 dark:bg-cyan-500/10 text-cyan-500 shadow-sm shadow-cyan-500/10"
-              )}>
-                <kpi.icon size={20} strokeWidth={2.5} />
-              </div>
-              
-              <div className={cn(
-                "px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 transition-all duration-300",
-                kpi.up === true ? "bg-emerald-50/80 text-emerald-600 dark:bg-emerald-500/20" : 
-                kpi.up === false ? "bg-rose-50/80 text-rose-600 dark:bg-rose-500/20" : 
-                "bg-zinc-50/80 text-zinc-500 dark:bg-zinc-500/20"
-              )}>
-                {kpi.up === true && <ArrowUpRight size={12} strokeWidth={3} />}
-                {kpi.up === false && <ArrowDownRight size={12} strokeWidth={3} />}
-                <span>{kpi.trend}</span>
-              </div>
-            </div>
+      {/* --- KPI GRID (Image Reference Style) --- */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[24px] overflow-hidden shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {kpis.map((kpi, i) => {
+            // Prepare sparkline data based on the metric
+            const sparkData = data.barData.map(m => {
+              if (kpi.label === "Receita Realizada") return { value: m.receita };
+              if (kpi.label === "Despesas Totais") return { value: m.despesa };
+              if (kpi.label === "Saldo Líquido") return { value: m.profit };
+              if (kpi.label === "Margem Líquida") return { value: m.receita > 0 ? (m.receita - m.despesa) / m.receita * 100 : 0 };
+              // Fallback for others
+              return { value: Math.random() * 100 }; 
+            });
 
-            <div className="relative z-10">
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] mb-1">
-                {kpi.label}
-              </p>
-              <h4 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight truncate">
-                {kpi.display ?? formatBRL(kpi.value!)}
-              </h4>
-            </div>
-            
-            {/* Elegant glass decoration */}
-            <div className={cn(
-              "absolute -bottom-6 -right-6 w-24 h-24 blur-[40px] opacity-[0.08] rounded-full transition-opacity duration-500 group-hover:opacity-[0.15]",
-              kpi.color === "emerald" ? "bg-emerald-500" :
-              kpi.color === "rose" ? "bg-rose-500" :
-              kpi.color === "blue" ? "bg-blue-500" :
-              kpi.color === "amber" ? "bg-amber-500" :
-              kpi.color === "violet" ? "bg-violet-500" :
-              "bg-cyan-500"
-            )} />
-          </div>
-        ))}
+            const colorHex = 
+              kpi.color === "emerald" ? "#10b981" :
+              kpi.color === "rose" ? "#f87171" :
+              kpi.color === "blue" ? "#3b82f6" :
+              kpi.color === "amber" ? "#fbbf24" :
+              kpi.color === "violet" ? "#8b5cf6" :
+              "#06b6d4";
+
+            return (
+              <div 
+                key={i} 
+                className={cn(
+                  "p-8 flex items-center justify-between group transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20",
+                  i % 3 !== 2 && "lg:border-r border-zinc-100 dark:border-zinc-800",
+                  i < 3 && "lg:border-b border-zinc-100 dark:border-zinc-800",
+                  i % 2 !== 1 && "md:border-r lg:md:border-r-0 border-zinc-100 dark:border-zinc-800",
+                  i < 4 && "md:border-b lg:md:border-b-0 border-zinc-100 dark:border-zinc-800",
+                  "border-b md:border-b-0 last:border-b-0"
+                )}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+                      {kpi.display ?? (kpi.value! >= 1000 ? (kpi.value! / 1000).toFixed(1) + 'k' : kpi.value)}
+                    </span>
+                    {kpi.trend && (
+                      <div className={cn(
+                        "px-2 py-0.5 rounded-full text-[11px] font-bold",
+                        kpi.up === true ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" : 
+                        kpi.up === false ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10" : 
+                        "bg-zinc-50 text-zinc-500 dark:bg-zinc-500/10"
+                      )}>
+                        {kpi.up === true ? "+" : ""}{kpi.trend}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 max-w-[120px] leading-tight">
+                    {kpi.label}
+                  </p>
+                </div>
+
+                <div className="h-16 w-32 shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={sparkData}>
+                      <defs>
+                        <linearGradient id={`grad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={colorHex} stopOpacity={0.2}/>
+                          <stop offset="100%" stopColor={colorHex} stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <Area 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke={colorHex} 
+                        strokeWidth={2.5} 
+                        fillOpacity={1} 
+                        fill={`url(#grad-${i})`}
+                        isAnimationActive={true}
+                        animationDuration={2000}
+                        dot={false}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* --- MIDDLE ROW: MAIN CHARTS --- */}
