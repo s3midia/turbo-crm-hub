@@ -258,14 +258,6 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                     className="h-6 text-xs w-40 bg-muted/30"
                     placeholder="Empresa"
                   />
-                  <Input
-                    value={editForm.cpfCnpj}
-                    onChange={e => setEditForm(f => ({ ...f, cpfCnpj: e.target.value }))}
-                    className="h-6 text-xs w-32 bg-muted/30"
-                    placeholder="CPF/CNPJ"
-                  />
-                </div>
-              ) : (
                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                   {(cliente.empresa || cliente.company_name) && (
                     <span className="flex items-center gap-1"><Building2 size={11} />{cliente.empresa || cliente.company_name}</span>
