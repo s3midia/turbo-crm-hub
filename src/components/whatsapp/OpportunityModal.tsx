@@ -95,6 +95,7 @@ export const OpportunityModal = ({
         niche: '',
         siteUrl: '',
         template: '',
+        cpfCnpj: '',
     });
 
     const [allLeads, setAllLeads] = useState<any[]>([]);
@@ -130,6 +131,7 @@ export const OpportunityModal = ({
                             niche: opp.niche || '',
                             siteUrl: opp.site_url || '',
                             template: '',
+                            cpfCnpj: (opp as any).cpf_cnpj || (opp as any).cpfCnpj || '',
                         });
                         setTasks(opp.tasks && opp.tasks.length > 0 ? opp.tasks : []);
                     }
@@ -143,7 +145,7 @@ export const OpportunityModal = ({
             };
             load();
         } else if (!opportunityId && open) {
-            setFormData({ status: stage, leadIdentification: contactName, priority: '', contact: contactPhone, email: '', observation: '', responsible: '', niche: '', siteUrl: '', template: '' });
+            setFormData({ status: stage, leadIdentification: contactName, priority: '', contact: contactPhone, email: '', observation: '', responsible: '', niche: '', siteUrl: '', template: '', cpfCnpj: '' });
             setTasks([]);
             setTimelineData([]);
         }
@@ -169,6 +171,7 @@ export const OpportunityModal = ({
                 tasks: tasks.filter(t => t.title),
                 niche: formData.niche,
                 site_url: formData.siteUrl,
+                cpf_cnpj: formData.cpfCnpj,
             } as any);
 
             toast({ title: 'Sucesso', description: opportunityId ? 'Oportunidade atualizada.' : 'Oportunidade criada com sucesso.' });
@@ -280,7 +283,6 @@ export const OpportunityModal = ({
                                 {[
                                     { value: 'general', label: 'Geral' },
                                     { value: 'finance', label: 'Financeiro' },
-                                    { value: 'timeline', label: 'Histórico' },
                                     { value: 'documents', label: 'Documentos' },
                                     { value: 'pipeline', label: 'Pipeline' },
                                 ].map(tab => (
@@ -414,21 +416,7 @@ export const OpportunityModal = ({
                                         <Section title="Observações" />
 
                                         <Field label="Notas internas">
-                                            <Textarea
-                                                value={formData.observation}
-                                                onChange={set('observation')}
-                                                rows={4}
-                                                placeholder="Anotações sobre este negócio..."
-                                                className="text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 resize-none"
-                                            />
-                                        </Field>
-                                    </div>
-
-                                    {/* RIGHT col */}
-                                    <div className="flex flex-col gap-6 p-8 overflow-y-auto">
-                                        <Section title="Contato" />
-
-                                        <div className="grid grid-cols-2 gap-5">
+                                                            <div className="grid grid-cols-2 gap-5">
                                             <Field label="Telefone / WhatsApp">
                                                 <Input
                                                     value={formData.contact}
@@ -436,6 +424,28 @@ export const OpportunityModal = ({
                                                     placeholder="(00) 00000-0000"
                                                     className="h-9 text-[12px] font-mono bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
                                                 />
+                                            </Field>
+                                            <Field label="CPF / CNPJ">
+                                                <Input
+                                                    value={formData.cpfCnpj}
+                                                    onChange={set('cpfCnpj')}
+                                                    placeholder="000.000.000-00"
+                                                    className="h-9 text-[12px] font-mono bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                                                />
+                                            </Field>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-5">
+                                            <Field label="E-mail">
+                                                <Input
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={set('email')}
+                                                    placeholder="email@exemplo.com"
+                                                    className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                                                />
+                                            </Field>
+                                        </div>
+      />
                                             </Field>
                                             <Field label="E-mail">
                                                 <Input
@@ -490,22 +500,11 @@ export const OpportunityModal = ({
 
                         {/* ── TAB: Financeiro ────────────────────────────────── */}
                         <TabsContent value="finance" className="flex-1 overflow-y-auto mt-0 p-8">
-                            {opportunityId ? (
-                                <LeadFinanceTab
-                                    leadId={opportunityId}
-                                    leadName={formData.leadIdentification}
-                                    siteUrl={formData.siteUrl}
-                                />
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-48 text-zinc-300 gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center">
-                                        <Zap size={18} className="text-zinc-400" />
-                                    </div>
-                                    <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 text-center">
-                                        As informações financeiras aparecerão após salvar os dados gerais
-                                    </p>
-                                </div>
-                            )}
+                            <LeadFinanceTab
+                                leadId={opportunityId || ""}
+                                leadName={formData.leadIdentification}
+                                siteUrl={formData.siteUrl}
+                            />
                         </TabsContent>
                         
                         {/* ── TAB: Pipeline ────────────────────────────────── */}
@@ -597,21 +596,10 @@ export const OpportunityModal = ({
                         
                         {/* ── TAB: Documentos ────────────────────────────────── */}
                         <TabsContent value="documents" className="flex-1 overflow-y-auto mt-0 p-8">
-                            {opportunityId ? (
-                                <LeadDocumentsTab
-                                    leadId={opportunityId}
-                                    leadName={formData.leadIdentification}
-                                />
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-48 text-zinc-300 gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center">
-                                        <FileText size={18} className="text-zinc-400" />
-                                    </div>
-                                    <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 text-center">
-                                        Os documentos aparecerão após salvar os dados gerais
-                                    </p>
-                                </div>
-                            )}
+                            <LeadDocumentsTab
+                                leadId={opportunityId || ""}
+                                leadName={formData.leadIdentification}
+                            />
                         </TabsContent>
 
                         {/* ── TAB: Histórico ─────────────────────────────────── */}
