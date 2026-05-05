@@ -116,25 +116,34 @@ export default function FinanceiroPage() {
       </div>
 
       {/* ── Tab Navigation ─────────────────────────────────────── */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 px-4 sticky top-[65px] z-10 shrink-0 backdrop-blur-sm">
-        <div className="flex gap-1 overflow-x-auto scrollbar-none py-1">
+      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 sticky top-[65px] z-10 shrink-0">
+        <div className="flex gap-1 overflow-x-auto scrollbar-none py-2 max-w-screen-2xl mx-auto">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all duration-200 relative rounded-xl my-1",
+                "flex items-center gap-2.5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 relative rounded-lg whitespace-nowrap group",
                 activeTab === tab.id
-                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  ? "text-zinc-900 dark:text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
               )}
             >
-              <tab.icon className="w-3.5 h-3.5" />
+              <tab.icon className={cn(
+                "w-3.5 h-3.5 transition-transform duration-300 group-hover:scale-110",
+                activeTab === tab.id ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400"
+              )} />
               {tab.label}
+              
               {tab.badge && (
-                <span className="ml-1 text-[8px] font-black px-1.5 py-0.5 rounded-md bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 uppercase tracking-tighter">
+                <span className="ml-1 text-[7px] font-black px-1.5 py-0.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 uppercase tracking-tighter animate-pulse">
                   {tab.badge}
                 </span>
+              )}
+
+              {/* Active Indicator */}
+              {activeTab === tab.id && (
+                <div className="absolute bottom-[-9px] left-2 right-2 h-[2px] bg-zinc-900 dark:bg-white rounded-t-full" />
               )}
             </button>
           ))}
