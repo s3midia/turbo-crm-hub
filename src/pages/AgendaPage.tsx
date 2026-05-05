@@ -8,6 +8,9 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -42,6 +45,15 @@ export default function AgendaPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [appleConnected, setAppleConnected] = useState(false);
+  const [isNewEventOpen, setIsNewEventOpen] = useState(false);
+
+  // Form State
+  const [newEventTitle, setNewEventTitle] = useState("");
+  const [newEventType, setNewEventType] = useState<EventType>("meeting");
+  const [newEventDay, setNewEventDay] = useState(now.getDate());
+  const [newEventTime, setNewEventTime] = useState("");
+  const [newEventClient, setNewEventClient] = useState("");
+  const [newEventValue, setNewEventValue] = useState("");
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -49,19 +61,39 @@ export default function AgendaPage() {
   const prevMonth = () => { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); };
 
-  // --- Mock Data ---
-  const mockEvents = useMemo<AgendaEvent[]>(() => {
-    return [
-      { id: "1", day: 5, title: "Reunião de Kickoff", type: "meeting", time: "10:00 - 11:30", client: "Acme Corp", location: "Google Meet", description: "Alinhamento inicial do projeto e definição de cronogramas." },
-      { id: "2", day: 5, title: "Fatura Mensal", type: "finance_in", value: 5000, client: "Acme Corp", status: "Pago", description: "Referente ao desenvolvimento do portal institucional." },
-      { id: "3", day: 10, title: "Mensalidade Gestão", type: "finance_in", value: 3500, client: "TechFlow" },
-      { id: "4", day: 10, title: "Pagamento Atrasado", type: "finance_overdue", value: 1200, client: "Loja Silva", description: "Entrar em contato com o financeiro da Loja Silva para negociação." },
-      { id: "5", day: 12, title: "Apresentação de Layout", type: "meeting", time: "14:30 - 15:30", client: "Mega Imports", location: "Av. Paulista, 1000 - São Paulo, SP", description: "Apresentação presencial do protótipo de alta fidelidade." },
-      { id: "6", day: 15, title: "Impostos (DAS)", type: "finance_out", value: 850 },
-      { id: "7", day: 20, title: "Faturamento Final", type: "finance_in", value: 12000, client: "Global Tech" },
-      { id: "8", day: 22, title: "Revisão Contratual", type: "task", time: "16:00" },
-    ];
-  }, []);
+  // --- Mock Data turned into state ---
+  const [events, setEvents] = useState<AgendaEvent[]>([
+    { id: "1", day: 5, title: "Reunião de Kickoff", type: "meeting", time: "10:00 - 11:30", client: "Acme Corp", location: "Google Meet", description: "Alinhamento inicial do projeto e definição de cronogramas." },
+    { id: "2", day: 5, title: "Fatura Mensal", type: "finance_in", value: 5000, client: "Acme Corp", status: "Pago", description: "Referente ao desenvolvimento do portal institucional." },
+    { id: "3", day: 10, title: "Mensalidade Gestão", type: "finance_in", value: 3500, client: "TechFlow" },
+    { id: "4", day: 10, title: "Pagamento Atrasado", type: "finance_overdue", value: 1200, client: "Loja Silva", description: "Entrar em contato com o financeiro da Loja Silva para negociação." },
+    { id: "5", day: 12, title: "Apresentação de Layout", type: "meeting", time: "14:30 - 15:30", client: "Mega Imports", location: "Av. Paulista, 1000 - São Paulo, SP", description: "Apresentação presencial do protótipo de alta fidelidade." },
+    { id: "6", day: 15, title: "Impostos (DAS)", type: "finance_out", value: 850 },
+    { id: "7", day: 20, title: "Faturamento Final", type: "finance_in", value: 12000, client: "Global Tech" },
+    { id: "8", day: 22, title: "Revisão Contratual", type: "task", time: "16:00" },
+  ]);
+
+  const handleAddEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newEvent: AgendaEvent = {
+      id: Math.random().toString(36).substr(2, 9),
+      day: newEventDay,
+      title: newEventTitle,
+      type: newEventType,
+      time: newEventTime || undefined,
+      client: newEventClient || undefined,
+      value: newEventValue ? parseFloat(newEventValue) : undefined,
+    };
+    setEvents([...events, newEvent]);
+    setIsNewEventOpen(false);
+    // Reset Form
+    setNewEventTitle("");
+    setNewEventType("meeting");
+    setNewEventDay(now.getDate());
+    setNewEventTime("");
+    setNewEventClient("");
+    setNewEventValue("");
+  };
 
   const handleSync = () => {
     setIsSyncing(true);
@@ -69,17 +101,17 @@ export default function AgendaPage() {
   };
 
   const filteredEvents = useMemo(() => {
-    if (filter === "all") return mockEvents;
-    if (filter === "meetings") return mockEvents.filter(e => e.type === "meeting" || e.type === "task");
-    if (filter === "finance") return mockEvents.filter(e => e.type.startsWith("finance"));
-    return mockEvents;
-  }, [filter, mockEvents]);
+    if (filter === "all") return events;
+    if (filter === "meetings") return events.filter(e => e.type === "meeting" || e.type === "task");
+    if (filter === "finance") return events.filter(e => e.type.startsWith("finance"));
+    return events;
+  }, [filter, events]);
 
   const cells = Array.from({ length: firstDay + daysInMonth }, (_, i) => i < firstDay ? null : i - firstDay + 1);
 
   // Totais Rápidos do Mês (só de exemplo visual)
-  const totalReceitas = mockEvents.filter(e => e.type === "finance_in").reduce((acc, curr) => acc + (curr.value || 0), 0);
-  const totalAtrasado = mockEvents.filter(e => e.type === "finance_overdue").reduce((acc, curr) => acc + (curr.value || 0), 0);
+  const totalReceitas = events.filter(e => e.type === "finance_in").reduce((acc, curr) => acc + (curr.value || 0), 0);
+  const totalAtrasado = events.filter(e => e.type === "finance_overdue").reduce((acc, curr) => acc + (curr.value || 0), 0);
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden animate-in fade-in duration-500">
@@ -290,7 +322,7 @@ export default function AgendaPage() {
               </div>
               
               <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                {mockEvents.filter(e => e.type === "meeting" || e.type === "task").slice(0, 4).map((ev, i) => (
+                {events.filter(e => e.type === "meeting" || e.type === "task").slice(0, 4).map((ev, i) => (
                   <div key={i} className="p-3.5 rounded-2xl border border-slate-100 dark:border-border/50 bg-slate-50/50 dark:bg-background hover:border-blue-200 dark:hover:border-blue-800/50 transition-colors group cursor-pointer" onClick={() => setSelectedEvent(ev)}>
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
@@ -310,7 +342,7 @@ export default function AgendaPage() {
               <h3 className="text-sm font-black text-slate-800 dark:text-foreground mb-5 flex items-center gap-2"><Bell size={16} className="text-amber-500"/> Lembretes Financeiros</h3>
               
               <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                {mockEvents.filter(e => e.type.startsWith("finance")).slice(0, 3).map((ev, i) => {
+                {events.filter(e => e.type.startsWith("finance")).slice(0, 3).map((ev, i) => {
                   const isOverdue = ev.type === "finance_overdue";
                   const isIncoming = ev.type === "finance_in";
                   return (
@@ -520,6 +552,68 @@ export default function AgendaPage() {
           <div className="flex justify-end pt-4 border-t border-border/40">
             <Button variant="ghost" onClick={() => setIsSettingsOpen(false)} className="rounded-xl font-bold">Fechar</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- MODAL DE NOVO EVENTO --- */}
+      <Dialog open={isNewEventOpen} onOpenChange={setIsNewEventOpen}>
+        <DialogContent className="sm:max-w-[425px] border-border/50 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <CalendarIcon size={20} className="text-primary" />
+              Novo Evento
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleAddEvent} className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-xs font-bold text-slate-500">Título do Evento</Label>
+              <Input id="title" value={newEventTitle} onChange={(e) => setNewEventTitle(e.target.value)} placeholder="Ex: Reunião com Cliente" required className="rounded-xl border-slate-200 dark:border-border/50" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="type" className="text-xs font-bold text-slate-500">Tipo</Label>
+                <Select value={newEventType} onValueChange={(val: any) => setNewEventType(val)}>
+                  <SelectTrigger id="type" className="rounded-xl border-slate-200 dark:border-border/50">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 dark:border-border/50">
+                    <SelectItem value="meeting">Compromisso</SelectItem>
+                    <SelectItem value="task">Tarefa</SelectItem>
+                    <SelectItem value="finance_in">Receita</SelectItem>
+                    <SelectItem value="finance_out">Despesa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="day" className="text-xs font-bold text-slate-500">Dia (1 a {daysInMonth})</Label>
+                <Input id="day" type="number" min="1" max={daysInMonth} value={newEventDay} onChange={(e) => setNewEventDay(Number(e.target.value))} required className="rounded-xl border-slate-200 dark:border-border/50" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="client" className="text-xs font-bold text-slate-500">Cliente (Opcional)</Label>
+              <Input id="client" value={newEventClient} onChange={(e) => setNewEventClient(e.target.value)} placeholder="Ex: Acme Corp" className="rounded-xl border-slate-200 dark:border-border/50" />
+            </div>
+
+            {newEventType.startsWith("finance") ? (
+              <div className="space-y-2">
+                <Label htmlFor="value" className="text-xs font-bold text-slate-500">Valor (R$)</Label>
+                <Input id="value" type="number" step="0.01" value={newEventValue} onChange={(e) => setNewEventValue(e.target.value)} placeholder="0.00" required className="rounded-xl border-slate-200 dark:border-border/50" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="time" className="text-xs font-bold text-slate-500">Horário</Label>
+                <Input id="time" type="time" value={newEventTime} onChange={(e) => setNewEventTime(e.target.value)} className="rounded-xl border-slate-200 dark:border-border/50" />
+              </div>
+            )}
+
+            <div className="pt-4 flex justify-end gap-3">
+              <Button type="button" variant="ghost" onClick={() => setIsNewEventOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
+              <Button type="submit" className="rounded-xl font-bold">Salvar Evento</Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
