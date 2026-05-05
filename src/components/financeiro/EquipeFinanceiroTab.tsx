@@ -316,14 +316,17 @@ export default function EquipeFinanceiroTab() {
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total da Folha", value: formatBRL(totalFolhaState), color: "text-foreground", bg: "bg-muted/30" },
-          { label: "Despesas Fixas", value: formatBRL(despesasFixasState), color: "text-rose-500", bg: "bg-rose-500/10" },
-          { label: "Despesas Variáveis", value: formatBRL(despesasVariaveisState), color: "text-amber-500", bg: "bg-amber-500/10" },
-          { label: "Comprometimento", value: `${comprometimentoState.toFixed(1)}%`, color: comprometimentoState > 60 ? "text-rose-500" : "text-emerald-500", bg: comprometimentoState > 60 ? "bg-rose-500/10" : "bg-emerald-500/10" },
+          { label: "Total da Folha", value: formatBRL(totalFolhaState), color: "text-foreground", bg: "bg-muted/30", icon: Users },
+          { label: "Despesas Fixas", value: formatBRL(despesasFixasState), color: "text-rose-500", bg: "bg-rose-500/10", icon: AlertCircle },
+          { label: "Despesas Variáveis", value: formatBRL(despesasVariaveisState), color: "text-amber-500", bg: "bg-amber-500/10", icon: TrendingUp },
+          { label: "Comprometimento", value: `${comprometimentoState.toFixed(1)}%`, color: comprometimentoState > 60 ? "text-rose-500" : "text-emerald-500", bg: comprometimentoState > 60 ? "bg-rose-500/10" : "bg-emerald-500/10", icon: Percent },
         ].map((k, i) => (
-          <div key={i} className={cn("p-4 rounded-2xl border border-border/30", k.bg)}>
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-1">{k.label}</p>
-            <p className={cn("text-xl font-black", k.color)}>{k.value}</p>
+          <div key={i} className={cn("p-5 rounded-[1.5rem] border border-border/40 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all", k.bg)}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{k.label}</p>
+              <k.icon size={14} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <p className={cn("text-2xl font-black tracking-tighter", k.color)}>{k.value}</p>
           </div>
         ))}
       </div>
