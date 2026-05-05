@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 import { formatBRL } from "@/lib/formatters";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface Funcionario {
   id: string | number;
@@ -487,42 +488,34 @@ export default function EquipeFinanceiroTab() {
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-muted-foreground uppercase px-1">Salário (R$)</label>
-                        <input 
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput 
                           className="w-full px-3 py-2 text-[12px] font-bold bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
-                          defaultValue={f.salario}
-                          onChange={e => f.salario = Number(e.target.value)}
+                          value={f.salario}
+                          onChange={val => f.salario = val}
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-muted-foreground uppercase px-1">Pró-labore (R$)</label>
-                        <input 
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput 
                           className="w-full px-3 py-2 text-[12px] font-bold bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
-                          defaultValue={f.prolabore}
-                          onChange={e => f.prolabore = Number(e.target.value)}
+                          value={f.prolabore}
+                          onChange={val => f.prolabore = val}
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-muted-foreground uppercase px-1">INSS (R$)</label>
-                        <input 
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput 
                           className="w-full px-3 py-2 text-[12px] bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
-                          defaultValue={f.inss}
-                          onChange={e => f.inss = Number(e.target.value)}
+                          value={f.inss}
+                          onChange={val => f.inss = val}
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-muted-foreground uppercase px-1">FGTS (R$)</label>
-                        <input 
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput 
                           className="w-full px-3 py-2 text-[12px] bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
-                          defaultValue={f.fgts}
-                          onChange={e => f.fgts = Number(e.target.value)}
+                          value={f.fgts}
+                          onChange={val => f.fgts = val}
                         />
                       </div>
                     </div>
@@ -661,11 +654,11 @@ export default function EquipeFinanceiroTab() {
                       onChange={e => d.descricao = e.target.value}
                     />
                     <div className="grid grid-cols-2 gap-2">
-                      <input 
-                        type="number"
+                      <CurrencyInput 
                         className="px-3 py-2 text-[12px] bg-background border border-border rounded-lg"
-                        defaultValue={d.valor}
-                        onChange={e => d.valor = Number(e.target.value)}
+                        value={d.valor}
+                        onChange={val => d.valor = val}
+                        placeholder="Valor (R$)"
                       />
                       <input 
                         className="px-3 py-2 text-[12px] bg-background border border-border rounded-lg"
