@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { AsaasService } from "@/services/asaasService";
+import { Loader2 } from "lucide-react";
 const PIPELINE_STAGES = [
   { key: "novo", label: "Novo" },
   { key: "qualificacao", label: "Qualif." },
@@ -60,8 +62,9 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ email: "", telefone: "", empresa: "" });
+  const [editForm, setEditForm] = useState({ email: "", telefone: "", empresa: "", cpfCnpj: "" });
   const navigate = useNavigate();
+  const [generatingBoletoId, setGeneratingBoletoId] = useState<string | null>(null);
 
   const [localDocs, setLocalDocs] = useState<any[]>([]);
 
@@ -81,6 +84,7 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
         email: cliente.email || "",
         telefone: cliente.telefone || cliente.phone || "",
         empresa: cliente.empresa || cliente.company_name || "",
+        cpfCnpj: (cliente as any).cpfCnpj || (cliente as any).documento || (cliente as any).cpf_cnpj || ""
       });
       setActiveTab("lancamentos");
     }
@@ -144,6 +148,52 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
     } catch { toast.error("Erro ao excluir"); }
   }
 
+  async function handleGerarBoletoExpress(t: FinancialTransaction) {
+    try {
+      setGeneratingBoletoId(t.id || "new");
+      toast.loading("Gerando boleto via Asaas...");
+      
+      const asaas = new AsaasService();
+      
+      const customerId = await asaas.findOrCreateCustomer(
+        leadName,
+        editForm.email || "contato@empresa.com",
+        editForm.telefone,
+        editForm.cpfCnpj
+      );
+
+      // Formatar data
+      let dueDate = new Date().toLocaleDateString("pt-BR");
+      if (t.vencimento) {
+        const d = new Date(t.vencimento);
+        if (!isNaN(d.getTime())) {
+          dueDate = d.toLocaleDateString("pt-BR");
+        }
+      }
+
+      const payment = await asaas.createBoleto(
+        customerId,
+        toNumber(t.valor),
+        dueDate,
+        t.descricao || `Cobrança - ${leadName}`
+      );
+
+      toast.dismiss();
+      if (payment.bankSlipUrl) {
+        window.open(payment.bankSlipUrl, "_blank");
+        toast.success("Boleto gerado e aberto em nova guia!");
+      } else {
+        toast.error("O boleto foi gerado, mas o link não está disponível.");
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.dismiss();
+      toast.error(`Falha: ${error.message}`);
+    } finally {
+      setGeneratingBoletoId(null);
+    }
+  }
+
   const currentStageIdx = PIPELINE_STAGES.findIndex(s => s.key === (cliente?.kanbanStage || cliente?.status));
 
   if (!open || !cliente) return null;
@@ -174,6 +224,12 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                     onChange={e => setEditForm(f => ({ ...f, empresa: e.target.value }))}
                     className="h-6 text-xs w-40 bg-muted/30"
                     placeholder="Empresa"
+                  />
+                  <Input
+                    value={editForm.cpfCnpj}
+                    onChange={e => setEditForm(f => ({ ...f, cpfCnpj: e.target.value }))}
+                    className="h-6 text-xs w-32 bg-muted/30"
+                    placeholder="CPF/CNPJ"
                   />
                   <button onClick={() => { setIsEditing(false); toast.success("Perfil atualizado!"); }} className="text-[10px] text-primary font-bold hover:underline">Salvar</button>
                   <button onClick={() => setIsEditing(false)} className="text-[10px] text-muted-foreground hover:underline">Cancelar</button>
@@ -339,9 +395,19 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                         {/* ações */}
                         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                           {t.status !== "pago" && (
-                            <button onClick={() => handleMarkPaid(t)} className="p-1.5 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-600 text-muted-foreground transition-all" title="Marcar como pago">
-                              <Check size={13} />
-                            </button>
+                            <>
+                              <button 
+                                onClick={() => handleGerarBoletoExpress(t)} 
+                                className="p-1.5 rounded-lg hover:bg-blue-500/10 hover:text-blue-600 text-muted-foreground transition-all flex items-center" 
+                                title="Gerar Boleto Asaas"
+                                disabled={generatingBoletoId === t.id}
+                              >
+                                {generatingBoletoId === t.id ? <Loader2 size={13} className="animate-spin" /> : <Receipt size={13} />}
+                              </button>
+                              <button onClick={() => handleMarkPaid(t)} className="p-1.5 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-600 text-muted-foreground transition-all" title="Marcar como pago">
+                                <Check size={13} />
+                              </button>
+                            </>
                           )}
                           <button onClick={() => openEdit(t)} className="p-1.5 rounded-lg hover:bg-primary/10 hover:text-primary text-muted-foreground transition-all" title="Editar">
                             <Edit3 size={13} />
