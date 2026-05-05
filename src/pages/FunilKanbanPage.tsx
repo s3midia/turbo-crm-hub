@@ -2,9 +2,15 @@ import React, { useState, useEffect } from "react";
 import {
     Download, Plus, MessageSquareMore, Trash2, Globe,
     Loader2, MessageSquareText, Clock, AlertCircle,
-    Search, TrendingUp, Zap, ChevronRight, ExternalLink, Settings, X, GripVertical
+    Search, TrendingUp, Zap, ChevronRight, ExternalLink, Settings, X, GripVertical, MoreHorizontal, Pencil
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -142,7 +148,31 @@ function LeadCard({ lead, accentBar, onClick, stages }: { lead: Lead; accentBar:
             </div>
             <div className="flex items-start justify-between gap-2">
                 <p className="text-[15px] font-bold text-zinc-900 dark:text-zinc-100 leading-snug tracking-tight">{lead.company_name || 'Sem nome'}</p>
-                <button className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-red-500 p-1 -mt-0.5" onClick={async (e) => { e.stopPropagation(); if (confirm("Deseja excluir este lead?")) await supabase.from("leads").delete().eq("id", lead.id); }}><Trash2 size={12} /></button>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <button className="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 transition-colors">
+                                <MoreHorizontal size={14} />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-32">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick(lead); }} className="text-xs cursor-pointer gap-2">
+                                <Pencil size={12} /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                                onClick={async (e) => { 
+                                    e.stopPropagation(); 
+                                    if (confirm("Deseja excluir este lead?")) {
+                                        await supabase.from("leads").delete().eq("id", lead.id); 
+                                    }
+                                }} 
+                                className="text-xs cursor-pointer gap-2 text-red-500 focus:text-red-500"
+                            >
+                                <Trash2 size={12} /> Excluir
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
             <div className="flex flex-wrap gap-1.5 mt-2">
                 {lead.niche && <span className="bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800/60 dark:text-zinc-300 dark:border-zinc-700 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">{lead.niche}</span>}
