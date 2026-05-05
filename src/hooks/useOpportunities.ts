@@ -30,6 +30,8 @@ export interface Opportunity {
     archived?: boolean;
     niche?: string;
     site_url?: string;
+    contract_start_date?: string;
+    contract_end_date?: string;
     created_at?: string;
     updated_at?: string;
 }
@@ -60,6 +62,8 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         status: opportunity.stage || null,
         niche: opportunity.niche,
         site_url: opportunity.site_url,
+        contract_start_date: opportunity.contract_start_date,
+        contract_end_date: opportunity.contract_end_date,
         updated_at: new Date().toISOString(),
     };
 
@@ -75,6 +79,8 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         responsible_id: opportunity.responsible_id || null,
         products: opportunity.products || [],
         tasks: opportunity.tasks || [],
+        contract_start_date: opportunity.contract_start_date,
+        contract_end_date: opportunity.contract_end_date,
         updated_at: new Date().toISOString(),
     };
 
@@ -137,6 +143,8 @@ export const getOpportunityById = async (id: string) => {
                 total_value: parseCurrency(opp.total_value),
                 products: opp.products || [],
                 tasks: opp.tasks || [],
+                contract_start_date: opp.contract_start_date,
+                contract_end_date: opp.contract_end_date,
                 created_at: opp.created_at,
                 updated_at: opp.updated_at,
             } as Opportunity;
@@ -157,6 +165,8 @@ export const getOpportunityById = async (id: string) => {
         total_value: parseCurrency(lead.value || lead.total_value),
         products: [],
         tasks: [],
+        contract_start_date: lead.contract_start_date,
+        contract_end_date: lead.contract_end_date,
         created_at: lead.created_at,
         updated_at: lead.updated_at,
     } as Opportunity;
@@ -215,7 +225,9 @@ export const getOpportunities = async (): Promise<Opportunity[]> => {
         updated_at: lead.updated_at,
         total_value: parseCurrency(lead.value || lead.total_value), 
         products: [],
-        tasks: []
+        tasks: [],
+        contract_start_date: lead.contract_start_date,
+        contract_end_date: lead.contract_end_date
     }));
 };
 
