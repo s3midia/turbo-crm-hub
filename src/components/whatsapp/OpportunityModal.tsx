@@ -583,72 +583,7 @@ export const OpportunityModal = ({
                                                         "text-zinc-400"
                                                     }`}>
                                                         {status === 'pago' ? "PAGO" : 
-                                                         status === 'atrasado' ? "ATR." :
-                                                         status === 'pendente' ? "PEND." : "—"}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        </TabsContent>
-                        
-                        {/* ── TAB: Documentos ────────────────────────────────── */}
-                        <TabsContent value="documents" className="flex-1 overflow-y-auto mt-0 p-8">
-                            <LeadDocumentsTab
-                                leadId={opportunityId || ""}
-                                leadName={formData.leadIdentification}
-                            />
-                        </TabsContent>
-
-                        {/* ── TAB: Histórico ─────────────────────────────────── */}
-                        <TabsContent value="timeline" className="flex-1 overflow-y-auto mt-0">
-                            <div className="grid grid-cols-2 gap-0 divide-x divide-zinc-100 dark:divide-zinc-800 h-full">
-                                {/* Add comment */}
-                                <div className="p-8 flex flex-col gap-4">
-                                    <Section title="Nova atividade" />
-                                    <Textarea
-                                        value={comment}
-                                        onChange={e => setComment(e.target.value)}
-                                        placeholder="Descreva o que aconteceu..."
-                                        rows={6}
-                                        className="text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 resize-none"
-                                    />
-                                    <div className="flex justify-end">
-                                        <button
-                                            onClick={handleAddComment}
-                                            disabled={!opportunityId || !comment.trim()}
-                                            className="px-6 py-2 text-[11px] font-black uppercase tracking-wider bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg hover:opacity-90 disabled:opacity-30 transition-all"
-                                        >
-                                            Registrar
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Timeline */}
-                                <div className="p-8 overflow-y-auto flex flex-col gap-4">
-                                    <Section title="Histórico" />
-                                    {timelineData.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-40 text-zinc-300 gap-2">
-                                            <MessageSquare size={20} />
-                                            <p className="text-[10px] font-bold uppercase tracking-widest">Sem registros</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {timelineData.map(entry => (
-                                                <div key={entry.id} className="flex gap-3">
-                                                    <div className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center shrink-0">
-                                                        {entry.type === 'agent'
-                                                            ? <Bot size={12} className="text-zinc-500" />
-                                                            : <MessageSquare size={12} className="text-zinc-500" />
-                                                        }
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                                                                {entry.type === 'agent' ? `Agente` : 'Usuário'}
-                                                            </span>
+                                                         status === 'atrasado'pan>
                                                             <span className="text-[9px] text-zinc-400">
                                                                 {new Date(entry.created_at).toLocaleString('pt-BR')}
                                                             </span>
