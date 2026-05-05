@@ -482,7 +482,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <Area type="monotone" dataKey="profit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
+                <Area type="monotone" dataKey="profit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} animationDuration={2000} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
