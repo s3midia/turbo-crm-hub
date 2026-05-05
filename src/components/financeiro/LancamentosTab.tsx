@@ -39,6 +39,7 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
     recorrencia: (transaction?.recorrencia ?? "unica") as FinancialTransaction["recorrencia"],
     status: (transaction?.status ?? "pendente") as FinancialTransaction["status"],
     classificacao: (transaction?.classificacao ?? "nao_recorrente") as "recorrente" | "nao_recorrente",
+    document_url: transaction?.document_url ?? "",
   });
 
   const [searchLead, setSearchLead] = useState("");
@@ -79,6 +80,36 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
 
   const categorias = form.tipo === "entrada" ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA;
 
+  async function handleFileUpload(file: File) {
+    try {
+      const loadingToast = toast.loading("Enviando comprovante...");
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `receipts/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        toast.dismiss(loadingToast);
+        toast.error("Erro ao subir arquivo: " + uploadError.message);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+
+      setForm(f => ({ ...f, document_url: publicUrl }));
+      toast.dismiss(loadingToast);
+      toast.success("Comprovante anexado!");
+    } catch (error: any) {
+      toast.error("Erro inesperado: " + error.message);
+    }
+  }
+
   async function handleSave() {
     if (!form.descricao || !form.valor || !form.vencimento) return;
     
@@ -95,6 +126,7 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
       categoria: form.categoria || categorias[0],
       recorrencia: form.recorrencia,
       classificacao: form.tipo === "entrada" ? form.classificacao : undefined,
+      document_url: form.document_url || undefined,
     };
 
     if (transaction?.id) {
@@ -257,6 +289,48 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
                     </button>
                   ))}
                 </div>
+              )}
+            </div>
+          </div>
+
+          <div className="col-span-2 space-y-1">
+            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Comprovante / Anexo</label>
+            <div className="flex items-center gap-3 p-3 bg-muted/30 border border-border/50 rounded-xl">
+              {form.document_url ? (
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600">
+                    <FileSpreadsheet size={16} />
+                  </div>
+                  <span className="text-xs font-bold truncate flex-1">{form.document_url.split('/').pop()}</span>
+                  <button 
+                    onClick={() => setForm(f => ({ ...f, document_url: "" }))}
+                    className="text-[10px] font-bold text-rose-500 hover:underline px-2"
+                  >
+                    Remover
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center justify-center gap-2 w-full py-2 border border-dashed border-primary/30 rounded-lg cursor-pointer hover:bg-primary/5 transition-all text-primary">
+                  <Plus size={14} />
+                  <span className="text-[11px] font-bold uppercase">Anexar Documento</span>
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file);
+                    }}
+                  />
+                </label>
+              )}
+              {form.document_url && (
+                <button 
+                  onClick={() => window.open(form.document_url, "_blank")}
+                  className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                  title="Visualizar"
+                >
+                  <Search size={14} />
+                </button>
               )}
             </div>
           </div>
