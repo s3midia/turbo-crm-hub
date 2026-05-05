@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Users, Check, AlertCircle, Plus, Trash2, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,8 +40,22 @@ const receitaRef = 0;
 const comprometimento = ((totalFolha + despesasFixas) / receitaRef) * 100;
 
 export default function EquipeFinanceiroTab() {
-  const [funcionarios, setFuncionarios] = useState(FUNCIONARIOS);
-  const [despesas, setDespesas] = useState(DESPESAS);
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>(() => {
+    const saved = localStorage.getItem("crm_equipe_funcionarios");
+    return saved ? JSON.parse(saved) : FUNCIONARIOS;
+  });
+  const [despesas, setDespesas] = useState<Despesa[]>(() => {
+    const saved = localStorage.getItem("crm_equipe_despesas");
+    return saved ? JSON.parse(saved) : DESPESAS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("crm_equipe_funcionarios", JSON.stringify(funcionarios));
+  }, [funcionarios]);
+
+  useEffect(() => {
+    localStorage.setItem("crm_equipe_despesas", JSON.stringify(despesas));
+  }, [despesas]);
   const [editingFuncId, setEditingFuncId] = useState<number | null>(null);
   const [editingDespId, setEditingDespId] = useState<number | null>(null);
   const [showFolhaModal, setShowFolhaModal] = useState(false);
