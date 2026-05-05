@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL } from "@/lib/formatters";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
@@ -118,7 +119,7 @@ export default function AgendaPage() {
   const [newEventDay, setNewEventDay] = useState(now.getDate());
   const [newEventTime, setNewEventTime] = useState("");
   const [newEventClient, setNewEventClient] = useState("");
-  const [newEventValue, setNewEventValue] = useState("");
+  const [newEventValue, setNewEventValue] = useState(0);
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -147,7 +148,7 @@ export default function AgendaPage() {
       type: newEventType,
       time: newEventTime || undefined,
       client: newEventClient || undefined,
-      value: newEventValue ? parseFloat(newEventValue) : undefined,
+      value: newEventValue || undefined,
     };
     setEvents([...events, newEvent]);
     setIsNewEventOpen(false);
@@ -157,7 +158,7 @@ export default function AgendaPage() {
     setNewEventDay(now.getDate());
     setNewEventTime("");
     setNewEventClient("");
-    setNewEventValue("");
+    setNewEventValue(0);
   };
 
   const handleGoogleEventsFetched = (googleItems: any[]) => {
@@ -731,7 +732,12 @@ export default function AgendaPage() {
             {newEventType.startsWith("finance") ? (
               <div className="space-y-2">
                 <Label htmlFor="value" className="text-xs font-bold text-slate-500">Valor (R$)</Label>
-                <Input id="value" type="number" step="0.01" value={newEventValue} onChange={(e) => setNewEventValue(e.target.value)} placeholder="0.00" required className="rounded-xl border-slate-200 dark:border-border/50" />
+                <CurrencyInput 
+                    value={newEventValue} 
+                    onChange={val => setNewEventValue(val)} 
+                    placeholder="0,00" 
+                    className="rounded-xl border-slate-200 dark:border-border/50 h-9" 
+                />
               </div>
             ) : (
               <div className="space-y-2">
