@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OpportunityModal } from "./whatsapp/OpportunityModal";
-import { getOpportunities, initializeDemoData, updateOpportunityStage, type Opportunity as DbOpportunity } from "@/hooks/useOpportunities";
+import { getOpportunities, initializeDemoData, updateOpportunityStage, deleteOpportunity, type Opportunity as DbOpportunity } from "@/hooks/useOpportunities";
 import { VendedorSelector } from "./pipeline/VendedorSelector";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useUser } from "@/contexts/UserContext";
@@ -138,6 +138,21 @@ export default function Pipeline() {
 
   const handleModalSaved = () => {
     loadOpportunities(); // Reload after saving
+  };
+
+  const handleDeleteOpportunity = async (id: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir esta oportunidade?")) {
+      return;
+    }
+
+    try {
+      await deleteOpportunity(id);
+      toast.success("Oportunidade excluída com sucesso.");
+      loadOpportunities();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao excluir oportunidade.");
+    }
   };
 
   // Drag & Drop handler
@@ -315,9 +330,9 @@ export default function Pipeline() {
                                           </button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                          <DropdownMenuItem>Editar</DropdownMenuItem>
-                                          <DropdownMenuItem>Mover estágio</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-red-600">Excluir</DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleCardClick(opportunity)}>Editar</DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleCardClick(opportunity)}>Mover estágio</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteOpportunity(opportunity.id)}>Excluir</DropdownMenuItem>
                                         </DropdownMenuContent>
                                       </DropdownMenu>
                                     </div>
