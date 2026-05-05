@@ -785,7 +785,7 @@ export default function EquipeFinanceiroTab() {
                 <Trash2 size={18} className="text-muted-foreground rotate-45" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
               <div className="space-y-6">
                 <table className="w-full border-collapse">
                   <thead>
