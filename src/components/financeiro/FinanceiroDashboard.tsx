@@ -3,7 +3,7 @@ import {
   TrendingUp, TrendingDown, Scale, Clock, Percent, Building2,
   AlertTriangle, CheckCircle2, AlertCircle, ArrowUpRight, ArrowDownRight,
   Target, Flame, ChevronRight, PieChart as PieIcon, LineChart as LineIcon,
-  Users, Wallet, Briefcase, Zap, Info, RefreshCw, BarChart3
+  Users, Wallet, Briefcase, Zap, Info, RefreshCw, BarChart3, Plus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
