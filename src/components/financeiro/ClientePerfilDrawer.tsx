@@ -223,6 +223,7 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
       toast.success("Perfil atualizado com sucesso!");
       setIsEditing(false);
       if (onSave) onSave();
+      onClose(); // Fecha o drawer para garantir o refresh visual na tabela
     } catch (err) {
       console.error(err);
       toast.error("Erro ao atualizar perfil.");
@@ -307,6 +308,13 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
           {cliente.dataInicio && (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Calendar size={12} className="text-primary/60" />Desde {cliente.dataInicio}
+            </span>
+          )}
+          {cliente.contract_start_date && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground border-l border-border/20 pl-4 ml-2">
+              <FileCheck size={12} className="text-emerald-500" />
+              Vigência: {new Date(cliente.contract_start_date).toLocaleDateString("pt-BR")}
+              {cliente.contract_end_date ? ` até ${new Date(cliente.contract_end_date).toLocaleDateString("pt-BR")}` : " (Indeterminado)"}
             </span>
           )}
         </div>
