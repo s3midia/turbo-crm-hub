@@ -57,10 +57,11 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
     const leadData: any = {
         company_name: opportunity.lead_identification,
         phone: opportunity.contact_phone,
-        status: opportunity.stage,
+        status: opportunity.stage || null,
         niche: opportunity.niche,
         site_url: opportunity.site_url,
         updated_at: new Date().toISOString(),
+        user_id: user.id,
     };
 
     const opportunityData: any = {
@@ -101,7 +102,13 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
             .select()
             .single();
         if (leadError) throw leadError;
-        await supabase.from('opportunities').insert([{ id: newLead.id, ...opportunityData }]);
+        
+        const { error: oppError } = await supabase.from('opportunities').insert([{ id: newLead.id, ...opportunityData }]);
+        if (oppError) {
+            console.error("Erro ao inserir oportunidade:", oppError);
+            throw oppError;
+        }
+        
         return newLead;
     }
 };
