@@ -17,6 +17,9 @@ import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
 // --- Componente do Botão do Google ---
 const GoogleButtonLogic = ({ googleConnected, setGoogleConnected, onEventsFetched }: { googleConnected: boolean, setGoogleConnected: (v: boolean) => void, onEventsFetched: (events: any[]) => void }) => {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const isConfigured = Boolean(clientId && clientId !== "dummy");
+
   const login = useGoogleLogin({
     onSuccess: async (codeResponse) => {
       console.log('Login Success:', codeResponse);
@@ -42,6 +45,19 @@ const GoogleButtonLogic = ({ googleConnected, setGoogleConnected, onEventsFetche
     onError: (error) => console.log('Login Failed:', error),
     scope: 'https://www.googleapis.com/auth/calendar.readonly',
   });
+
+  if (!isConfigured) {
+    return (
+      <Button 
+        variant="outline" 
+        size="sm" 
+        className="rounded-xl font-bold transition-all border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-900/20 dark:text-rose-400"
+        onClick={() => alert("Erro: VITE_GOOGLE_CLIENT_ID não está configurado no arquivo .env. Configure a variável e reinicie o servidor.")}
+      >
+        <AlertTriangle size={14} className="mr-1.5" /> Não Configurado
+      </Button>
+    );
+  }
 
   return (
     <Button 
