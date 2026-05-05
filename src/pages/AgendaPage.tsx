@@ -114,81 +114,55 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col xl:flex-row overflow-hidden bg-muted/10 p-6 gap-6">
         
-        {/* SIDEBAR PREVISIBILIDADE (Exibida quando Tudo ou Financeiro está ativo) */}
-        {filter !== "meetings" && (
-          <div className="w-full lg:w-80 border-r border-border/40 bg-muted/10 p-6 overflow-y-auto shrink-0 flex flex-col gap-6">
-            <div className="space-y-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Previsibilidade do Mês</h3>
-              
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/20 rounded-full blur-2xl" />
-                <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest mb-1">A Receber / Entradas</p>
-                <p className="text-2xl font-black text-emerald-600">{formatBRL(totalReceitas)}</p>
+        {/* CALENDÁRIO MAIN (Mês) */}
+        <div className="flex-1 flex flex-col min-w-0 bg-card rounded-3xl border border-border/50 shadow-sm overflow-hidden">
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-b border-border/50 gap-4 shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl">
+                <Button variant="ghost" size="icon" onClick={prevMonth} className="h-7 w-7 rounded-lg hover:bg-background shadow-sm"><ChevronLeft size={14} /></Button>
+                <span className="w-28 text-center text-[13px] font-black text-foreground tracking-tight">
+                  {MONTHS[month]} <span className="text-primary">{year}</span>
+                </span>
+                <Button variant="ghost" size="icon" onClick={nextMonth} className="h-7 w-7 rounded-lg hover:bg-background shadow-sm"><ChevronRight size={14} /></Button>
               </div>
 
-              {totalAtrasado > 0 && (
-                <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-5 relative overflow-hidden group">
-                  <div className="absolute -right-4 -top-4 w-16 h-16 bg-rose-500/20 rounded-full blur-2xl group-hover:bg-rose-500/30 transition-all" />
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold text-rose-700 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                        <AlertTriangle size={10} className="animate-pulse" /> Atrasados
-                      </p>
-                      <p className="text-xl font-black text-rose-600">{formatBRL(totalAtrasado)}</p>
-                    </div>
+              {/* Previsibilidade ao lado do Mês (Pequeno e Organizado) */}
+              {filter !== "meetings" && (
+                <div className="flex items-center gap-2 hidden md:flex">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] font-bold text-emerald-700 uppercase">Receitas: {formatBRL(totalReceitas)}</span>
                   </div>
-                  <Button size="sm" variant="outline" className="w-full mt-3 h-7 text-[10px] font-black border-rose-500/30 text-rose-600 hover:bg-rose-500/10">COBRAR AGORA</Button>
+                  {totalAtrasado > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                      <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                      <span className="text-[10px] font-bold text-rose-700 uppercase">Atrasos: {formatBRL(totalAtrasado)}</span>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-
-            <div className="space-y-4 flex-1">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sincronização Externa</h3>
-              <div className="bg-card border border-border/40 rounded-2xl p-4 text-center space-y-3 shadow-sm">
-                <div className="flex justify-center -space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 border-2 border-background flex items-center justify-center text-blue-600 font-bold text-[10px]">G</div>
-                  <div className="w-8 h-8 rounded-full bg-slate-100 border-2 border-background flex items-center justify-center text-slate-800 font-bold text-[10px]">A</div>
-                </div>
-                <p className="text-[11px] font-semibold text-muted-foreground leading-relaxed">Conecte com Google Calendar ou Apple Calendar para bidirecionalidade.</p>
-                <Button variant="secondary" size="sm" className="w-full rounded-xl text-[10px] font-bold h-8">
-                  <Plus size={12} className="mr-1" /> CONECTAR
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CALENDÁRIO MAIN */}
-        <div className="flex-1 flex flex-col p-6 overflow-hidden">
-          
-          <div className="flex items-center justify-between mb-6 shrink-0">
-            <div className="flex items-center gap-2 bg-card border border-border/40 p-1 rounded-2xl shadow-sm">
-              <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8 rounded-xl hover:bg-muted"><ChevronLeft size={16} /></Button>
-              <span className="w-32 text-center text-sm font-black text-foreground tracking-tight">
-                {MONTHS[month]} <span className="text-primary">{year}</span>
-              </span>
-              <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8 rounded-xl hover:bg-muted"><ChevronRight size={16} /></Button>
             </div>
 
             <Button 
               variant="outline" 
               size="sm" 
-              className="rounded-xl h-9 text-[11px] font-bold border-border/40 shadow-sm"
+              className="rounded-xl h-8 text-[10px] font-bold border-border/40 shadow-sm bg-background"
               onClick={handleSync}
               disabled={isSyncing}
             >
-              {isSyncing ? <RefreshCw size={14} className="mr-2 animate-spin text-primary" /> : <RefreshCw size={14} className="mr-2 text-primary" />}
+              {isSyncing ? <RefreshCw size={12} className="mr-2 animate-spin text-primary" /> : <RefreshCw size={12} className="mr-2 text-primary" />}
               {isSyncing ? "Sincronizando..." : "Sincronizar CRM"}
             </Button>
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0 border border-border/40 rounded-3xl overflow-hidden shadow-sm bg-card">
+          <div className="flex-1 flex flex-col min-h-0 bg-background">
             {/* Header Dias da Semana */}
-            <div className="grid grid-cols-7 border-b border-border/40 bg-muted/20 shrink-0">
+            <div className="grid grid-cols-7 border-b border-border/50 shrink-0">
               {DAYS.map(d => (
-                <div key={d} className="p-3 text-center text-[10px] font-black text-muted-foreground uppercase tracking-widest border-r border-border/40 last:border-0">
+                <div key={d} className="py-2.5 text-center text-[10px] font-black text-muted-foreground uppercase tracking-widest border-r border-border/50 last:border-0">
                   <span className="hidden md:inline">{d}</span>
                   <span className="md:hidden">{d.slice(0,3)}</span>
                 </div>
@@ -205,15 +179,15 @@ export default function AgendaPage() {
                   <div 
                     key={i} 
                     className={cn(
-                      "min-h-[100px] border-r border-b border-border/40 p-1.5 transition-colors relative flex flex-col",
-                      !day && "bg-muted/10 opacity-50",
-                      day && "hover:bg-muted/5",
-                      isToday && "bg-primary/[0.02]"
+                      "min-h-[90px] border-r border-b border-border/50 p-1.5 transition-colors relative flex flex-col",
+                      !day && "bg-muted/5 opacity-50",
+                      day && "hover:bg-muted/10 cursor-pointer",
+                      isToday && "bg-primary/[0.03]"
                     )}
                   >
                     {day && (
                       <span className={cn(
-                        "text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-lg mb-1 shrink-0",
+                        "text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 shrink-0",
                         isToday ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
                       )}>
                         {day}
@@ -222,37 +196,35 @@ export default function AgendaPage() {
 
                     <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-0.5 pb-1">
                       {dayEvents.map(ev => {
-                        
-                        // Estilização baseada no tipo de evento
-                        let bg = "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300";
-                        let icon = <Clock size={9} />;
+                        let bg = "bg-slate-100 text-slate-700 border-slate-200";
+                        let icon = <Clock size={8} />;
                         
                         if (ev.type === "meeting") {
-                          bg = "bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-400";
-                          icon = <Video size={9} />;
+                          bg = "bg-blue-50 text-blue-700 border-blue-200/50";
+                          icon = <Video size={8} />;
                         } else if (ev.type === "finance_in") {
-                          bg = "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-400 font-bold";
-                          icon = <DollarSign size={9} />;
+                          bg = "bg-emerald-50 text-emerald-700 border-emerald-200/50 font-bold";
+                          icon = <DollarSign size={8} />;
                         } else if (ev.type === "finance_overdue") {
                           bg = "bg-rose-500 text-white border-rose-600 font-black shadow-sm animate-pulse";
-                          icon = <AlertTriangle size={9} />;
+                          icon = <AlertTriangle size={8} />;
                         } else if (ev.type === "finance_out") {
-                          bg = "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400";
-                          icon = <DollarSign size={9} />;
+                          bg = "bg-amber-50 text-amber-700 border-amber-200/50";
+                          icon = <DollarSign size={8} />;
                         }
 
                         return (
                           <div 
                             key={ev.id} 
                             className={cn(
-                              "text-[9px] px-1.5 py-1 rounded-md border flex flex-col gap-0.5 leading-tight truncate cursor-pointer hover:brightness-95 transition-all",
+                              "text-[9px] px-1.5 py-1 rounded border flex flex-col gap-0.5 leading-tight truncate hover:brightness-95 transition-all",
                               bg
                             )}
                             title={ev.title}
                           >
                             <div className="flex items-center justify-between">
                               <span className="flex items-center gap-1 font-semibold truncate">
-                                {icon} {ev.type.startsWith("finance") && ev.value ? formatBRL(ev.value) : ev.time}
+                                {ev.type.startsWith("finance") && ev.value ? formatBRL(ev.value) : ev.time}
                               </span>
                             </div>
                             <span className="truncate opacity-90">{ev.client || ev.title}</span>
@@ -265,6 +237,71 @@ export default function AgendaPage() {
               })}
             </div>
           </div>
+        </div>
+
+        {/* RIGHT SIDEBAR (Upcoming & Reminders - Reference Image Style) */}
+        <div className="w-full xl:w-80 flex flex-col gap-6 shrink-0">
+          
+          {/* Upcoming Events */}
+          <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-5 flex-1 flex flex-col">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-sm font-black text-foreground">Up Coming Events</h3>
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-blue-600 font-bold hover:text-blue-700 hover:bg-blue-50"><Plus size={10} className="mr-1"/> Add events</Button>
+            </div>
+            
+            <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+              {mockEvents.filter(e => e.type === "meeting" || e.type === "task").slice(0, 4).map((ev, i) => (
+                <div key={i} className="p-3 rounded-2xl border border-border/50 bg-background hover:border-border transition-colors group">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <div className={cn("w-3 h-3 rounded-[3px]", ev.type === "meeting" ? "bg-blue-500" : "bg-purple-500")} />
+                      <span className="text-[11px] font-black text-slate-700">{ev.time || "10:00"} - 11:00</span>
+                    </div>
+                    <button className="text-muted-foreground opacity-0 group-hover:opacity-100"><span className="text-lg leading-none">⋯</span></button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-medium pl-5">{ev.title} {ev.client && `with ${ev.client}`}</p>
+                </div>
+              ))}
+            </div>
+            <Button variant="secondary" className="w-full mt-4 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-[11px] rounded-xl h-9">View all events</Button>
+          </div>
+
+          {/* Reminders / Alertas Financeiros */}
+          <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-5 flex-1 flex flex-col">
+            <h3 className="text-sm font-black text-foreground mb-5">Reminders & Alerts</h3>
+            
+            <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+              {mockEvents.filter(e => e.type.startsWith("finance")).slice(0, 3).map((ev, i) => {
+                const isOverdue = ev.type === "finance_overdue";
+                const isIncoming = ev.type === "finance_in";
+                return (
+                  <div key={i} className="p-3 rounded-2xl border border-border/50 bg-background flex gap-3 items-center group">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+                      isOverdue ? "bg-rose-50 text-rose-500" : 
+                      isIncoming ? "bg-emerald-50 text-emerald-500" : "bg-amber-50 text-amber-500"
+                    )}>
+                      {isOverdue ? <AlertTriangle size={16} /> : isIncoming ? <DollarSign size={16} /> : <Wallet size={16} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-bold text-slate-700 truncate pr-2">{ev.title}</p>
+                        {isOverdue && <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />}
+                      </div>
+                      <p className={cn(
+                        "text-[9px] font-medium truncate",
+                        isOverdue ? "text-rose-500" : "text-muted-foreground"
+                      )}>
+                        {ev.client} • {ev.value && formatBRL(ev.value)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <Button variant="secondary" className="w-full mt-4 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-[11px] rounded-xl h-9">View all</Button>
+          </div>
+          
         </div>
 
       </div>
