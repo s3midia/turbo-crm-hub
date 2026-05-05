@@ -240,10 +240,10 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700 font-jakarta">
-
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700 font-jakarta bg-black p-4 rounded-[40px]">
+...
       {/* --- KPI GRID (Minimalist Slim Design) --- */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[32px] overflow-hidden shadow-sm">
+      <div className="bg-zinc-950 border border-white/5 rounded-[32px] overflow-hidden shadow-2xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {kpis.map((kpi, i) => {
             const sparkData = data.barData.map(m => {
@@ -261,25 +261,25 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
               <div 
                 key={i} 
                 className={cn(
-                  "p-8 flex flex-col justify-between group transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10",
-                  i % 3 !== 2 && "lg:border-r border-zinc-100 dark:border-zinc-800",
-                  i < 3 && "lg:border-b border-zinc-100 dark:border-zinc-800",
+                  "p-8 flex flex-col justify-between group transition-all duration-500 hover:bg-white/[0.02]",
+                  i % 3 !== 2 && "lg:border-r border-white/5",
+                  i < 3 && "lg:border-b border-white/5",
                   "border-b lg:border-b-0 last:border-b-0"
                 )}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.25em] mb-1">
+                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.25em] mb-1">
                       {kpi.label}
                     </p>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter">
+                      <span className="text-3xl font-black text-white tracking-tighter">
                         {kpi.display ?? (kpi.value! >= 1000 ? (kpi.value! / 1000).toFixed(1) + 'k' : kpi.value)}
                       </span>
                     </div>
                   </div>
                   <div className={cn(
-                    "p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800 text-zinc-400 group-hover:bg-zinc-900 group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-zinc-900 transition-all duration-300",
+                    "p-2 rounded-xl bg-zinc-900 text-zinc-400 group-hover:bg-white group-hover:text-black transition-all duration-300",
                   )}>
                     <kpi.icon size={16} />
                   </div>
@@ -290,9 +290,9 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                     {kpi.trend && (
                       <span className={cn(
                         "text-[10px] font-black uppercase tracking-widest",
-                        kpi.up === true ? "text-emerald-500" : 
-                        kpi.up === false ? "text-rose-500" : 
-                        "text-zinc-400"
+                        kpi.up === true ? "text-emerald-400" : 
+                        kpi.up === false ? "text-rose-400" : 
+                        "text-zinc-500"
                       )}>
                         {kpi.up === true ? "+" : ""}{kpi.trend}
                       </span>
@@ -330,21 +330,21 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Chart: Receitas vs Despesas (Animated Lines) */}
-        <div className="lg:col-span-3 p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
+        <div className="lg:col-span-3 p-8 rounded-[32px] bg-zinc-950 border border-white/5 shadow-2xl relative overflow-hidden group">
           <div className="flex items-center justify-between mb-10 relative z-10">
             <div>
-              <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-tight">
-                <BarChart3 size={20} className="text-zinc-900 dark:text-zinc-100" />
+              <h3 className="text-lg font-black text-white flex items-center gap-2 uppercase tracking-tight">
+                <BarChart3 size={20} className="text-white" />
                 Desempenho Financeiro
               </h3>
-              <p className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-1">Análise Comparativa • 6 Meses</p>
+              <p className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.3em] mt-1">Análise Comparativa • 6 Meses</p>
             </div>
-            <div className="flex items-center gap-6 text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">
+            <div className="flex items-center gap-6 text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">
               <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20" />Receitas
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/20" />Receitas
               </span>
               <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/20" />Despesas
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-sm shadow-rose-400/20" />Despesas
               </span>
             </div>
           </div>
@@ -352,30 +352,33 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
           <div className="h-[220px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.02)" />
                 <XAxis 
                   dataKey="month" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fontWeight: 900, fill: '#A1A1AA' }} 
+                  tick={{ fontSize: 9, fontWeight: 900, fill: '#52525B' }} 
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fontWeight: 700, fill: '#A1A1AA' }}
+                  tick={{ fontSize: 9, fontWeight: 700, fill: '#52525B' }}
                   tickFormatter={(val) => `R$ ${val >= 1000 ? (val/1000).toFixed(0)+'k' : val}`}
                 />
                 <Tooltip 
-                  cursor={{ stroke: 'rgba(0,0,0,0.05)', strokeWidth: 1 }}
+                  cursor={{ stroke: 'rgba(255,255,255,0.05)', strokeWidth: 1 }}
                   contentStyle={{ 
+                    backgroundColor: '#09090b',
                     borderRadius: '12px', 
-                    border: '1px solid rgba(0,0,0,0.1)', 
-                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)',
                     fontSize: '10px',
                     fontWeight: '900',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
+                    letterSpacing: '0.05em',
+                    color: '#fff'
                   }}
+                  itemStyle={{ color: '#fff' }}
                   formatter={(value: any) => [formatBRL(value), '']}
                 />
                 <Line 
@@ -383,7 +386,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                   dataKey="receita" 
                   stroke="#10b981" 
                   strokeWidth={3} 
-                  dot={{ r: 3, strokeWidth: 2, fill: "#fff" }}
+                  dot={{ r: 3, strokeWidth: 2, fill: "#000" }}
                   activeDot={{ r: 5, strokeWidth: 0, fill: "#10b981" }}
                   animationDuration={2000}
                 />
@@ -392,7 +395,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                   dataKey="despesa" 
                   stroke="#f87171" 
                   strokeWidth={3} 
-                  dot={{ r: 3, strokeWidth: 2, fill: "#fff" }}
+                  dot={{ r: 3, strokeWidth: 2, fill: "#000" }}
                   activeDot={{ r: 5, strokeWidth: 0, fill: "#f87171" }}
                   animationDuration={2000}
                 />
@@ -403,46 +406,40 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
 
         {/* Top Clients & EBITDA */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm h-full flex flex-col">
-            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-8 uppercase tracking-tight">
-              <Users size={18} className="text-zinc-400" />
+          <div className="p-8 rounded-[32px] bg-zinc-950 border border-white/5 shadow-2xl h-full flex flex-col">
+            <h3 className="text-sm font-black text-white flex items-center gap-2 mb-8 uppercase tracking-tight">
+              <Users size={18} className="text-zinc-500" />
               Maiores Clientes
             </h3>
             <div className="space-y-4 flex-1">
               {data.topClients.map((client, i) => (
                 <div key={i} className="flex items-center justify-between group">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-black group-hover:bg-zinc-900 group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-zinc-900 transition-all">
+                    <div className="w-8 h-8 rounded-xl bg-zinc-900 flex items-center justify-center text-[10px] font-black group-hover:bg-white group-hover:text-black transition-all">
                       {client.name.substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-[12px] font-black text-zinc-900 dark:text-zinc-100 leading-none">{client.name}</p>
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Sócio Parceiro</p>
+                      <p className="text-[12px] font-black text-white leading-none">{client.name}</p>
+                      <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Sócio Parceiro</p>
                     </div>
                   </div>
-                  <p className="text-[12px] font-black text-zinc-900 dark:text-zinc-100">{formatBRL(client.total)}</p>
+                  <p className="text-[12px] font-black text-white">{formatBRL(client.total)}</p>
                 </div>
               ))}
-              {data.topClients.length === 0 && (
-                <div className="text-center py-10 opacity-30">
-                  <Info size={32} className="mx-auto mb-2" />
-                  <p className="text-[9px] font-black uppercase tracking-widest">Sem dados de clientes</p>
-                </div>
-              )}
             </div>
 
-            <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+            <div className="mt-8 pt-6 border-t border-white/5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">EBITDA Estimado</p>
-                  <p className="text-[18px] font-black text-emerald-500 tracking-tighter">{formatBRL(data.ebitda)}</p>
+                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">EBITDA Estimado</p>
+                  <p className="text-[18px] font-black text-emerald-400 tracking-tighter">{formatBRL(data.ebitda)}</p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <TrendingUp size={20} className="text-emerald-500" />
+                <div className="w-10 h-10 rounded-full bg-emerald-400/10 flex items-center justify-center">
+                  <TrendingUp size={20} className="text-emerald-400" />
                 </div>
               </div>
-              <p className="text-[9px] font-bold text-zinc-400 uppercase leading-relaxed tracking-tight">
-                Resultado operacional antes de impostos, amortização e depreciação. Saúde operacional bruta.
+              <p className="text-[9px] font-bold text-zinc-500 uppercase leading-relaxed tracking-tight">
+                Resultado operacional antes de impostos, amortização e depreciação.
               </p>
             </div>
           </div>
@@ -453,9 +450,9 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Expense Breakdown (Donut Chart) */}
-        <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col">
-          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-8 uppercase tracking-tight">
-            <PieIcon size={18} className="text-zinc-400" />
+        <div className="p-8 rounded-[32px] bg-zinc-950 border border-white/5 shadow-2xl relative overflow-hidden flex flex-col">
+          <h3 className="text-sm font-black text-white flex items-center gap-2 mb-8 uppercase tracking-tight">
+            <PieIcon size={18} className="text-zinc-500" />
             Composição das Despesas
           </h3>
           <div className="h-[180px] w-full flex items-center">
@@ -476,7 +473,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                 </Pie>
                 <Tooltip 
                   formatter={(value: any) => formatBRL(value)}
-                  contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}
+                  contentStyle={{ backgroundColor: '#09090b', borderRadius: '12px', border: 'none', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', color: '#fff' }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -485,33 +482,33 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                 <div key={i} className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-[9px] font-black text-zinc-900 dark:text-zinc-100 truncate uppercase tracking-tighter">{cat.label}</span>
+                    <span className="text-[9px] font-black text-white truncate uppercase tracking-tighter">{cat.label}</span>
                   </div>
-                  <span className="text-[9px] font-bold text-zinc-400 ml-3 uppercase tracking-widest">{cat.pct.toFixed(1)}%</span>
+                  <span className="text-[9px] font-bold text-zinc-500 ml-3 uppercase tracking-widest">{cat.pct.toFixed(1)}%</span>
                 </div>
               ))}
             </div>
           </div>
-          <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Total Saídas</span>
-            <span className="text-[14px] font-black text-rose-500">{formatBRL(data.despesas_totais)}</span>
+          <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Total Saídas</span>
+            <span className="text-[14px] font-black text-rose-400">{formatBRL(data.despesas_totais)}</span>
           </div>
         </div>
 
         {/* Projected Cashflow & Line Chart */}
-        <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
-          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-8 uppercase tracking-tight">
-            <Target size={18} className="text-zinc-400" />
+        <div className="p-8 rounded-[32px] bg-zinc-950 border border-white/5 shadow-2xl flex flex-col">
+          <h3 className="text-sm font-black text-white flex items-center gap-2 mb-8 uppercase tracking-tight">
+            <Target size={18} className="text-zinc-500" />
             Fluxo Projetado
           </h3>
           <div className="space-y-2 mb-6">
             {data.cashflow.map((day, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group">
-                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{day.label}</span>
+              <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all group">
+                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{day.label}</span>
                 <div className="text-right">
-                  <p className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 tracking-tight">{formatBRL(day.value)}</p>
+                  <p className="text-[13px] font-black text-white tracking-tight">{formatBRL(day.value)}</p>
                   {day.delta !== 0 && (
-                    <p className={cn("text-[9px] font-black uppercase tracking-tighter", day.delta > 0 ? "text-emerald-500" : "text-rose-500")}>
+                    <p className={cn("text-[9px] font-black uppercase tracking-tighter", day.delta > 0 ? "text-emerald-400" : "text-rose-400")}>
                       {day.delta > 0 ? "+" : ""}{formatBRL(day.delta)}
                     </p>
                   )}
@@ -519,35 +516,22 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
               </div>
             ))}
           </div>
-          <div className="h-[80px] w-full mt-auto opacity-50 group-hover:opacity-100 transition-opacity">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.profitTrend}>
-                <defs>
-                  <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="profit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} animationDuration={2000} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
         </div>
 
         {/* Health Score & Actions */}
-        <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
+        <div className="p-8 rounded-[32px] bg-zinc-950 border border-white/5 shadow-2xl flex flex-col">
           <div className="mb-8">
-            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight flex items-center gap-2">
-               <Zap size={18} className="text-amber-500 fill-amber-500/20" />
+            <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+               <Zap size={18} className="text-amber-400 fill-amber-400/20" />
                Saúde Financeira
             </h3>
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Score Dinâmico de Performance</p>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Score Dinâmico de Performance</p>
           </div>
 
           <div className="flex items-center gap-6 mb-8">
             <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
               <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-zinc-100 dark:text-zinc-800" strokeWidth="8" />
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-white/5" strokeWidth="8" />
                 <circle 
                   cx="50" cy="50" r="45" 
                   fill="none" 
@@ -560,18 +544,18 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100 leading-none tracking-tighter">{data.score}</span>
-                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mt-1">Pontos</span>
+                <span className="text-2xl font-black text-white leading-none tracking-tighter">{data.score}</span>
+                <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mt-1">Pontos</span>
               </div>
             </div>
             <div className="space-y-2 flex-1">
               {[
-                { label: "Liquidez", val: data.a_receber > data.despesas_totais ? "Alta" : "Média", color: "text-emerald-500" },
-                { label: "Eficiência", val: data.margem_liquida > 20 ? "Ótima" : "Regular", color: "text-blue-500" },
-                { label: "Risco", val: data.urgentActions.length === 0 ? "Baixo" : "Médio", color: "text-amber-500" }
+                { label: "Liquidez", val: data.a_receber > data.despesas_totais ? "Alta" : "Média", color: "text-emerald-400" },
+                { label: "Eficiência", val: data.margem_liquida > 20 ? "Ótima" : "Regular", color: "text-blue-400" },
+                { label: "Risco", val: data.urgentActions.length === 0 ? "Baixo" : "Médio", color: "text-amber-400" }
               ].map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center text-[10px]">
-                  <span className="text-zinc-400 font-bold uppercase tracking-widest text-[8px]">{item.label}</span>
+                  <span className="text-zinc-500 font-bold uppercase tracking-widest text-[8px]">{item.label}</span>
                   <span className={cn("font-black uppercase tracking-tighter", item.color)}>{item.val}</span>
                 </div>
               ))}
@@ -584,24 +568,18 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                 key={i}
                 onClick={() => onTabChange?.(action.tab)}
                 className={cn("w-full p-3 rounded-2xl border flex items-start gap-3 text-left transition-all hover:scale-[1.02]",
-                  action.type === "danger" ? "bg-rose-500/5 border-rose-500/10 hover:border-rose-500/30" : "bg-amber-500/5 border-amber-500/10 hover:border-amber-500/30"
+                  action.type === "danger" ? "bg-rose-500/10 border-rose-500/20 hover:border-rose-500/40" : "bg-amber-500/10 border-amber-500/20 hover:border-amber-500/40"
                 )}
               >
-                <div className={cn("p-1.5 rounded-lg", action.type === "danger" ? "bg-rose-500/20 text-rose-500" : "bg-amber-500/20 text-amber-500")}>
+                <div className={cn("p-1.5 rounded-lg", action.type === "danger" ? "bg-rose-500/20 text-rose-400" : "bg-amber-500/20 text-amber-400")}>
                   <action.icon size={14} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">{action.title}</p>
-                  <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-tight mt-0.5">{action.desc}</p>
+                  <p className="text-[11px] font-black text-white uppercase tracking-tighter">{action.title}</p>
+                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-tight mt-0.5">{action.desc}</p>
                 </div>
               </button>
             ))}
-            {data.urgentActions.length === 0 && (
-              <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center gap-3">
-                <CheckCircle2 size={16} className="text-emerald-500" />
-                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Obrigações em dia!</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
