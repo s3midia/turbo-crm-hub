@@ -152,7 +152,7 @@ export default function FinanceiroPage() {
           ref={scrollRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setIsScrolling(null)}
-          className="flex items-center gap-1 p-1 bg-zinc-950 dark:bg-zinc-900 border border-white/10 dark:border-zinc-800 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-none shadow-2xl relative [mask-image:linear-gradient(to_right,transparent,black_50px,black_calc(100%-50px),transparent)]"
+          className="flex items-center gap-1 p-1 bg-zinc-950 dark:bg-zinc-900 border border-white/10 dark:border-zinc-800 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-none shadow-2xl relative"
         >
           {TABS.map((tab) => (
             <button
