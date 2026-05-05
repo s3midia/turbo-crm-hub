@@ -22,6 +22,15 @@ import { formatBRL } from '@/lib/formatters';
 import { useFinance } from '@/hooks/useFinance';
 import { LeadDocumentsTab } from '@/components/financeiro/LeadDocumentsTab';
 
+const PIPELINE_STAGES = [
+  { key: "novo", label: "Novo" },
+  { key: "qualificacao", label: "Qualif." },
+  { key: "atendimento", label: "Contato" },
+  { key: "reuniao", label: "Reunião" },
+  { key: "fechamento", label: "Fechamento" },
+  { key: "ganhou", label: "Fechado" },
+];
+
 interface OpportunityModalProps {
     open: boolean;
     onClose: () => void;
