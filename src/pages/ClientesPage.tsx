@@ -67,10 +67,6 @@ export default function ClientesPage() {
     } catch (err) {
       console.error(err);
       toast.error("Erro ao carregar clientes.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleOpenCliente = (cliente: ClientePerfilData) => {
     setSelectedCliente(cliente);
