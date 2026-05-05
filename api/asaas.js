@@ -37,7 +37,23 @@ app.post('/api/asaas', async (req, res) => {
             const searchData = await searchRes.json();
             
             if (searchData.data && searchData.data.length > 0) {
-                return res.status(200).json({ customerId: searchData.data[0].id });
+                const existingCustomer = searchData.data[0];
+                const customerId = existingCustomer.id;
+
+                // Se encontramos o cliente mas recebemos um CPF/CNPJ da UI, vamos garantir que ele esteja atualizado
+                if (cpfCnpj && existingCustomer.cpfCnpj !== cpfCnpj) {
+                    const updateRes = await fetch(`${BASE_URL}/customers/${customerId}`, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ cpfCnpj })
+                    });
+                    const updateData = await updateRes.json();
+                    if (!updateRes.ok) {
+                         throw new Error(updateData.errors?.[0]?.description || 'Erro ao atualizar CPF/CNPJ do cliente existente. O CPF pode ser inválido.');
+                    }
+                }
+
+                return res.status(200).json({ customerId });
             } else {
                 // 2. Criar cliente se não existir
                 const createRes = await fetch(`${BASE_URL}/customers`, {
