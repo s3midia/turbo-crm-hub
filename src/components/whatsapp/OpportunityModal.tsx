@@ -293,6 +293,7 @@ export const OpportunityModal = ({
                                                         <SelectItem value="in_contact">Em contato</SelectItem>
                                                         <SelectItem value="presentation">Apresentação</SelectItem>
                                                         <SelectItem value="negotiation">Negociação</SelectItem>
+                                                        <SelectItem value="ganhou">Ganhou / Cliente</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </Field>
