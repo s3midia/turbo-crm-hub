@@ -407,9 +407,9 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Expense Breakdown (Donut Chart) */}
-        <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden">
-          <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-6">
-            <PieIcon size={16} className="text-rose-500" />
+        <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col">
+          <h3 className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6 uppercase tracking-tighter">
+            <PieIcon size={16} className="text-zinc-400" />
             Composição das Despesas
           </h3>
           <div className="h-[180px] w-full flex items-center">
@@ -430,7 +430,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                 </Pie>
                 <Tooltip 
                   formatter={(value: any) => formatBRL(value)}
-                  contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '10px', fontWeight: 'bold' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -439,33 +439,33 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                 <div key={i} className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-[10px] font-bold text-foreground truncate">{cat.label}</span>
+                    <span className="text-[9px] font-black text-zinc-900 dark:text-zinc-100 truncate uppercase tracking-tighter">{cat.label}</span>
                   </div>
-                  <span className="text-[9px] text-muted-foreground ml-3">{cat.pct.toFixed(1)}%</span>
+                  <span className="text-[9px] font-bold text-zinc-400 ml-3 uppercase tracking-widest">{cat.pct.toFixed(1)}%</span>
                 </div>
               ))}
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between">
-            <span className="text-[11px] font-black text-muted-foreground uppercase">Total Saídas</span>
-            <span className="text-sm font-black text-rose-500">{formatBRL(data.despesas_totais)}</span>
+          <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Total Saídas</span>
+            <span className="text-[14px] font-black text-rose-500">{formatBRL(data.despesas_totais)}</span>
           </div>
         </div>
 
         {/* Projected Cashflow & Line Chart */}
-        <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm">
-          <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-6">
-            <Target size={16} className="text-blue-500" />
-            Fluxo de Caixa Projetado
+        <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col">
+          <h3 className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6 uppercase tracking-tighter">
+            <Target size={16} className="text-zinc-400" />
+            Fluxo Projetado
           </h3>
-          <div className="space-y-3 mb-6">
+          <div className="space-y-2 mb-6">
             {data.cashflow.map((day, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/30 hover:border-primary/20 transition-all group">
-                <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">{day.label}</span>
+              <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group">
+                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{day.label}</span>
                 <div className="text-right">
-                  <p className="text-sm font-black text-foreground tracking-tight">{formatBRL(day.value)}</p>
+                  <p className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 tracking-tight">{formatBRL(day.value)}</p>
                   {day.delta !== 0 && (
-                    <p className={cn("text-[9px] font-bold", day.delta > 0 ? "text-emerald-500" : "text-rose-500")}>
+                    <p className={cn("text-[9px] font-black uppercase tracking-tighter", day.delta > 0 ? "text-emerald-500" : "text-rose-500")}>
                       {day.delta > 0 ? "+" : ""}{formatBRL(day.delta)}
                     </p>
                   )}
@@ -473,32 +473,32 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
               </div>
             ))}
           </div>
-          <div className="h-[80px] w-full mt-auto">
+          <div className="h-[80px] w-full mt-auto opacity-50 group-hover:opacity-100 transition-opacity">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data.profitTrend}>
                 <defs>
                   <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <Area type="monotone" dataKey="profit" stroke="#3b82f6" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
+                <Area type="monotone" dataKey="profit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Health Score & Actions */}
-        <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm flex flex-col">
+        <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col">
           <div className="mb-6">
-            <h3 className="text-sm font-black text-foreground mb-1">Saúde Financeira</h3>
-            <p className="text-[11px] text-muted-foreground font-medium">Score dinâmico baseado em liquidez e performance</p>
+            <h3 className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">Saúde Financeira</h3>
+            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Score Dinâmico de Performance</p>
           </div>
 
           <div className="flex items-center gap-6 mb-8">
             <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
               <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="8" />
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-zinc-100 dark:text-zinc-800" strokeWidth="8" />
                 <circle 
                   cx="50" cy="50" r="45" 
                   fill="none" 
@@ -511,8 +511,8 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black text-foreground leading-none">{data.score}</span>
-                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-1">Pontos</span>
+                <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100 leading-none tracking-tighter">{data.score}</span>
+                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mt-1">Pontos</span>
               </div>
             </div>
             <div className="space-y-2 flex-1">
@@ -522,8 +522,8 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                 { label: "Risco", val: data.urgentActions.length === 0 ? "Baixo" : "Médio", color: "text-amber-500" }
               ].map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center text-[10px]">
-                  <span className="text-muted-foreground font-bold">{item.label}</span>
-                  <span className={cn("font-black", item.color)}>{item.val}</span>
+                  <span className="text-zinc-400 font-bold uppercase tracking-widest text-[8px]">{item.label}</span>
+                  <span className={cn("font-black uppercase tracking-tighter", item.color)}>{item.val}</span>
                 </div>
               ))}
             </div>
@@ -542,15 +542,15 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                   <action.icon size={14} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-black text-foreground">{action.title}</p>
-                  <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">{action.desc}</p>
+                  <p className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">{action.title}</p>
+                  <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-tight mt-0.5">{action.desc}</p>
                 </div>
               </button>
             ))}
             {data.urgentActions.length === 0 && (
               <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center gap-3">
                 <CheckCircle2 size={16} className="text-emerald-500" />
-                <p className="text-[10px] font-bold text-emerald-600">Todas as obrigações estão em dia!</p>
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Obrigações em dia!</p>
               </div>
             )}
           </div>
