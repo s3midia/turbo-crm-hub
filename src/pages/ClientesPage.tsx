@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ClientePerfilDrawer, ClientePerfilData } from "@/components/financeiro/ClientePerfilDrawer";
 import { deleteOpportunity, updateOpportunityStage } from "@/hooks/useOpportunities";
+import { supabase } from "@/integrations/supabase/client";
 import { UserPlus, Search, Filter, MoreHorizontal, User, ShieldCheck, AlertCircle, Building2, Users, Pencil, Trash2, UserMinus, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
