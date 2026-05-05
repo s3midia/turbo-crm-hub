@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { UserPlus, Search, Filter, MoreHorizontal, User, ShieldCheck, AlertCircle, Building2 } from "lucide-react";
+import { UserPlus, Search, Filter, MoreHorizontal, User, ShieldCheck, AlertCircle, Building2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientePerfilDrawer, ClientePerfilData } from "@/components/financeiro/ClientePerfilDrawer";
 import { Badge } from "@/components/ui/badge";
