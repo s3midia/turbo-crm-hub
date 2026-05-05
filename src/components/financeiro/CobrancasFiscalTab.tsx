@@ -235,37 +235,8 @@ export default function CobrancasFiscalTab({
     }
   };
 
-  useEffect(() => {
-    async function loadIntegrations() {
-      const { data, error } = await (supabase as any)
-        .from("api_manager")
-        .select("*")
-        .eq("category", "cobranca");
-
-      if (error) {
-        console.error("Erro ao carregar integrações:", error);
-        return;
-      }
-
-      if (data && data.length > 0) {
-        setIntStates(prev =>
-          prev.map((s, i) => {
-            const saved = data.find((d: any) => d.name === integracoes[i].nome);
-            if (saved) {
-              return {
-                ...s,
-                connected: saved.status === "stable",
-                connectedProvider: saved.url ?? "",
-                provider: saved.url ?? "",
-                apiKey: saved.api_key ?? "",
-              };
-            }
-            return s;
-          })
-        );
-      }
-    }
-    loadIntegrations();
+    // Integramos diretamente com a API do Asaas via Vercel Proxy
+    // Não é mais necessário buscar da tabela api_manager pois as chaves estão no .env / Vercel
     fetchRealData(); // Initial sync
   }, []);
 
@@ -835,29 +806,6 @@ export default function CobrancasFiscalTab({
         </DialogContent>
       </Dialog>
 
-      {/* Centralized Integrations CTA */}
-      <div className="bg-gradient-to-br from-primary/10 via-background to-blue-500/5 border border-primary/20 rounded-3xl p-6 shadow-sm overflow-hidden relative group">
-        <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
-          <Zap size={120} />
-        </div>
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2">
-            <h3 className="text-lg font-black text-foreground flex items-center gap-2">
-              <Zap size={20} className="text-primary animate-pulse" />
-              Gestão Centralizada de Integrações
-            </h3>
-            <p className="text-sm text-muted-foreground max-w-xl">
-              As configurações de <strong>Boleto Bancário</strong>, <strong>NF-e</strong> e <strong>Gateways de Pagamento</strong> foram movidas para o painel central de integrações para maior segurança e controle global.
-            </p>
-          </div>
-          <Button 
-            className="rounded-2xl px-8 font-black shadow-lg shadow-primary/20 h-12"
-            onClick={() => window.location.href = '/integracoes'}
-          >
-            CONFIGURAR AGORA <ExternalLink size={16} className="ml-2" />
-          </Button>
-        </div>
-      </div>
 
       {/* Cobranças Recorrentes */}
       <div className="space-y-3">
@@ -1103,20 +1051,10 @@ export default function CobrancasFiscalTab({
                       try {
                         setLoadingAction("generating-final");
                         
-                        // 1. Check if Asaas is connected
-                        const asaasConfig = intStates.find(s => s.connected && (s.connectedProvider === "Asaas" || s.connectedProvider === "Asaas Sandbox"));
+                        toast.loading("Comunicando com Asaas via Proxy...");
                         
-                        if (!asaasConfig || !asaasConfig.apiKey) {
-                          toast.error("Integração com Asaas não configurada ou sem API Key.");
-                          setLoadingAction(null);
-                          return;
-                        }
-
-                        toast.loading("Comunicando com Asaas...");
-                        
-                        // 2. Initialize Service
-                        const isProduction = asaasConfig.connectedProvider === "Asaas";
-                        const asaas = new AsaasService(asaasConfig.apiKey, isProduction);
+                        // 2. Initialize Service (A chave está protegida no servidor Vercel)
+                        const asaas = new AsaasService();
 
                         // 3. Find or Create Customer
                         const customerId = await asaas.findOrCreateCustomer(
