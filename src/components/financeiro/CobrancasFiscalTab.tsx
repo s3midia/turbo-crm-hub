@@ -1094,6 +1094,12 @@ export default function CobrancasFiscalTab({
                           return;
                         }
 
+                        if (!generatedBoleto?.value || generatedBoleto.value <= 0) {
+                          toast.error("Obrigatório: O valor da cobrança deve ser maior que zero.");
+                          setLoadingAction(null);
+                          return;
+                        }
+
                         // 3. Find or Create Customer
                         const customerId = await asaas.findOrCreateCustomer(
                           generatedBoleto?.client || selectedClient?.cliente,
