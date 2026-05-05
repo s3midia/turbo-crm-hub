@@ -3,7 +3,7 @@ import { useFinance, FinancialTransaction } from '@/hooks/useFinance';
 import {
   DollarSign, Plus,
   ArrowUpCircle, ArrowDownCircle, Edit3, Trash2,
-  Banknote, Receipt, AlertTriangle
+  Banknote, Receipt, AlertTriangle, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
