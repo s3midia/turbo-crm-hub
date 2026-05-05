@@ -22,5 +22,9 @@
         { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
     }
-  ]
+  ],
+  "env": {
+    "VITE_ASAAS_PRODUCTION": "true",
+    "VITE_ASAAS_API_KEY": "$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjEzMDUxMDZjLTViZGUtNDk3Yi1hYTU1LWY2Yzk0Y2U3NTNiMDo6JGFhY2hfYjA3ZDE2N2QtYjVkYS00YjFmLThkZGYtZTFhMWRlMjE1NDdk"
+  }
 }
