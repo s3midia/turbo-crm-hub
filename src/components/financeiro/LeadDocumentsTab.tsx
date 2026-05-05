@@ -195,7 +195,11 @@ export const LeadDocumentsTab = ({ leadId, leadName }: LeadDocumentsTabProps) =>
                     
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button size="sm" className="h-8 gap-2 font-bold uppercase text-[10px]">
+                            <Button 
+                                size="sm" 
+                                className="h-8 gap-2 font-bold uppercase text-[10px]"
+                                disabled={!leadId}
+                            >
                                 <Plus className="w-3.5 h-3.5" /> Novo Documento
                             </Button>
                         </DropdownMenuTrigger>
@@ -213,7 +217,14 @@ export const LeadDocumentsTab = ({ leadId, leadName }: LeadDocumentsTabProps) =>
                 </CardHeader>
 
                 <CardContent className="p-0">
-                    {docs.length === 0 ? (
+                    {!leadId ? (
+                        <div className="flex flex-col items-center justify-center py-12 opacity-60 bg-muted/5">
+                            <Zap className="h-8 w-8 mb-3 text-amber-500" />
+                            <p className="text-xs font-black uppercase tracking-widest text-center px-6">
+                                Salve os dados gerais primeiro<br/>para liberar o gerenciamento de documentos
+                            </p>
+                        </div>
+                    ) : docs.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 opacity-40">
                             <FileText className="h-10 w-10 mb-3 text-muted-foreground" />
                             <p className="text-xs font-black uppercase tracking-widest">Nenhum documento</p>
