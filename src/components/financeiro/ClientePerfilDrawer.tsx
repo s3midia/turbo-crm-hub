@@ -95,10 +95,6 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
         email: cliente.email || "",
         telefone: cliente.telefone || cliente.phone || "",
         empresa: cliente.empresa || cliente.company_name || "",
-        cpfCnpj: "",
-        contractStartDate: cliente.contract_start_date || "",
-        contractEndDate: cliente.contract_end_date || ""
-      });
       setActiveTab("geral");
     }
   }, [cliente?.id, cliente?.lead_id]);
