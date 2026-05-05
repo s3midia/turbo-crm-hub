@@ -89,15 +89,15 @@ export default function ConciliacaoTab() {
               { label: "Divergências", value: stats.divergencias, color: "text-amber-500", bg: "bg-amber-500/10" },
               { label: "Não Encontrados", value: stats.naoEncontrados, color: "text-rose-500", bg: "bg-rose-500/10" },
             ].map((s, i) => (
-              <div key={i} className={cn("p-4 rounded-2xl border border-border/30", s.bg)}>
+              <div key={i} className={cn("p-3 rounded-2xl border border-border/30", s.bg)}>
                 <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{s.label}</p>
-                <p className={cn("text-3xl font-black mt-1", s.color)}>{s.value}</p>
+                <p className={cn("text-2xl font-black mt-1", s.color)}>{s.value}</p>
               </div>
             ))}
           </div>
 
           {/* Accuracy Bar */}
-          <div className="p-5 rounded-2xl bg-card border border-border/50 space-y-3">
+          <div className="p-4 rounded-2xl bg-card border border-border/50 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold text-foreground flex items-center gap-2">
                 <RefreshCw size={16} className="text-primary" />
@@ -113,7 +113,7 @@ export default function ConciliacaoTab() {
 
           {/* Table */}
           <div className="rounded-3xl border border-border/40 bg-card/50 overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-border/40 flex items-center justify-between bg-muted/20">
+            <div className="px-4 py-2.5 border-b border-border/40 flex items-center justify-between bg-muted/20">
               <div className="flex items-center gap-2">
                 <FileText size={16} className="text-muted-foreground" />
                 <span className="text-sm font-bold">Extrato — Dezembro 2025</span>
