@@ -34,11 +34,6 @@ export default function ClientesPage() {
   const fetchClientes = async () => {
     setLoading(true);
     try {
-      // Aqui buscamos todos os leads que estão com status que representem "clientes".
-      // Ou podemos buscar todos e filtrar os que são clientes (ex: "ganhou").
-      // Para demonstração, buscaremos os leads com status "ganhou" ou que tenham a flag is_client.
-      // Como não sabemos a estrutura exata, buscamos todos os leads para filtrar, 
-      // mas na vida real seria uma query mais direcionada (ex: eq('status', 'ganhou')).
       const { data, error } = await supabase
         .from('leads')
         .select('*')
@@ -46,8 +41,6 @@ export default function ClientesPage() {
 
       if (error) throw error;
 
-      // Filtrando localmente apenas aqueles que consideramos "clientes" (ex: status ganhou)
-      // Se você criar uma flag no banco `is_client`, use-a na query supabase.
       const clientesFiltrados = data
         .filter(lead => lead.status === 'ganhou' || lead.status === 'inativo' || lead.is_client === true)
         .map(lead => ({
@@ -56,7 +49,7 @@ export default function ClientesPage() {
           email: lead.email,
           telefone: lead.phone,
           empresa: lead.company_name,
-          status: lead.status === 'ganhou' ? 'ativo' : lead.status, // Simplificação de status
+          status: lead.status === 'ganhou' ? 'ativo' : lead.status, 
           valor: lead.value || lead.total_value || 0,
           dataInicio: new Date(lead.created_at).toLocaleDateString("pt-BR"),
           contract_start_date: lead.contract_start_date,
@@ -67,6 +60,20 @@ export default function ClientesPage() {
     } catch (err) {
       console.error(err);
       toast.error("Erro ao carregar clientes.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sincroniza o cliente selecionado com a lista atualizada
+  useEffect(() => {
+    if (selectedCliente && clientes.length > 0) {
+      const updated = clientes.find(c => c.id === selectedCliente.id);
+      if (updated) {
+        setSelectedCliente(updated);
+      }
+    }
+  }, [clientes]);
 
   const handleOpenCliente = (cliente: ClientePerfilData) => {
     setSelectedCliente(cliente);
