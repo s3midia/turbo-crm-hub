@@ -439,9 +439,9 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
           { label: "Saídas Totais", value: totals.saidas, color: "text-rose-500", bg: "bg-rose-500/10" },
           { label: "Pendente a Receber", value: totals.pendentes, color: "text-amber-500", bg: "bg-amber-500/10" },
         ].map((s, i) => (
-          <div key={i} className={cn("p-3 rounded-2xl border border-border/40", s.bg)}>
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{s.label}</p>
-            <p className={cn("text-xl font-black mt-1", s.color)}>{formatBRL(s.value)}</p>
+          <div key={i} className={cn("p-2 lg:p-2.5 rounded-xl border border-border/40", s.bg)}>
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-wider">{s.label}</p>
+            <p className={cn("text-lg font-black mt-0.5", s.color)}>{formatBRL(s.value)}</p>
           </div>
         ))}
       </div>
