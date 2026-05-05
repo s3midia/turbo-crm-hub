@@ -264,8 +264,6 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                     className="h-6 text-xs w-32 bg-muted/30"
                     placeholder="CPF/CNPJ"
                   />
-                  <button onClick={() => { setIsEditing(false); toast.success("Perfil atualizado!"); }} className="text-[10px] text-primary font-bold hover:underline">Salvar</button>
-                  <button onClick={() => setIsEditing(false)} className="text-[10px] text-muted-foreground hover:underline">Cancelar</button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
