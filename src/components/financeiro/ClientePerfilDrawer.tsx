@@ -51,14 +51,14 @@ interface Props {
   cliente: ClientePerfilData | null;
 }
 
-type ProfileTab = "lancamentos" | "pipeline" | "documentos";
+type ProfileTab = "geral" | "lancamentos" | "pipeline" | "documentos";
 
 export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
   const leadId = cliente?.id || cliente?.lead_id || "";
   const leadName = cliente?.cliente || cliente?.company_name || "";
 
   const { transactions, loading, saveTransaction, deleteTransaction } = useFinance(leadId || undefined);
-  const [activeTab, setActiveTab] = useState<ProfileTab>("lancamentos");
+  const [activeTab, setActiveTab] = useState<ProfileTab>("geral");
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
   const [isEditing, setIsEditing] = useState(false);
@@ -86,7 +86,7 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
         empresa: cliente.empresa || cliente.company_name || "",
         cpfCnpj: (cliente as any).cpfCnpj || (cliente as any).documento || (cliente as any).cpf_cnpj || ""
       });
-      setActiveTab("lancamentos");
+      setActiveTab("geral");
     }
   }, [cliente?.id, cliente?.lead_id]);
 
@@ -301,6 +301,7 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
         {/* Tabs */}
         <div className="flex border-b border-border/30 px-6 shrink-0">
           {([
+            { id: "geral", label: "Geral", icon: User },
             { id: "lancamentos", label: "Financeiro", icon: Receipt },
             { id: "pipeline", label: "Pipeline", icon: Zap },
             { id: "documentos", label: "Documentos", icon: Paperclip },
@@ -322,6 +323,58 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
+
+          {/* ── Geral ── */}
+          {activeTab === "geral" && (
+            <div className="p-6 space-y-6">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Informações do Cliente</p>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Email</label>
+                    <Input 
+                      value={editForm.email} 
+                      onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                      className="h-9 text-xs bg-muted/20"
+                      placeholder="Email do cliente"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Telefone</label>
+                    <Input 
+                      value={editForm.telefone} 
+                      onChange={e => setEditForm(f => ({ ...f, telefone: e.target.value }))}
+                      className="h-9 text-xs bg-muted/20"
+                      placeholder="Telefone"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Empresa</label>
+                    <Input 
+                      value={editForm.empresa} 
+                      onChange={e => setEditForm(f => ({ ...f, empresa: e.target.value }))}
+                      className="h-9 text-xs bg-muted/20"
+                      placeholder="Nome da empresa"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">CPF/CNPJ</label>
+                    <Input 
+                      value={editForm.cpfCnpj} 
+                      onChange={e => setEditForm(f => ({ ...f, cpfCnpj: e.target.value }))}
+                      className="h-9 text-xs bg-muted/20"
+                      placeholder="Documento"
+                    />
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Button onClick={() => toast.success("Perfil atualizado!")} className="text-xs font-bold px-8">
+                    Salvar Alterações
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Lançamentos ── */}
           {activeTab === "lancamentos" && (
