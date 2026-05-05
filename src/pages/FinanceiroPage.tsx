@@ -116,34 +116,34 @@ export default function FinanceiroPage() {
       </div>
 
       {/* ── Tab Navigation ─────────────────────────────────────── */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 sticky top-[65px] z-10 shrink-0">
-        <div className="flex gap-1 overflow-x-auto scrollbar-none py-2 max-w-screen-2xl mx-auto">
+      <div className="px-6 py-4 sticky top-[65px] z-10 shrink-0 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-md">
+        <div className="flex items-center gap-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-none shadow-sm">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2.5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 relative rounded-lg whitespace-nowrap group",
+                "flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] transition-all duration-300 relative rounded-xl whitespace-nowrap group",
                 activeTab === tab.id
-                  ? "text-zinc-900 dark:text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg shadow-zinc-900/20 dark:shadow-white/10"
+                  : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
               )}
             >
               <tab.icon className={cn(
                 "w-3.5 h-3.5 transition-transform duration-300 group-hover:scale-110",
-                activeTab === tab.id ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400"
+                activeTab === tab.id ? "text-white dark:text-zinc-900" : "text-zinc-400"
               )} />
               {tab.label}
               
               {tab.badge && (
-                <span className="ml-1 text-[7px] font-black px-1.5 py-0.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 uppercase tracking-tighter animate-pulse">
+                <span className={cn(
+                  "ml-1 text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter transition-colors",
+                  activeTab === tab.id 
+                    ? "bg-white/20 text-white dark:bg-zinc-900/20 dark:text-zinc-900" 
+                    : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                )}>
                   {tab.badge}
                 </span>
-              )}
-
-              {/* Active Indicator */}
-              {activeTab === tab.id && (
-                <div className="absolute bottom-[-9px] left-2 right-2 h-[2px] bg-zinc-900 dark:bg-white rounded-t-full" />
               )}
             </button>
           ))}
