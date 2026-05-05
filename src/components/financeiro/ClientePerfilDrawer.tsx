@@ -51,12 +51,13 @@ export interface ClientePerfilData {
 interface Props {
   open: boolean;
   onClose: () => void;
+  onSave?: () => void;
   cliente: ClientePerfilData | null;
 }
 
 type ProfileTab = "geral" | "lancamentos" | "pipeline" | "documentos";
 
-export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
+export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
   const leadId = cliente?.id || cliente?.lead_id || "";
   const leadName = cliente?.cliente || cliente?.company_name || "";
 
@@ -221,6 +222,7 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
       } as any);
       toast.success("Perfil atualizado com sucesso!");
       setIsEditing(false);
+      if (onSave) onSave();
     } catch (err) {
       console.error(err);
       toast.error("Erro ao atualizar perfil.");
