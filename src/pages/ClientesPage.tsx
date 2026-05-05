@@ -321,7 +321,6 @@ export default function ClientesPage() {
       </div>
 
 
-      <OpportunityModal 
         open={isNewModalOpen}
         onClose={() => {
           setIsNewModalOpen(false);
