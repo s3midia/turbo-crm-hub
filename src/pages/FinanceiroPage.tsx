@@ -87,27 +87,27 @@ export default function FinanceiroPage() {
     <div className="flex flex-col h-full bg-background">
 
       {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-border/30 sticky top-0 z-20 bg-background/95 backdrop-blur-sm shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <DollarSign className="w-4 h-4 text-primary" />
+      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-20 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-zinc-900 dark:bg-white flex items-center justify-center">
+            <DollarSign className="w-4 h-4 text-white dark:text-zinc-900" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-foreground leading-none">Hub Financeiro</h1>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Gestão completa · Sincronizado em tempo real</p>
+            <h1 className="text-[15px] font-black text-zinc-900 dark:text-zinc-100 tracking-tighter uppercase leading-none">Hub Financeiro</h1>
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest leading-none mt-1">Gestão de Fluxo de Caixa</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => { setActiveTab("relatorios"); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/50 bg-card hover:bg-muted text-[11px] font-medium text-muted-foreground hover:text-foreground transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-[11px] font-black uppercase tracking-widest hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all active:scale-95 shadow-sm"
           >
             <Download className="w-3.5 h-3.5" />
             Exportar
           </button>
           <button
             onClick={() => { setActiveTab("lancamentos"); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all text-[11px] font-semibold"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-zinc-900/10 dark:shadow-white/10"
           >
             <Plus className="w-3.5 h-3.5" />
             Nova Transação
@@ -116,23 +116,23 @@ export default function FinanceiroPage() {
       </div>
 
       {/* ── Tab Navigation ─────────────────────────────────────── */}
-      <div className="border-b border-border/30 bg-background px-4 sticky top-[52px] z-10 shrink-0">
-        <div className="flex gap-0 overflow-x-auto scrollbar-none">
+      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 px-4 sticky top-[65px] z-10 shrink-0 backdrop-blur-sm">
+        <div className="flex gap-1 overflow-x-auto scrollbar-none py-1">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-1.5 px-4 py-3 text-[11px] font-medium whitespace-nowrap transition-all duration-150 relative border-b-2 shrink-0",
+                "flex items-center gap-2 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all duration-200 relative rounded-xl my-1",
                 activeTab === tab.id
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border/40"
+                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900"
               )}
             >
               <tab.icon className="w-3.5 h-3.5" />
               {tab.label}
               {tab.badge && (
-                <span className="ml-0.5 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary uppercase tracking-wider">
+                <span className="ml-1 text-[8px] font-black px-1.5 py-0.5 rounded-md bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 uppercase tracking-tighter">
                   {tab.badge}
                 </span>
               )}
