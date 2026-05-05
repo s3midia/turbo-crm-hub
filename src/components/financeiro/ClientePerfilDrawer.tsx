@@ -257,6 +257,18 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                     onChange={e => setEditForm(f => ({ ...f, empresa: e.target.value }))}
                     className="h-6 text-xs w-40 bg-muted/30"
                     placeholder="Empresa"
+                  />
+                  <Input
+                    value={editForm.cpfCnpj}
+                    onChange={e => setEditForm(f => ({ ...f, cpfCnpj: e.target.value }))}
+                    className="h-6 text-xs w-32 bg-muted/30"
+                    placeholder="CPF/CNPJ"
+                  />
+                  <button onClick={handleSaveProfile} className="text-[10px] text-primary font-bold hover:underline">Salvar</button>
+                  <button onClick={() => setIsEditing(false)} className="text-[10px] text-muted-foreground hover:underline">Cancelar</button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                   {(cliente.empresa || cliente.company_name) && (
                     <span className="flex items-center gap-1"><Building2 size={11} />{cliente.empresa || cliente.company_name}</span>
                   )}
