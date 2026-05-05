@@ -13,6 +13,40 @@ export const formatBRL = (value: number | null | undefined): string => {
 };
 
 /**
+ * Formats a raw numeric string or number into a BRL masked string (e.g., "1.000,00").
+ * Used for inputs to follow Brazilian standards.
+ */
+export const maskBRL = (value: string | number): string => {
+  const onlyDigits = String(value).replace(/\D/g, "");
+  const amount = parseFloat(onlyDigits) / 100;
+  
+  if (isNaN(amount)) return "R$ 0,00";
+  
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2
+  }).format(amount);
+};
+
+/**
+ * Parses a BRL masked string (e.g., "R$ 1.000,00") back to a float number.
+ */
+export const parseBRL = (value: string | number | null | undefined): number => {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  
+  // Remove R$, spaces, and thousands dots, then replace decimal comma with dot
+  const cleanValue = value
+    .replace(/R\$/g, "")
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+    
+  return parseFloat(cleanValue) || 0;
+};
+
+/**
  * Null-safe date formatting.
  */
 export const formatDate = (date: string | null | undefined): string => {
