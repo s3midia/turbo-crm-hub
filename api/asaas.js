@@ -10,13 +10,13 @@ app.post('/api/asaas', async (req, res) => {
         const { action, payload } = req.body;
         
         // A API Key deve estar configurada nas variáveis de ambiente do Vercel
-        // Usamos VITE_ASAAS_API_KEY para consistência com o .env local
-        const ASAAS_API_KEY = process.env.VITE_ASAAS_API_KEY;
-        const IS_PRODUCTION = process.env.VITE_ASAAS_PRODUCTION === 'true';
+        // Limpamos possíveis espaços em branco ou aspas acidentais
+        const ASAAS_API_KEY = process.env.VITE_ASAAS_API_KEY?.trim().replace(/^["']|["']$/g, '');
+        const IS_PRODUCTION = String(process.env.VITE_ASAAS_PRODUCTION).trim() === 'true';
 
         if (!ASAAS_API_KEY) {
-            console.error('[Asaas Proxy] Erro: VITE_ASAAS_API_KEY não configurada no Vercel.');
-            return res.status(500).json({ error: 'Configuração de API Asaas ausente no servidor.' });
+            console.error('[Asaas Proxy] Erro: VITE_ASAAS_API_KEY não encontrada no process.env');
+            return res.status(500).json({ error: 'Configuração de API Asaas (VITE_ASAAS_API_KEY) ausente no servidor Vercel.' });
         }
 
         const BASE_URL = IS_PRODUCTION 
