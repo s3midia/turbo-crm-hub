@@ -320,11 +320,6 @@ export default function ClientesPage() {
         )}
       </div>
 
-      <ClientePerfilDrawer 
-        open={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        cliente={selectedCliente}
-      />
 
       <OpportunityModal 
         open={isNewModalOpen}
