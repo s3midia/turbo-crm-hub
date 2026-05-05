@@ -16,6 +16,7 @@ export interface FinancialTransaction {
   categoria: string;
   recorrencia: 'unica' | 'mensal' | 'trimestral' | 'anual';
   classificacao?: 'recorrente' | 'nao_recorrente';
+  document_url?: string;
   created_at?: string;
 }
 
