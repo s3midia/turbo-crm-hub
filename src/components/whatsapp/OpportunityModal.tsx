@@ -98,6 +98,8 @@ export const OpportunityModal = ({
         template: '',
         cpfCnpj: '',
         totalValue: 0,
+        contractStartDate: '',
+        contractEndDate: '',
     });
 
     const [allLeads, setAllLeads] = useState<any[]>([]);
@@ -133,6 +135,8 @@ export const OpportunityModal = ({
                             template: '',
                             cpfCnpj: (opp as any).cpf_cnpj || (opp as any).cpfCnpj || '',
                             totalValue: opp.total_value || 0,
+                            contractStartDate: opp.contract_start_date || '',
+                            contractEndDate: opp.contract_end_date || '',
                         });
                         setTasks(opp.tasks && opp.tasks.length > 0 ? opp.tasks : []);
                     }
@@ -157,6 +161,8 @@ export const OpportunityModal = ({
                 template: '',
                 cpfCnpj: '',
                 totalValue: 0,
+                contractStartDate: '',
+                contractEndDate: '',
             });
             setTasks([]);
         }
@@ -184,6 +190,8 @@ export const OpportunityModal = ({
                 site_url: formData.siteUrl,
                 cpf_cnpj: formData.cpfCnpj,
                 total_value: formData.totalValue,
+                contract_start_date: formData.contractStartDate || null,
+                contract_end_date: formData.contractEndDate || null,
             } as any);
 
             toast({ title: 'Sucesso', description: opportunityId ? 'Oportunidade atualizada.' : 'Oportunidade criada com sucesso.' });
@@ -406,6 +414,29 @@ export const OpportunityModal = ({
                                                 )}
                                             </div>
                                         </Field>
+
+                                        <Section title="Vigência do Contrato" />
+                                        <div className="grid grid-cols-2 gap-5">
+                                            <Field label="Início do Contrato">
+                                                <Input 
+                                                    type="date" 
+                                                    value={formData.contractStartDate} 
+                                                    onChange={set('contractStartDate')} 
+                                                    className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" 
+                                                />
+                                            </Field>
+                                            <Field label="Término do Contrato">
+                                                <Input 
+                                                    type="date" 
+                                                    value={formData.contractEndDate} 
+                                                    onChange={set('contractEndDate')} 
+                                                    className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" 
+                                                />
+                                            </Field>
+                                        </div>
+                                        <p className="text-[10px] text-zinc-400 font-medium italic">
+                                            * Defina o período de validade para controle de renovações e faturamento.
+                                        </p>
                                     </div>
                                 </div>
                             )}
