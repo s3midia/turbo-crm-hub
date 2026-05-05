@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Users, Check, AlertCircle, Plus, Trash2, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 import { formatBRL } from "@/lib/formatters";
 
@@ -40,82 +42,194 @@ const receitaRef = 0;
 const comprometimento = ((totalFolha + despesasFixas) / receitaRef) * 100;
 
 export default function EquipeFinanceiroTab() {
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>(() => {
-    const saved = localStorage.getItem("crm_equipe_funcionarios");
-    return saved ? JSON.parse(saved) : FUNCIONARIOS;
-  });
-  const [despesas, setDespesas] = useState<Despesa[]>(() => {
-    const saved = localStorage.getItem("crm_equipe_despesas");
-    return saved ? JSON.parse(saved) : DESPESAS;
-  });
+export default function EquipeFinanceiroTab() {
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const [despesas, setDespesas] = useState<Despesa[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchEquipeData = async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Fetch Employees
+    const { data: empData } = await supabase
+      .from('company_employees')
+      .select('*')
+      .eq('user_id', user.id);
+
+    if (empData) {
+      setFuncionarios(empData.map(f => ({
+        id: f.id,
+        nome: f.nome,
+        cargo: f.cargo,
+        salario: Number(f.salario),
+        inss: Number(f.inss),
+        fgts: Number(f.fgts),
+        status: f.status as "pago" | "pendente",
+        vencimento: f.vencimento,
+        email: f.email,
+        telefone: f.telefone,
+        dataAdmissao: f.data_admissao,
+        cpf: f.cpf
+      })));
+    }
+
+    // Fetch Expenses (from financial_transactions)
+    const { data: despData } = await supabase
+      .from('financial_transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('tipo', 'saida');
+
+    if (despData) {
+      setDespesas(despData.map(d => ({
+        id: d.id,
+        descricao: d.descricao,
+        tipo: d.classificacao === 'recorrente' ? 'fixa' : 'variavel',
+        valor: Number(d.valor),
+        vencimento: d.vencimento,
+        status: d.status === 'pago' ? 'pago' : 'pendente',
+        categoria: d.categoria
+      })));
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    localStorage.setItem("crm_equipe_funcionarios", JSON.stringify(funcionarios));
-  }, [funcionarios]);
+    fetchEquipeData();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem("crm_equipe_despesas", JSON.stringify(despesas));
-  }, [despesas]);
-  const [editingFuncId, setEditingFuncId] = useState<number | null>(null);
-  const [editingDespId, setEditingDespId] = useState<number | null>(null);
+  const [editingFuncId, setEditingFuncId] = useState<string | null>(null);
+  const [editingDespId, setEditingDespId] = useState<string | null>(null);
   const [showFolhaModal, setShowFolhaModal] = useState(false);
   const [showDespesasModal, setShowDespesasModal] = useState(false);
 
-  function markFuncPaid(id: number) {
-    setFuncionarios(prev => prev.map(f => f.id === id ? { ...f, status: "pago" } : f));
+  async function markFuncPaid(id: string) {
+    const { error } = await supabase
+      .from('company_employees')
+      .update({ status: 'pago' })
+      .eq('id', id);
+
+    if (!error) {
+      setFuncionarios(prev => prev.map(f => String(f.id) === String(id) ? { ...f, status: "pago" } : f));
+      toast.success("Pagamento registrado!");
+    }
   }
 
-  function markDespPaid(id: number) {
-    setDespesas(prev => prev.map(d => d.id === id ? { ...d, status: "pago" } : d));
+  async function markDespPaid(id: string) {
+    const { error } = await supabase
+      .from('financial_transactions')
+      .update({ status: 'pago', recebimento: new Date().toISOString().split('T')[0] })
+      .eq('id', id);
+
+    if (!error) {
+      setDespesas(prev => prev.map(d => String(d.id) === String(id) ? { ...d, status: "pago" } : d));
+      toast.success("Despesa marcada como paga!");
+    }
   }
 
-  function handleSaveFunc(id: number, data: Partial<Funcionario>) {
-    setFuncionarios(prev => prev.map(f => f.id === id ? { ...f, ...data } : f));
+  async function handleSaveFunc(id: string, data: Partial<Funcionario>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const payload = {
+      nome: data.nome,
+      cargo: data.cargo,
+      salario: data.salario,
+      inss: data.inss,
+      fgts: data.fgts,
+      vencimento: data.vencimento,
+      user_id: user.id
+    };
+
+    if (String(id).length > 15) { // UUID
+      const { error } = await supabase.from('company_employees').update(payload).eq('id', id);
+      if (error) toast.error("Erro ao atualizar colaborador");
+    } else {
+      const { data: newData, error } = await supabase.from('company_employees').insert([payload]).select();
+      if (newData) {
+        setFuncionarios(prev => prev.map(f => String(f.id) === String(id) ? { ...f, id: newData[0].id } : f));
+      }
+    }
     setEditingFuncId(null);
+    toast.success("Dados salvos!");
   }
 
-  function handleSaveDesp(id: number, data: Partial<Despesa>) {
-    setDespesas(prev => prev.map(d => d.id === id ? { ...d, ...data } : d));
+  async function handleSaveDesp(id: string, data: Partial<Despesa>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const payload = {
+      descricao: data.descricao,
+      valor: data.valor,
+      categoria: data.categoria,
+      vencimento: data.vencimento,
+      tipo: 'saida',
+      classificacao: data.tipo === 'fixa' ? 'recorrente' : 'nao_recorrente',
+      user_id: user.id
+    };
+
+    if (String(id).length > 15) { // UUID
+      const { error } = await supabase.from('financial_transactions').update(payload).eq('id', id);
+      if (error) toast.error("Erro ao atualizar despesa");
+    } else {
+      const { data: newData, error } = await supabase.from('financial_transactions').insert([payload]).select();
+      if (newData) {
+        setDespesas(prev => prev.map(d => String(d.id) === String(id) ? { ...d, id: newData[0].id } : d));
+      }
+    }
     setEditingDespId(null);
+    toast.success("Despesa salva!");
   }
 
   function handleAddFunc() {
-    const newId = Date.now();
+    const tempId = Date.now().toString();
     const newFunc: Funcionario = {
-      id: newId,
+      id: tempId as any,
       nome: "Novo Colaborador",
       cargo: "Cargo",
       salario: 0,
       inss: 0,
       fgts: 0,
       status: "pendente",
-      vencimento: "05/05/2026",
+      vencimento: new Date().toISOString().split('T')[0],
     };
     setFuncionarios(prev => [...prev, newFunc]);
-    setEditingFuncId(newId);
+    setEditingFuncId(tempId);
   }
 
   function handleAddDesp() {
-    const newId = Date.now();
+    const tempId = Date.now().toString();
     const newDesp: Despesa = {
-      id: newId,
+      id: tempId as any,
       descricao: "Nova Despesa",
       tipo: "variavel",
       valor: 0,
-      vencimento: "10/05/2026",
+      vencimento: new Date().toISOString().split('T')[0],
       status: "pendente",
       categoria: "Geral",
     };
     setDespesas(prev => [...prev, newDesp]);
-    setEditingDespId(newId);
+    setEditingDespId(tempId);
   }
 
-  function handleDeleteFunc(id: number) {
-    setFuncionarios(prev => prev.filter(f => f.id !== id));
+  async function handleDeleteFunc(id: string) {
+    if (String(id).length > 15) {
+      const { error } = await supabase.from('company_employees').delete().eq('id', id);
+      if (error) return;
+    }
+    setFuncionarios(prev => prev.filter(f => String(f.id) !== String(id)));
+    toast.success("Colaborador removido");
   }
 
-  function handleDeleteDesp(id: number) {
-    setDespesas(prev => prev.filter(d => d.id !== id));
+  async function handleDeleteDesp(id: string) {
+    if (String(id).length > 15) {
+      const { error } = await supabase.from('financial_transactions').delete().eq('id', id);
+      if (error) return;
+    }
+    setDespesas(prev => prev.filter(d => String(d.id) !== String(id)));
+    toast.success("Despesa removida");
   }
 
   const totalFolhaState = funcionarios.reduce((s, f) => s + f.salario + f.inss + f.fgts, 0);
@@ -183,7 +297,7 @@ export default function EquipeFinanceiroTab() {
           <div className="space-y-3 flex-1">
             {funcionarios.map(f => (
               <div key={f.id} className="p-4 rounded-2xl border border-border/30 bg-muted/10 hover:bg-muted/20 transition-all group relative">
-                {editingFuncId === f.id ? (
+                {editingFuncId === String(f.id) ? (
                   <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
                     <div className="grid grid-cols-2 gap-2">
                       <input 
@@ -205,7 +319,7 @@ export default function EquipeFinanceiroTab() {
                     </div>
                     <div className="flex gap-2 justify-end">
                       <button 
-                        onClick={() => handleDeleteFunc(f.id)}
+                        onClick={() => handleDeleteFunc(String(f.id))}
                         className="mr-auto px-3 py-1.5 text-[10px] font-bold text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
                       >
                         Excluir
@@ -217,7 +331,7 @@ export default function EquipeFinanceiroTab() {
                         Cancelar
                       </button>
                       <button 
-                        onClick={() => handleSaveFunc(f.id, f)}
+                        onClick={() => handleSaveFunc(String(f.id), f)}
                         className="px-3 py-1.5 text-[10px] font-bold bg-primary text-primary-foreground rounded-lg"
                       >
                         Salvar
@@ -238,7 +352,7 @@ export default function EquipeFinanceiroTab() {
                           {f.status === "pago" ? "✓ Pago" : "Pendente"}
                         </span>
                         <button 
-                          onClick={() => setEditingFuncId(f.id)}
+                          onClick={() => setEditingFuncId(String(f.id))}
                           className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-bold text-primary hover:underline"
                         >
                           Editar dados
@@ -263,7 +377,7 @@ export default function EquipeFinanceiroTab() {
                         <Calendar size={10} /> Vence: {f.vencimento}
                       </p>
                       {f.status === "pendente" && (
-                        <button onClick={() => markFuncPaid(f.id)} className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
+                        <button onClick={() => markFuncPaid(String(f.id))} className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
                           <Check size={12} /> Marcar pago
                         </button>
                       )}
@@ -304,7 +418,7 @@ export default function EquipeFinanceiroTab() {
           <div className="space-y-3 flex-1">
             {despesas.map(d => (
               <div key={d.id} className="p-4 rounded-2xl border border-border/30 bg-muted/10 hover:bg-muted/20 transition-all group relative">
-                {editingDespId === d.id ? (
+                {editingDespId === String(d.id) ? (
                   <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
                     <input 
                       className="w-full px-3 py-2 text-[12px] font-bold bg-background border border-border rounded-lg"
@@ -326,7 +440,7 @@ export default function EquipeFinanceiroTab() {
                     </div>
                     <div className="flex gap-2 justify-end">
                       <button 
-                        onClick={() => handleDeleteDesp(d.id)}
+                        onClick={() => handleDeleteDesp(String(d.id))}
                         className="mr-auto px-3 py-1.5 text-[10px] font-bold text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
                       >
                         Excluir
@@ -338,7 +452,7 @@ export default function EquipeFinanceiroTab() {
                         Cancelar
                       </button>
                       <button 
-                        onClick={() => handleSaveDesp(d.id, d)}
+                        onClick={() => handleSaveDesp(String(d.id), d)}
                         className="px-3 py-1.5 text-[10px] font-bold bg-amber-500 text-white rounded-lg"
                       >
                         Salvar
@@ -360,7 +474,7 @@ export default function EquipeFinanceiroTab() {
                         <Calendar size={10} /> {d.vencimento} · {d.categoria}
                       </p>
                       <button 
-                        onClick={() => setEditingDespId(d.id)}
+                        onClick={() => setEditingDespId(String(d.id))}
                         className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-bold text-primary hover:underline"
                       >
                         Editar despesa
@@ -369,7 +483,7 @@ export default function EquipeFinanceiroTab() {
                     <div className="text-right flex flex-col items-end gap-2">
                       <span className="font-black text-rose-500 text-sm">{formatBRL(d.valor)}</span>
                       {d.status === "pendente" ? (
-                        <button onClick={() => markDespPaid(d.id)} className="text-[10px] font-bold text-amber-600 border border-amber-500/30 bg-amber-500/10 px-2 py-1 rounded-lg hover:bg-amber-500/20 transition-all group-hover:opacity-100">
+                        <button onClick={() => markDespPaid(String(d.id))} className="text-[10px] font-bold text-amber-600 border border-amber-500/30 bg-amber-500/10 px-2 py-1 rounded-lg hover:bg-amber-500/20 transition-all group-hover:opacity-100">
                           Pagar
                         </button>
                       ) : (
