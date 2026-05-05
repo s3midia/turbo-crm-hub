@@ -31,6 +31,8 @@ const PIPELINE_STAGES = [
   { key: "ganhou", label: "Fechado" },
 ];
 
+const NICHO_SUGGESTIONS = ["Construtora", "Agro", "Dentista", "Advocacia", "Estética", "Varejo"];
+
 interface OpportunityModalProps {
     open: boolean;
     onClose: () => void;
@@ -223,15 +225,6 @@ export const OpportunityModal = ({
                         </div>
 
                         <div className="flex items-center gap-6">
-                            <div className="text-right">
-                                <div className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 leading-none">
-                                    {formatBRL(transactionsTotal)}
-                                </div>
-                                <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
-                                    Valor
-                                </div>
-                            </div>
-
                             {formData.priority && (
                                 <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
                                     formData.priority === 'high' ? 'bg-red-50 text-red-500 dark:bg-red-950/30' :
@@ -254,8 +247,6 @@ export const OpportunityModal = ({
                             <TabsList className="h-10 bg-transparent gap-1 p-0">
                                 {[
                                     { value: 'general', label: 'Geral' },
-                                    { value: 'finance', label: 'Financeiro' },
-                                    { value: 'documents', label: 'Documentos' },
                                     { value: 'pipeline', label: 'Pipeline' },
                                 ].map(tab => (
                                     <TabsTrigger
@@ -277,8 +268,41 @@ export const OpportunityModal = ({
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-0 h-full divide-x divide-zinc-100 dark:divide-zinc-800">
+                                    {/* COLUNA ESQUERDA */}
                                     <div className="flex flex-col gap-6 p-8 overflow-y-auto">
                                         <Section title="Negócio" />
+
+                                        <Field label="Empresa / Lead">
+                                            <div className="relative group">
+                                                <Input
+                                                    value={formData.leadIdentification}
+                                                    onChange={(e) => {
+                                                        set('leadIdentification')(e);
+                                                        setIsSearchingLeads(true);
+                                                    }}
+                                                    onFocus={() => setIsSearchingLeads(true)}
+                                                    placeholder="Nome da empresa"
+                                                    className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 pr-8"
+                                                />
+                                                <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-zinc-400 opacity-50" />
+                                                {isSearchingLeads && formData.leadIdentification.length > 1 && (
+                                                    <div className="absolute z-[100] mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden">
+                                                        <div className="max-h-[200px] overflow-y-auto">
+                                                            {allLeads.filter(l => (l.company_name || "").toLowerCase().includes(formData.leadIdentification.toLowerCase())).map(l => (
+                                                                <button key={l.id} onClick={() => {
+                                                                    setFormData(prev => ({ ...prev, leadIdentification: l.company_name, contact: l.phone || prev.contact, niche: l.niche || prev.niche }));
+                                                                    setIsSearchingLeads(false);
+                                                                }} className="w-full text-left px-4 py-2 text-[12px] hover:bg-zinc-50 dark:hover:bg-zinc-800 flex flex-col border-b last:border-0">
+                                                                    <span className="font-bold">{l.company_name}</span>
+                                                                    <span className="text-[10px] text-zinc-400">{l.phone || 'Sem telefone'}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </Field>
+
                                         <div className="grid grid-cols-2 gap-5">
                                             <Field label="Status">
                                                 <Select value={formData.status} onValueChange={v => setFormData(p => ({...p, status: v}))}>
@@ -308,41 +332,22 @@ export const OpportunityModal = ({
                                             </Field>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-5">
-                                            <Field label="Empresa / Lead">
-                                                <div className="relative group">
-                                                    <Input
-                                                        value={formData.leadIdentification}
-                                                        onChange={(e) => {
-                                                            set('leadIdentification')(e);
-                                                            setIsSearchingLeads(true);
-                                                        }}
-                                                        onFocus={() => setIsSearchingLeads(true)}
-                                                        placeholder="Nome da empresa"
-                                                        className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 pr-8"
-                                                    />
-                                                    <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-zinc-400 opacity-50" />
-                                                    {isSearchingLeads && formData.leadIdentification.length > 1 && (
-                                                        <div className="absolute z-[100] mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden">
-                                                            <div className="max-h-[200px] overflow-y-auto">
-                                                                {allLeads.filter(l => (l.company_name || "").toLowerCase().includes(formData.leadIdentification.toLowerCase())).map(l => (
-                                                                    <button key={l.id} onClick={() => {
-                                                                        setFormData(prev => ({ ...prev, leadIdentification: l.company_name, contact: l.phone || prev.contact, niche: l.niche || prev.niche }));
-                                                                        setIsSearchingLeads(false);
-                                                                    }} className="w-full text-left px-4 py-2 text-[12px] hover:bg-zinc-50 dark:hover:bg-zinc-800 flex flex-col border-b last:border-0">
-                                                                        <span className="font-bold">{l.company_name}</span>
-                                                                        <span className="text-[10px] text-zinc-400">{l.phone || 'Sem telefone'}</span>
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </Field>
-                                            <Field label="Nicho">
+                                        <Field label="Nicho">
+                                            <div className="space-y-2">
                                                 <Input value={formData.niche} onChange={set('niche')} placeholder="Nicho" className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" />
-                                            </Field>
-                                        </div>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {NICHO_SUGGESTIONS.map(n => (
+                                                        <button
+                                                            key={n}
+                                                            onClick={() => setFormData(p => ({...p, niche: n}))}
+                                                            className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-tight bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 rounded transition-colors"
+                                                        >
+                                                            {n}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </Field>
 
                                         <Field label="Responsável">
                                             <Select value={formData.responsible} onValueChange={v => setFormData(p => ({...p, responsible: v}))}>
@@ -363,6 +368,7 @@ export const OpportunityModal = ({
                                         </Field>
                                     </div>
 
+                                    {/* COLUNA DIREITA */}
                                     <div className="flex flex-col gap-6 p-8 overflow-y-auto">
                                         <Section title="Contato & Documentos" />
                                         <div className="grid grid-cols-2 gap-5">
@@ -389,23 +395,6 @@ export const OpportunityModal = ({
                                     </div>
                                 </div>
                             )}
-                        </TabsContent>
-
-                        {/* Financeiro */}
-                        <TabsContent value="finance" className="flex-1 overflow-y-auto mt-0 p-8">
-                            <LeadFinanceTab
-                                leadId={opportunityId || ""}
-                                leadName={formData.leadIdentification}
-                                siteUrl={formData.siteUrl}
-                            />
-                        </TabsContent>
-
-                        {/* Documentos */}
-                        <TabsContent value="documents" className="flex-1 overflow-y-auto mt-0 p-8">
-                            <LeadDocumentsTab
-                                leadId={opportunityId || ""}
-                                leadName={formData.leadIdentification}
-                            />
                         </TabsContent>
 
                         {/* Pipeline */}
