@@ -52,8 +52,8 @@ export default function ClientesPage() {
           status: lead.status === 'ganhou' ? 'ativo' : lead.status, 
           valor: lead.value || lead.total_value || 0,
           dataInicio: new Date(lead.created_at).toLocaleDateString("pt-BR"),
-          contract_start_date: lead.contract_start_date,
-          contract_end_date: lead.contract_end_date,
+          contract_start_date: lead.contract_start_date || lead.contractStartDate || "",
+          contract_end_date: lead.contract_end_date || lead.contractEndDate || ""
         }));
 
       setClientes(clientesFiltrados);
@@ -270,7 +270,7 @@ export default function ClientesPage() {
                           </span>
                         </div>
                       ) : (
-                        <span className="text-[10px] text-muted-foreground italic">Não definida</span>
+                        <span className="text-[10px] text-muted-foreground/60 italic bg-muted/30 px-2 py-0.5 rounded">Vigência não definida</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell">
