@@ -91,7 +91,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       const despesas = txs.filter(t => t.tipo === 'saida').reduce((acc, t) => acc + Number(t.valor), 0);
       const saldo = receita - despesas;
       const aReceber = txs.filter(t => t.tipo === 'entrada' && t.status === 'pendente').reduce((acc, t) => acc + Number(t.valor), 0);
-      const margem = receita > 0 ? (saldo / receita) * 100 : 0;
+      const margem = receita > 0 ? Math.max(-999, Math.min(100, (saldo / receita) * 100)) : (saldo < 0 ? -100 : 0);
       
       // EBITDA Estimate (Simplified: Revenue - Op Expenses before Tax/Depreciation)
       // Here we just use Operating Profit as proxy
