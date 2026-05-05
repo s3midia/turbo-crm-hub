@@ -240,7 +240,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700 font-jakarta">
 
       {/* --- KPI GRID (Image Reference Style) --- */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[24px] overflow-hidden shadow-sm">
@@ -268,7 +268,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
               <div 
                 key={i} 
                 className={cn(
-                  "p-8 flex items-center justify-between group transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20",
+                  "p-10 flex items-center justify-between group transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20",
                   i % 3 !== 2 && "lg:border-r border-zinc-100 dark:border-zinc-800",
                   i < 3 && "lg:border-b border-zinc-100 dark:border-zinc-800",
                   i % 2 !== 1 && "md:border-r lg:md:border-r-0 border-zinc-100 dark:border-zinc-800",
@@ -276,14 +276,14 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                   "border-b md:border-b-0 last:border-b-0"
                 )}
               >
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+                    <span className="text-4xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter">
                       {kpi.display ?? (kpi.value! >= 1000 ? (kpi.value! / 1000).toFixed(1) + 'k' : kpi.value)}
                     </span>
                     {kpi.trend && (
                       <div className={cn(
-                        "px-2 py-0.5 rounded-full text-[11px] font-bold",
+                        "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
                         kpi.up === true ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" : 
                         kpi.up === false ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10" : 
                         "bg-zinc-50 text-zinc-500 dark:bg-zinc-500/10"
@@ -292,7 +292,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                       </div>
                     )}
                   </div>
-                  <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 max-w-[120px] leading-tight">
+                  <p className="text-[11px] font-extrabold text-zinc-400 dark:text-zinc-500 max-w-[140px] leading-tight uppercase tracking-[0.2em]">
                     {kpi.label}
                   </p>
                 </div>
