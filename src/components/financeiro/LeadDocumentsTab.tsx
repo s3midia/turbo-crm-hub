@@ -193,104 +193,91 @@ export const LeadDocumentsTab = ({ leadId, leadName }: LeadDocumentsTabProps) =>
                         <FileText className="h-4 w-4" /> Documentos do Cliente
                     </CardTitle>
                     
-                    {/* Ocultamos o menu suspenso daqui e o movemos para o conteúdo principal para padronizar o visual */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button size="sm" className="h-8 gap-2 font-bold uppercase text-[10px]">
+                                <Plus className="w-3.5 h-3.5" /> Novo Documento
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => setIsAddLinkModalOpen(true)} className="gap-2 cursor-pointer">
+                                <LinkIcon className="w-4 h-4 text-primary" />
+                                Vincular Link
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setIsUploadPdfModalOpen(true)} className="gap-2 cursor-pointer">
+                                <Upload className="w-4 h-4 text-emerald-500" />
+                                Subir PDF
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </CardHeader>
 
-                <CardContent className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        {docs.map((doc) => (
-                            <div key={doc.id} className="p-4 rounded-2xl border border-border/40 bg-background hover:border-primary/20 transition-all group cursor-pointer relative overflow-hidden">
-                                <div className="flex items-center gap-3">
+                <CardContent className="p-0">
+                    {docs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 opacity-40">
+                            <FileText className="h-10 w-10 mb-3 text-muted-foreground" />
+                            <p className="text-xs font-black uppercase tracking-widest">Nenhum documento</p>
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                                Vincule um link ou suba um PDF para este cliente
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-border/40">
+                            {docs.map((doc) => (
+                                <div key={doc.id} className="px-5 py-3 flex items-center gap-3 hover:bg-muted/10 transition-colors group">
                                     <div className={cn(
-                                        "w-10 h-10 rounded-xl flex items-center justify-center transition-colors shrink-0",
-                                        doc.subtipo === "Upload PDF" ? "bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500/20" : "bg-primary/10 text-primary group-hover:bg-primary/20"
+                                        "p-2 rounded-xl shrink-0",
+                                        doc.subtipo === "Upload PDF" ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"
                                     )}>
-                                        {doc.subtipo === "Upload PDF" ? <FileText size={20} /> : <LinkIcon size={20} />}
+                                        {doc.subtipo === "Upload PDF" ? <FileText size={14} /> : <LinkIcon size={14} />}
                                     </div>
-                                    <div className="flex-1 min-w-0 pr-8">
-                                        <p className="text-[12px] font-bold text-foreground truncate">{doc.titulo}</p>
-                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium mt-1">
-                                            <span>{doc.subtipo}</span>
-                                            <span>•</span>
-                                            <span>{doc.data}</span>
+                                    
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-black text-foreground truncate">{doc.titulo}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[10px] text-muted-foreground font-bold">{doc.data}</span>
+                                            <Badge variant="outline" className="text-[9px] font-black px-1.5 py-0 border-muted-foreground/20 h-4">
+                                                {doc.subtipo}
+                                            </Badge>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all bg-background/90 p-1 rounded-lg">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedDoc(doc);
-                                            if (doc.arquivoUrl) setIsPdfViewOpen(true);
-                                            else setIsViewModalOpen(true);
-                                        }}
-                                    >
-                                        <Eye size={14} />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDelete(doc.id);
-                                        }}
-                                    >
-                                        <Trash2 size={14} />
-                                    </Button>
-                                    {doc.arquivoUrl && (
+
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                window.open(doc.arquivoUrl, "_blank");
+                                            onClick={() => {
+                                                setSelectedDoc(doc);
+                                                if (doc.arquivoUrl) setIsPdfViewOpen(true);
+                                                else setIsViewModalOpen(true);
                                             }}
                                         >
-                                            <ExternalLink size={14} />
+                                            <Eye size={12} />
                                         </Button>
-                                    )}
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                            onClick={() => handleDelete(doc.id)}
+                                        >
+                                            <Trash2 size={12} />
+                                        </Button>
+                                        {doc.arquivoUrl && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                onClick={() => window.open(doc.arquivoUrl, "_blank")}
+                                            >
+                                                <ExternalLink size={12} />
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="space-y-3">
-                        <div 
-                            className="flex items-center justify-between p-4 rounded-xl border-2 border-dashed border-border/60 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all cursor-pointer group/doc"
-                            onClick={() => setIsUploadPdfModalOpen(true)}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-                                    <Paperclip size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-[12px] font-bold text-foreground group-hover/doc:text-purple-600 transition-colors">Anexar Novo Contrato</p>
-                                    <p className="text-[10px] text-muted-foreground">Fazer upload de PDF para armazenamento</p>
-                                </div>
-                            </div>
-                            <Plus size={18} className="text-muted-foreground group-hover/doc:text-purple-500" />
+                            ))}
                         </div>
-                        <div 
-                            className="flex items-center justify-between p-4 rounded-xl border-2 border-dashed border-border/60 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all cursor-pointer group/doc"
-                            onClick={() => setIsAddLinkModalOpen(true)}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                                    <LinkIcon size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-[12px] font-bold text-foreground group-hover/doc:text-blue-600 transition-colors">Vincular Link Externo</p>
-                                    <p className="text-[10px] text-muted-foreground">Documentos do ZapSign, Google Drive, etc.</p>
-                                </div>
-                            </div>
-                            <Plus size={18} className="text-muted-foreground group-hover/doc:text-blue-500" />
-                        </div>
-                    </div>
+                    )}
                 </CardContent>
             </Card>
 
