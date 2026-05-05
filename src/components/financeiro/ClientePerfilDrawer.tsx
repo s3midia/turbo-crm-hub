@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { saveOpportunity } from "@/hooks/useOpportunities";
 import { AsaasService } from "@/services/asaasService";
 import { Loader2 } from "lucide-react";
 const PIPELINE_STAGES = [
@@ -43,6 +44,8 @@ export interface ClientePerfilData {
   dataInicio?: string;
   totalPago?: number;
   clientId?: string;
+  contract_start_date?: string;
+  contract_end_date?: string;
 }
 
 interface Props {
@@ -62,7 +65,14 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ email: "", telefone: "", empresa: "", cpfCnpj: "" });
+  const [editForm, setEditForm] = useState({ 
+    email: "", 
+    telefone: "", 
+    empresa: "", 
+    cpfCnpj: "",
+    contractStartDate: "",
+    contractEndDate: ""
+  });
   const navigate = useNavigate();
   const [generatingBoletoId, setGeneratingBoletoId] = useState<string | null>(null);
 
@@ -84,7 +94,9 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
         email: cliente.email || "",
         telefone: cliente.telefone || cliente.phone || "",
         empresa: cliente.empresa || cliente.company_name || "",
-        cpfCnpj: (cliente as any).cpfCnpj || (cliente as any).documento || (cliente as any).cpf_cnpj || ""
+        cpfCnpj: (cliente as any).cpfCnpj || (cliente as any).documento || (cliente as any).cpf_cnpj || "",
+        contractStartDate: cliente.contract_start_date || "",
+        contractEndDate: cliente.contract_end_date || ""
       });
       setActiveTab("geral");
     }
@@ -193,6 +205,27 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
       setGeneratingBoletoId(null);
     }
   }
+
+  const handleSaveProfile = async () => {
+    if (!leadId) return;
+    try {
+      await saveOpportunity({
+        id: leadId,
+        lead_identification: editForm.empresa || leadName,
+        contact_phone: editForm.telefone,
+        contact_email: editForm.email,
+        stage: cliente.status || cliente.kanbanStage || 'ganhou',
+        total_value: cliente.valor || 0,
+        contract_start_date: editForm.contractStartDate || null,
+        contract_end_date: editForm.contractEndDate || null,
+      } as any);
+      toast.success("Perfil atualizado com sucesso!");
+      setIsEditing(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao atualizar perfil.");
+    }
+  };
 
   const currentStageIdx = PIPELINE_STAGES.findIndex(s => s.key === (cliente?.kanbanStage || cliente?.status));
 
@@ -367,8 +400,37 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                     />
                   </div>
                 </div>
-                <div className="mt-6 flex justify-end">
-                  <Button onClick={() => toast.success("Perfil atualizado!")} className="text-xs font-bold px-8">
+
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-8 mb-4">Vigência de Contrato</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Início do Contrato</label>
+                    <Input 
+                      type="date"
+                      value={editForm.contractStartDate} 
+                      onChange={e => setEditForm(f => ({ ...f, contractStartDate: e.target.value }))}
+                      className="h-9 text-xs bg-muted/20"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Término do Contrato</label>
+                    <Input 
+                      type="date"
+                      value={editForm.contractEndDate} 
+                      onChange={e => setEditForm(f => ({ ...f, contractEndDate: e.target.value }))}
+                      className="h-9 text-xs bg-muted/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-8 p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-[11px] text-primary/80 font-medium">
+                    As datas de vigência ajudam a monitorar renovações automáticas e períodos de fidelidade.
+                  </p>
+                </div>
+
+                <div className="mt-8 flex justify-end">
+                  <Button onClick={handleSaveProfile} className="text-xs font-bold px-8">
                     Salvar Alterações
                   </Button>
                 </div>
