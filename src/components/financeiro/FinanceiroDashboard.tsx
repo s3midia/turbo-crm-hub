@@ -267,35 +267,13 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                   "border-b lg:border-b-0 last:border-b-0"
                 )}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">
+                {/* Header Row: Label + Stretched Sparkline + Icon */}
+                <div className="flex items-center gap-4 mb-2">
+                  <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] whitespace-nowrap shrink-0">
                     {kpi.label}
                   </p>
-                  <div className="text-zinc-300 dark:text-zinc-700">
-                    <kpi.icon size={12} />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter">
-                        {kpi.display ?? (kpi.value! >= 1000 ? (kpi.value! / 1000).toFixed(1) + 'k' : kpi.value)}
-                      </span>
-                    </div>
-                    {kpi.trend && (
-                      <span className={cn(
-                        "text-[9px] font-black uppercase tracking-tighter",
-                        kpi.up === true ? "text-emerald-500" : 
-                        kpi.up === false ? "text-rose-500" : 
-                        "text-zinc-400"
-                      )}>
-                        {kpi.up === true ? "+" : ""}{kpi.trend}
-                      </span>
-                    )}
-                  </div>
                   
-                  <div className="w-20 h-8 opacity-100 transition-opacity duration-500">
+                  <div className="flex-1 h-10 opacity-100">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={sparkData}>
                         <defs>
@@ -308,7 +286,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                           type="monotone" 
                           dataKey="value" 
                           stroke={accentColor} 
-                          strokeWidth={2} 
+                          strokeWidth={2.5} 
                           fillOpacity={1} 
                           fill={`url(#grad-${i})`}
                           dot={false}
@@ -316,6 +294,27 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
+
+                  <div className="text-zinc-300 dark:text-zinc-700 shrink-0">
+                    <kpi.icon size={12} />
+                  </div>
+                </div>
+
+                {/* Data Row: Value + Trend */}
+                <div className="flex items-baseline gap-3">
+                  <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter">
+                    {kpi.display ?? (kpi.value! >= 1000 ? (kpi.value! / 1000).toFixed(1) + 'k' : kpi.value)}
+                  </span>
+                  {kpi.trend && (
+                    <span className={cn(
+                      "text-[10px] font-black uppercase tracking-tighter",
+                      kpi.up === true ? "text-emerald-500" : 
+                      kpi.up === false ? "text-rose-500" : 
+                      "text-zinc-400"
+                    )}>
+                      {kpi.up === true ? "↑" : kpi.up === false ? "↓" : ""} {kpi.trend}
+                    </span>
+                  )}
                 </div>
               </div>
             );
