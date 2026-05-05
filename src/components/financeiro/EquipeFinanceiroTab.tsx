@@ -205,15 +205,23 @@ export default function EquipeFinanceiroTab() {
 
     if (String(id).length > 15) { // UUID
       const { error } = await supabase.from('financial_transactions').update(payload).eq('id', id);
-      if (error) toast.error("Erro ao atualizar despesa");
+      if (error) {
+        toast.error("Erro ao atualizar despesa: " + error.message);
+        return;
+      }
     } else {
       const { data: newData, error } = await supabase.from('financial_transactions').insert([payload]).select();
+      if (error) {
+        toast.error("Erro ao salvar despesa: " + error.message);
+        return;
+      }
       if (newData) {
         setDespesas(prev => prev.map(d => String(d.id) === String(id) ? { ...d, id: newData[0].id } : d));
       }
     }
     setEditingDespId(null);
     toast.success("Despesa salva!");
+    fetchEquipeData();
   }
 
   function handleAddFunc() {
