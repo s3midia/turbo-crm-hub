@@ -84,6 +84,38 @@ export default function FinanceiroPage() {
   }
 
   return (
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [isScrolling, setIsScrolling] = useState<"left" | "right" | null>(null);
+
+  React.useEffect(() => {
+    let animationId: number;
+    const scroll = () => {
+      if (scrollRef.current && isScrolling) {
+        const speed = 5;
+        scrollRef.current.scrollLeft += isScrolling === "right" ? speed : -speed;
+        animationId = requestAnimationFrame(scroll);
+      }
+    };
+    if (isScrolling) animationId = requestAnimationFrame(scroll);
+    return () => cancelAnimationFrame(animationId);
+  }, [isScrolling]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!scrollRef.current) return;
+    const { left, width } = scrollRef.current.getBoundingClientRect();
+    const x = e.clientX - left;
+    const edgeSize = 100; // pixels from the edge to trigger scroll
+
+    if (x > width - edgeSize) {
+      setIsScrolling("right");
+    } else if (x < edgeSize) {
+      setIsScrolling("left");
+    } else {
+      setIsScrolling(null);
+    }
+  };
+
+  return (
     <div className="flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
 
       {/* ── Header ─────────────────────────────────────────────── */}
@@ -117,7 +149,12 @@ export default function FinanceiroPage() {
 
       {/* ── Tab Navigation ─────────────────────────────────────── */}
       <div className="px-6 py-4 sticky top-[65px] z-10 shrink-0 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
-        <div className="flex items-center gap-1 p-1 bg-zinc-950 dark:bg-zinc-900 border border-white/10 dark:border-zinc-800 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-none shadow-2xl">
+        <div 
+          ref={scrollRef}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setIsScrolling(null)}
+          className="flex items-center gap-1 p-1 bg-zinc-950 dark:bg-zinc-900 border border-white/10 dark:border-zinc-800 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-none shadow-2xl relative"
+        >
           {TABS.map((tab) => (
             <button
               key={tab.id}
