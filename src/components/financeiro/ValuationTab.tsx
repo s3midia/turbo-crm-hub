@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Building2, TrendingUp, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 import { formatBRL } from "@/lib/formatters";
 
@@ -70,66 +71,136 @@ const METODO_INFO = {
 };
 
 export default function ValuationTab() {
-  const [metodo, setMetodo] = useState<MetodoValuation>(() => {
-    const saved = localStorage.getItem("crm_valuation_metodo");
-    return (saved as MetodoValuation) || "multiplos";
+  const [metodo, setMetodo] = useState<MetodoValuation>("multiplos");
+  const [inputs, setInputs] = useState<ValuationInput>({
+    faturamento12m: 0,
+    lucroLiquido: 0,
+    ativosCirculantes: 0,
+    passivos: 0,
+    taxaCrescimento: 0,
+    setor: "Tecnologia / SaaS",
+    wacc: 0,
   });
-  const [inputs, setInputs] = useState<ValuationInput>(() => {
-    const saved = localStorage.getItem("crm_valuation_inputs");
-    return saved ? JSON.parse(saved) : {
-      faturamento12m: 0,
-      lucroLiquido: 0,
-      ativosCirculantes: 0,
-      passivos: 0,
-      taxaCrescimento: 0,
-      setor: "Tecnologia / SaaS",
-      wacc: 0,
+
+  const [bens, setBens] = useState<Bem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch Valuation Config
+      const { data: configData } = await supabase
+        .from('company_valuation_config')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (configData) {
+        setMetodo(configData.metodo as MetodoValuation);
+        setInputs({
+          faturamento12m: Number(configData.faturamento12m),
+          lucroLiquido: Number(configData.lucro_liquido),
+          ativosCirculantes: Number(configData.ativos_circulantes),
+          passivos: Number(configData.passivos),
+          taxaCrescimento: Number(configData.taxa_crescimento),
+          setor: configData.setor,
+          wacc: Number(configData.wacc),
+        });
+      }
+
+      // Fetch Assets
+      const { data: assetsData } = await supabase
+        .from('company_assets')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (assetsData) {
+        setBens(assetsData.map(a => ({
+          id: a.id,
+          nome: a.nome,
+          valor: Number(a.valor)
+        })));
+      }
+      setLoading(false);
     };
-  });
 
-  const [bens, setBens] = useState<Bem[]>(() => {
-    const saved = localStorage.getItem("crm_bens_empresa");
-    return saved ? JSON.parse(saved) : [];
-  });
+    fetchData();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem("crm_valuation_metodo", metodo);
-  }, [metodo]);
+  const saveConfig = async (newMetodo?: MetodoValuation, newInputs?: ValuationInput) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-  useEffect(() => {
-    localStorage.setItem("crm_valuation_inputs", JSON.stringify(inputs));
-  }, [inputs]);
+    const m = newMetodo || metodo;
+    const i = newInputs || inputs;
 
-  useEffect(() => {
-    localStorage.setItem("crm_bens_empresa", JSON.stringify(bens));
-  }, [bens]);
+    await supabase.from('company_valuation_config').upsert({
+      user_id: user.id,
+      metodo: m,
+      faturamento12m: i.faturamento12m,
+      lucro_liquido: i.lucroLiquido,
+      ativos_circulantes: i.ativosCirculantes,
+      passivos: i.passivos,
+      taxa_crescimento: i.taxaCrescimento,
+      setor: i.setor,
+      wacc: i.wacc,
+      updated_at: new Date().toISOString()
+    });
+  };
+
+  const handleMetodoChange = (m: MetodoValuation) => {
+    setMetodo(m);
+    saveConfig(m);
+  };
+
+  const updateInput = (key: keyof ValuationInput, val: string) => {
+    const numVal = parseFloat(val) || 0;
+    const newInputs = { ...inputs, [key]: numVal };
+    setInputs(newInputs);
+    saveConfig(undefined, newInputs);
+  };
 
   const [novoBem, setNovoBem] = useState({ nome: "", valor: "" });
 
   const totalBens = bens.reduce((acc, b) => acc + b.valor, 0);
   const resultado = calcularValuation(inputs, bens, metodo);
 
-  const addBem = () => {
+  const addBem = async () => {
     if (!novoBem.nome || !novoBem.valor) return;
-    setBens([...bens, { id: Date.now().toString(), nome: novoBem.nome, valor: parseFloat(novoBem.valor) }]);
-    setNovoBem({ nome: "", valor: "" });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const valorNum = parseFloat(novoBem.valor);
+    const { data, error } = await supabase.from('company_assets').insert([{
+      user_id: user.id,
+      nome: novoBem.nome,
+      valor: valorNum
+    }]).select();
+
+    if (data) {
+      setBens([...bens, { id: data[0].id, nome: data[0].nome, valor: Number(data[0].valor) }]);
+      setNovoBem({ nome: "", valor: "" });
+      toast.success("Bem adicionado com sucesso!");
+    }
   };
 
-  const removeBem = (id: string) => {
-    setBens(bens.filter(b => b.id !== id));
+  const removeBem = async (id: string) => {
+    const { error } = await supabase.from('company_assets').delete().eq('id', id);
+    if (!error) {
+      setBens(bens.filter(b => b.id !== id));
+      toast.success("Bem removido!");
+    }
   };
-  const maxHistorico = historico.length > 0 ? Math.max(...historico.map(h => Math.max(h.multiplos, h.fcd, h.patrimonial))) : 0;
-
-  function updateInput(key: keyof ValuationInput, val: string) {
-    setInputs(prev => ({ ...prev, [key]: parseFloat(val) || 0 }));
-  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Method Selector */}
       <div className="grid grid-cols-3 gap-4">
         {(Object.entries(METODO_INFO) as [MetodoValuation, typeof METODO_INFO[MetodoValuation]][]).map(([id, info]) => (
-          <button key={id} onClick={() => setMetodo(id)}
+          <button key={id} onClick={() => handleMetodoChange(id)}
             className={cn("p-5 rounded-2xl border text-left transition-all hover:scale-[1.01]",
               metodo === id ? "bg-primary/5 border-primary shadow-md shadow-primary/10" : "bg-card border-border/50 hover:border-primary/30"
             )}>
