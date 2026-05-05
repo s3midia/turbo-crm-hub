@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Building2, TrendingUp, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -70,18 +70,39 @@ const METODO_INFO = {
 };
 
 export default function ValuationTab() {
-  const [metodo, setMetodo] = useState<MetodoValuation>("multiplos");
-  const [inputs, setInputs] = useState<ValuationInput>({
-    faturamento12m: 0,
-    lucroLiquido: 0,
-    ativosCirculantes: 0,
-    passivos: 0,
-    taxaCrescimento: 0,
-    setor: "Tecnologia / SaaS",
-    wacc: 0,
+  const [metodo, setMetodo] = useState<MetodoValuation>(() => {
+    const saved = localStorage.getItem("crm_valuation_metodo");
+    return (saved as MetodoValuation) || "multiplos";
+  });
+  const [inputs, setInputs] = useState<ValuationInput>(() => {
+    const saved = localStorage.getItem("crm_valuation_inputs");
+    return saved ? JSON.parse(saved) : {
+      faturamento12m: 0,
+      lucroLiquido: 0,
+      ativosCirculantes: 0,
+      passivos: 0,
+      taxaCrescimento: 0,
+      setor: "Tecnologia / SaaS",
+      wacc: 0,
+    };
   });
 
-  const [bens, setBens] = useState<Bem[]>([]);
+  const [bens, setBens] = useState<Bem[]>(() => {
+    const saved = localStorage.getItem("crm_bens_empresa");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("crm_valuation_metodo", metodo);
+  }, [metodo]);
+
+  useEffect(() => {
+    localStorage.setItem("crm_valuation_inputs", JSON.stringify(inputs));
+  }, [inputs]);
+
+  useEffect(() => {
+    localStorage.setItem("crm_bens_empresa", JSON.stringify(bens));
+  }, [bens]);
 
   const [novoBem, setNovoBem] = useState({ nome: "", valor: "" });
 

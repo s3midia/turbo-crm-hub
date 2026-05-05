@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TrendingUp, Plus, Building2, BarChart3, Percent, ArrowUpRight, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,8 +29,15 @@ const evolutionData: any[] = [];
 const maxEvol = Math.max(...evolutionData.map(d => d.valor));
 
 export default function InvestimentosTab() {
-  const [investimentos, setInvestimentos] = useState(INITIAL);
+  const [investimentos, setInvestimentos] = useState<Investimento[]>(() => {
+    const saved = localStorage.getItem("crm_investimentos");
+    return saved ? JSON.parse(saved) : INITIAL;
+  });
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("crm_investimentos", JSON.stringify(investimentos));
+  }, [investimentos]);
   const [form, setForm] = useState({ nome: "", tipo: "Renda Fixa" as Investimento["tipo"], aporte: "", rendimento: "", data: "" });
 
   const totalAporte = investimentos.reduce((s, i) => s + i.aporte, 0);
