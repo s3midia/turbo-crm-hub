@@ -140,14 +140,14 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-card border border-border rounded-3xl shadow-2xl p-8 mx-4 animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between mb-6">
+      <div className="w-full max-w-lg bg-card border border-border rounded-3xl shadow-2xl p-6 mx-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-black">{transaction ? "Editar Transação" : "Nova Transação"}</h2>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-all"><X size={18} /></button>
         </div>
 
         {/* Tipo Toggle */}
-        <div className="flex gap-2 p-1 bg-muted/50 rounded-2xl mb-6">
+        <div className="flex gap-2 p-1 bg-muted/50 rounded-2xl mb-4">
           {(["entrada", "saida"] as const).map(tipo => (
             <button
               key={tipo}
@@ -423,7 +423,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+    <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
       {showModal && (
         <TransacaoModal
           transaction={editingTransaction}
@@ -439,7 +439,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
           { label: "Saídas Totais", value: totals.saidas, color: "text-rose-500", bg: "bg-rose-500/10" },
           { label: "Pendente a Receber", value: totals.pendentes, color: "text-amber-500", bg: "bg-amber-500/10" },
         ].map((s, i) => (
-          <div key={i} className={cn("p-4 rounded-2xl border border-border/40", s.bg)}>
+          <div key={i} className={cn("p-3 rounded-2xl border border-border/40", s.bg)}>
             <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{s.label}</p>
             <p className={cn("text-xl font-black mt-1", s.color)}>{formatBRL(s.value)}</p>
           </div>
@@ -451,7 +451,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
         <div className="flex-1 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input type="text" placeholder="Buscar por descrição ou cliente..."
-            className="w-full pl-10 pr-4 py-3 bg-card border border-border/50 rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-card border border-border/50 rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
         <div className="flex gap-2">
@@ -483,7 +483,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
           <thead>
             <tr className="bg-muted/30 border-b border-border/40">
               {["Transação", "Categoria", "Recorrência", "Valor", "Vencimento", "Status", "Ações"].map(h => (
-                <th key={h} className="px-5 py-4 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">{h}</th>
+                <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">{h}</th>
               ))}
             </tr>
           </thead>
