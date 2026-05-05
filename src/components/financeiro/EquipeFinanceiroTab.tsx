@@ -525,21 +525,26 @@ export default function EquipeFinanceiroTab() {
                     <Plus size={12} /> Nova
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "fixa", categoria: "Aluguel", descricao: "Aluguel / Condomínio" })}>
-                    Aluguel / Condomínio
+                <DropdownMenuContent align="end" className="w-56 p-2">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase px-2 py-1.5 mb-1 border-b border-border/50">Sugestões de Despesas</p>
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "fixa", categoria: "Aluguel", descricao: "Aluguel / Condomínio" })} className="gap-2 text-[11px] font-medium cursor-pointer">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" /> Aluguel / Condomínio
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "fixa", categoria: "Software", descricao: "Software / SaaS" })}>
-                    Software / SaaS
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "fixa", categoria: "Software", descricao: "Software / SaaS (CRM, Adobe, etc)" })} className="gap-2 text-[11px] font-medium cursor-pointer">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500" /> Software / SaaS
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "variavel", categoria: "Marketing", descricao: "Marketing / Ads" })}>
-                    Marketing / Ads
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "variavel", categoria: "Marketing", descricao: "Tráfego Pago (Ads)" })} className="gap-2 text-[11px] font-medium cursor-pointer">
+                    <div className="w-2 h-2 rounded-full bg-rose-500" /> Tráfego Pago / Ads
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "fixa", categoria: "Contabilidade", descricao: "Serviços Contábeis" })}>
-                    Contabilidade
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "variavel", categoria: "Impostos", descricao: "Impostos / DAS / Guias" })} className="gap-2 text-[11px] font-medium cursor-pointer">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" /> Impostos / Taxas
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "variavel", categoria: "Geral", descricao: "Nova Despesa" })}>
-                    Outra Despesa
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "fixa", categoria: "Infraestrutura", descricao: "Energia / Internet / Água" })} className="gap-2 text-[11px] font-medium cursor-pointer">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" /> Utilidades (Luz/Internet)
+                  </DropdownMenuItem>
+                  <div className="h-px bg-border/50 my-1" />
+                  <DropdownMenuItem onClick={() => handleAddDesp({ tipo: "variavel", categoria: "Geral", descricao: "Nova Despesa" })} className="gap-2 text-[11px] font-bold cursor-pointer text-primary">
+                    <Plus size={12} /> Outra Despesa
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
