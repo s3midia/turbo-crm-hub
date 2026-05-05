@@ -301,21 +301,21 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Chart: Receitas vs Despesas (Animated Lines) */}
-        <div className="lg:col-span-3 p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-8 relative z-10">
+        <div className="lg:col-span-3 p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-10 relative z-10">
             <div>
-              <h3 className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-tighter">
-                <BarChart3 size={16} className="text-zinc-900 dark:text-zinc-100" />
+              <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-tight">
+                <BarChart3 size={18} className="text-zinc-900 dark:text-zinc-100" />
                 Desempenho Financeiro
               </h3>
-              <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Análise Comparativa • 6 Meses</p>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Análise Comparativa • 6 Meses</p>
             </div>
-            <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-zinc-400">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20" />Receitas
+            <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20" />Receitas
               </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/20" />Despesas
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/20" />Despesas
               </span>
             </div>
           </div>
@@ -373,11 +373,10 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         </div>
 
         {/* Top Clients & EBITDA */}
-        {/* Top Clients & EBITDA */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm h-full flex flex-col">
-            <h3 className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6 uppercase tracking-tighter">
-              <Users size={16} className="text-zinc-400" />
+          <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm h-full flex flex-col">
+            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-8 uppercase tracking-tight">
+              <Users size={18} className="text-zinc-400" />
               Maiores Clientes
             </h3>
             <div className="space-y-4 flex-1">
@@ -425,9 +424,9 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Expense Breakdown (Donut Chart) */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col">
-          <h3 className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6 uppercase tracking-tighter">
-            <PieIcon size={16} className="text-zinc-400" />
+        <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col">
+          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-8 uppercase tracking-tight">
+            <PieIcon size={18} className="text-zinc-400" />
             Composição das Despesas
           </h3>
           <div className="h-[180px] w-full flex items-center">
@@ -471,9 +470,9 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         </div>
 
         {/* Projected Cashflow & Line Chart */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col">
-          <h3 className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6 uppercase tracking-tighter">
-            <Target size={16} className="text-zinc-400" />
+        <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
+          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-8 uppercase tracking-tight">
+            <Target size={18} className="text-zinc-400" />
             Fluxo Projetado
           </h3>
           <div className="space-y-2 mb-6">
@@ -507,10 +506,13 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         </div>
 
         {/* Health Score & Actions */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col">
-          <div className="mb-6">
-            <h3 className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">Saúde Financeira</h3>
-            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Score Dinâmico de Performance</p>
+        <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
+          <div className="mb-8">
+            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight flex items-center gap-2">
+               <Zap size={18} className="text-amber-500 fill-amber-500/20" />
+               Saúde Financeira
+            </h3>
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Score Dinâmico de Performance</p>
           </div>
 
           <div className="flex items-center gap-6 mb-8">
