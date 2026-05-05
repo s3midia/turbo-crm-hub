@@ -240,7 +240,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700 font-jakarta">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700 font-jakarta">
 
       {/* --- KPI GRID (Minimalist Slim Design) --- */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[32px] overflow-hidden shadow-sm">
@@ -261,19 +261,19 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
               <div 
                 key={i} 
                 className={cn(
-                  "p-8 flex flex-col justify-between group transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10",
+                  "p-4 lg:p-6 flex flex-col justify-between group transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10",
                   i % 3 !== 2 && "lg:border-r border-zinc-100 dark:border-zinc-800",
                   i < 3 && "lg:border-b border-zinc-100 dark:border-zinc-800",
                   "border-b lg:border-b-0 last:border-b-0"
                 )}
               >
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.25em] mb-1">
                       {kpi.label}
                     </p>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter">
+                      <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter">
                         {kpi.display ?? (kpi.value! >= 1000 ? (kpi.value! / 1000).toFixed(1) + 'k' : kpi.value)}
                       </span>
                     </div>
@@ -330,8 +330,8 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Chart: Receitas vs Despesas (Animated Lines) */}
-        <div className="lg:col-span-3 p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-10 relative z-10">
+        <div className="lg:col-span-3 p-5 lg:p-6 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-6 relative z-10">
             <div>
               <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-tight">
                 <BarChart3 size={20} className="text-zinc-900 dark:text-zinc-100" />
@@ -349,7 +349,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
             </div>
           </div>
           
-          <div className="h-[220px] w-full mt-4">
+          <div className="h-[180px] w-full mt-2">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
@@ -403,12 +403,12 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
 
         {/* Top Clients & EBITDA */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm h-full flex flex-col">
-            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-8 uppercase tracking-tight">
+          <div className="p-5 lg:p-6 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm h-full flex flex-col">
+            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6 uppercase tracking-tight">
               <Users size={18} className="text-zinc-400" />
               Maiores Clientes
             </h3>
-            <div className="space-y-4 flex-1">
+            <div className="space-y-3 flex-1">
               {data.topClients.map((client, i) => (
                 <div key={i} className="flex items-center justify-between group">
                   <div className="flex items-center gap-3">
@@ -425,8 +425,8 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
               ))}
             </div>
 
-            <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center justify-between mb-4">
+            <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">EBITDA Estimado</p>
                   <p className="text-[18px] font-black text-emerald-500 tracking-tighter">{formatBRL(data.ebitda)}</p>
@@ -447,8 +447,8 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Expense Breakdown (Donut Chart) */}
-        <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col">
-          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-8 uppercase tracking-tight">
+        <div className="p-5 lg:p-6 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col">
+          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-4 uppercase tracking-tight">
             <PieIcon size={18} className="text-zinc-400" />
             Composição das Despesas
           </h3>
@@ -493,8 +493,8 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         </div>
 
         {/* Projected Cashflow & Line Chart */}
-        <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
-          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-8 uppercase tracking-tight">
+        <div className="p-5 lg:p-6 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
+          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-4 uppercase tracking-tight">
             <Target size={18} className="text-zinc-400" />
             Fluxo Projetado
           </h3>
@@ -516,8 +516,8 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         </div>
 
         {/* Health Score & Actions */}
-        <div className="p-8 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
-          <div className="mb-8">
+        <div className="p-5 lg:p-6 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
+          <div className="mb-4">
             <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight flex items-center gap-2">
                <Zap size={18} className="text-amber-500 fill-amber-500/20" />
                Saúde Financeira
@@ -525,7 +525,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Score Dinâmico de Performance</p>
           </div>
 
-          <div className="flex items-center gap-6 mb-8">
+          <div className="flex items-center gap-6 mb-4">
             <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
               <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
                 <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-zinc-100 dark:text-zinc-800" strokeWidth="8" />
