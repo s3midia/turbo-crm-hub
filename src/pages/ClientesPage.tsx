@@ -59,6 +59,8 @@ export default function ClientesPage() {
           status: lead.status === 'ganhou' ? 'ativo' : lead.status, // Simplificação de status
           valor: lead.value || lead.total_value || 0,
           dataInicio: new Date(lead.created_at).toLocaleDateString("pt-BR"),
+          contract_start_date: lead.contract_start_date,
+          contract_end_date: lead.contract_end_date,
         }));
 
       setClientes(clientesFiltrados);
@@ -226,6 +228,7 @@ export default function ClientesPage() {
                   <th className="px-4 py-3 hidden md:table-cell">Contato</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 hidden sm:table-cell">MRR</th>
+                  <th className="px-4 py-3 hidden lg:table-cell">Vigência</th>
                   <th className="px-4 py-3 hidden lg:table-cell">Cliente Desde</th>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
@@ -252,6 +255,20 @@ export default function ClientesPage() {
                     </td>
                     <td className="px-4 py-3 font-semibold text-primary hidden sm:table-cell">
                       {formatBRL(Number(c.valor) || 0)}
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {c.contract_start_date ? (
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-foreground">
+                            {new Date(c.contract_start_date).toLocaleDateString("pt-BR")}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground uppercase">
+                            até {c.contract_end_date ? new Date(c.contract_end_date).toLocaleDateString("pt-BR") : "Indeterminado"}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground italic">Não definida</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell">
                       {c.dataInicio}
