@@ -235,6 +235,7 @@ export default function CobrancasFiscalTab({
     }
   };
 
+  useEffect(() => {
     // Integramos diretamente com a API do Asaas via Vercel Proxy
     // Não é mais necessário buscar da tabela api_manager pois as chaves estão no .env / Vercel
     fetchRealData(); // Initial sync
