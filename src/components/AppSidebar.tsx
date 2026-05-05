@@ -51,6 +51,7 @@ const NAV_SECTIONS = [
         label: "Vendas & Leads",
         items: [
             { label: "Funil Kanban", icon: Columns3, to: "/pipeline" },
+            { label: "Clientes", icon: Users, to: "/clientes" },
             { label: "Agenda", icon: Calendar, to: "/agenda" },
             { label: "Atendimentos", icon: MessageSquare, to: "/atendimentos" },
             { label: "Modelos de Docs", icon: FileText, to: "/modelos-docs" },

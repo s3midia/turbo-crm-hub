@@ -34,6 +34,7 @@ import EquipePage from "./pages/EquipePage";
 import PerfilEmpresaPage from "./pages/PerfilEmpresaPage";
 import IntegracoesPage from "./pages/IntegracoesPage";
 import FunilKanbanPage from "./pages/FunilKanbanPage";
+import ClientesPage from "./pages/ClientesPage";
 import ModelosDocsPage from "./pages/ModelosDocsPage";
 import GeneratorPage from "./pages/GeneratorPage";
 import NotFound from "./pages/NotFound";
@@ -158,6 +159,7 @@ const App = () => {
                                   <Route path="/" element={<DashboardPage />} />
                                   <Route path="/pipeline/relatorio" element={<PipelineReportPage />} />
                                   <Route path="/contacts" element={<ContactsPage />} />
+                                  <Route path="/clientes" element={<ClientesPage />} />
                                   <Route path="/products" element={<ProductsPage />} />
                                   <Route path="/tasks" element={<TasksPage />} />
                                   <Route path="/agentes-s3" element={<AgentsPage />} />
