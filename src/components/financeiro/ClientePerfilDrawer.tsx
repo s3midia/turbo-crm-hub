@@ -257,8 +257,6 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
                     onChange={e => setEditForm(f => ({ ...f, empresa: e.target.value }))}
                     className="h-6 text-xs w-40 bg-muted/30"
                     placeholder="Empresa"
-                  />
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                   {(cliente.empresa || cliente.company_name) && (
                     <span className="flex items-center gap-1"><Building2 size={11} />{cliente.empresa || cliente.company_name}</span>
                   )}
