@@ -45,6 +45,7 @@ const comprometimento = ((totalFolha + despesasFixas) / receitaRef) * 100;
 export default function EquipeFinanceiroTab() {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [despesas, setDespesas] = useState<Despesa[]>([]);
+  const [receitaMensal, setReceitaMensal] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const fetchEquipeData = async () => {
@@ -94,6 +95,19 @@ export default function EquipeFinanceiroTab() {
         categoria: d.categoria
       })));
     }
+
+    // Fetch Revenue for commitment calculation
+    const { data: revData } = await supabase
+      .from('financial_transactions')
+      .select('valor')
+      .eq('user_id', user.id)
+      .eq('tipo', 'entrada');
+    
+    if (revData) {
+      const totalRev = revData.reduce((sum, r) => sum + Number(r.valor), 0);
+      setReceitaMensal(totalRev);
+    }
+
     setLoading(false);
   };
 
@@ -246,7 +260,7 @@ export default function EquipeFinanceiroTab() {
   const totalFolhaState = funcionarios.reduce((s, f) => s + f.salario + f.inss + f.fgts + f.prolabore, 0);
   const despesasFixasState = despesas.filter(d => d.tipo === "fixa").reduce((s, d) => s + d.valor, 0);
   const despesasVariaveisState = despesas.filter(d => d.tipo === "variavel").reduce((s, d) => s + d.valor, 0);
-  const comprometimentoState = ((totalFolhaState + despesasFixasState) / receitaRef) * 100;
+  const comprometimentoState = receitaMensal > 0 ? ((totalFolhaState + despesasFixasState) / receitaMensal) * 100 : 0;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -279,7 +293,7 @@ export default function EquipeFinanceiroTab() {
             style={{ width: `${Math.min(comprometimentoState, 100)}%` }}
           />
         </div>
-        <p className="text-[11px] text-muted-foreground">Folha + Fixas = {formatBRL(totalFolhaState + despesasFixasState)} de {formatBRL(receitaRef)} de receita</p>
+        <p className="text-[11px] text-muted-foreground">Folha + Fixas = {formatBRL(totalFolhaState + despesasFixasState)} de {formatBRL(receitaMensal)} de receita</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
