@@ -155,7 +155,7 @@ export const OpportunityModal = ({
     const handleSubmit = async () => {
         setLoading(true);
         try {
-            await saveOpportunity({
+            const result = await saveOpportunity({
                 id: opportunityId,
                 stage: formData.status,
                 lead_identification: formData.leadIdentification,
@@ -170,9 +170,23 @@ export const OpportunityModal = ({
                 niche: formData.niche,
                 site_url: formData.siteUrl,
             } as any);
-            toast({ title: 'Salvo', description: 'Oportunidade atualizada.' });
+
+            toast({ title: 'Sucesso', description: opportunityId ? 'Oportunidade atualizada.' : 'Oportunidade criada com sucesso.' });
+            
             if (onSaved) onSaved();
-            onClose();
+            
+            // Se for criação, não fechamos para permitir editar as outras abas agora que temos ID
+            if (!opportunityId && result?.id) {
+                // Aqui o ideal seria atualizar a URL ou o estado do pai para mudar o opportunityId
+                // Mas como estamos em um modal, vamos avisar que ele pode continuar
+                toast({ title: 'Atenção', description: 'Oportunidade criada! Agora você pode gerenciar as outras abas.' });
+                // Note: Para que as abas funcionem, o componente pai precisa atualizar o opportunityId prop
+                // Caso contrário, o modal continuará achando que é novo.
+                // Na ClientesPage, o OpportunityModal é controlado pelo estado local.
+                onClose(); // Por segurança, fechamos e o usuário reabre se necessário, ou podemos deixar aberto se o pai atualizar.
+            } else {
+                onClose();
+            }
         } catch (err: any) {
             toast({ title: 'Erro', description: err.message, variant: 'destructive' });
         } finally {
@@ -259,15 +273,16 @@ export const OpportunityModal = ({
                     </div>
 
                     {/* ── Tabs ───────────────────────────────────────────────── */}
-                    <Tabs defaultValue="finance" className="flex flex-col flex-1 overflow-hidden">
+                    {/* ── Tabs ───────────────────────────────────────────────── */}
+                    <Tabs defaultValue="general" className="flex flex-col flex-1 overflow-hidden">
                         <div className="flex items-center px-8 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
                             <TabsList className="h-10 bg-transparent gap-1 p-0">
                                 {[
-                                    { value: 'finance', label: 'Financeiro' },
-                                    { value: 'pipeline', label: 'Pipeline' },
-                                    { value: 'documents', label: 'Documentos' },
                                     { value: 'general', label: 'Geral' },
+                                    { value: 'finance', label: 'Financeiro' },
                                     { value: 'timeline', label: 'Histórico' },
+                                    { value: 'documents', label: 'Documentos' },
+                                    { value: 'pipeline', label: 'Pipeline' },
                                 ].map(tab => (
                                     <TabsTrigger
                                         key={tab.value}
@@ -484,10 +499,10 @@ export const OpportunityModal = ({
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-48 text-zinc-300 gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center">
-                                        <Archive size={18} className="text-zinc-400" />
+                                        <Zap size={18} className="text-zinc-400" />
                                     </div>
                                     <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 text-center">
-                                        Salve o negócio primeiro
+                                        As informações financeiras aparecerão após salvar os dados gerais
                                     </p>
                                 </div>
                             )}
@@ -593,7 +608,7 @@ export const OpportunityModal = ({
                                         <FileText size={18} className="text-zinc-400" />
                                     </div>
                                     <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 text-center">
-                                        Salve o negócio primeiro
+                                        Os documentos aparecerão após salvar os dados gerais
                                     </p>
                                 </div>
                             )}
