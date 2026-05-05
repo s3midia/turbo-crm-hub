@@ -322,22 +322,22 @@ export default function EquipeFinanceiroTab() {
           { label: "Despesas Variáveis", value: formatBRL(despesasVariaveisState), color: "text-amber-500", bg: "bg-amber-500/10", icon: TrendingUp },
           { label: "Comprometimento", value: `${comprometimentoState.toFixed(1)}%`, color: comprometimentoState > 60 ? "text-rose-500" : "text-emerald-500", bg: comprometimentoState > 60 ? "bg-rose-500/10" : "bg-emerald-500/10", icon: Percent },
         ].map((k, i) => (
-          <div key={i} className={cn("p-4 rounded-[1.5rem] border border-border/40 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all", k.bg)}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{k.label}</p>
-              <k.icon size={14} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+          <div key={i} className={cn("p-3 rounded-[1.2rem] border border-border/40 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all", k.bg)}>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{k.label}</p>
+              <k.icon size={12} className="opacity-100" />
             </div>
-            <p className={cn("text-2xl font-black tracking-tighter", k.color)}>{k.value}</p>
+            <p className={cn("text-xl font-black tracking-tighter", k.color)}>{k.value}</p>
           </div>
         ))}
       </div>
 
       {/* Comprometimento Bar - Elegant Premium Version */}
-      <div className="relative p-5 lg:p-6 rounded-[2.5rem] bg-gradient-to-br from-card to-card/50 border border-border/50 shadow-2xl overflow-hidden group">
+      <div className="relative p-4 lg:p-5 rounded-[2rem] bg-gradient-to-br from-card to-card/50 border border-border/50 shadow-2xl overflow-hidden group">
         {/* Subtle background decorative element */}
         <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-1000" />
         
-        <div className="relative z-10 space-y-4">
+        <div className="relative z-10 space-y-3">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -347,10 +347,10 @@ export default function EquipeFinanceiroTab() {
                 )} />
                 <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Saúde Financeira da Operação</span>
               </div>
-              <h3 className="text-2xl font-black tracking-tight text-foreground flex items-baseline gap-2">
-                Comprometimento da Receita
+              <h3 className="text-xl font-black tracking-tight text-foreground flex items-baseline gap-2">
+                Comprometimento
                 <span className={cn(
-                  "text-3xl font-black",
+                  "text-2xl font-black",
                   comprometimentoState > 60 ? "text-rose-500" : comprometimentoState > 40 ? "text-amber-500" : "text-emerald-500"
                 )}>
                   {comprometimentoState.toFixed(1)}%
@@ -360,7 +360,7 @@ export default function EquipeFinanceiroTab() {
             
             <div className="flex flex-col items-start md:items-end gap-1">
               <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Custos Fixos Totais</p>
-              <p className="text-xl font-black text-foreground">{formatBRL(totalFolhaState + despesasFixasState)}</p>
+              <p className="text-lg font-black text-foreground">{formatBRL(totalFolhaState + despesasFixasState)}</p>
             </div>
           </div>
 
