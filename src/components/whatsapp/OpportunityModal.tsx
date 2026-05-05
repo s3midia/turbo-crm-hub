@@ -18,7 +18,8 @@ import { saveOpportunity, archiveOpportunity, getOpportunityById, type Task } fr
 import { useToast } from '@/hooks/use-toast';
 import { useProfiles } from '@/hooks/useProfiles';
 import { LeadFinanceTab } from '@/components/financeiro/LeadFinanceTab';
-import { formatBRL } from '@/lib/formatters';
+import { formatBRL, parseBRL } from '@/lib/formatters';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { useFinance } from '@/hooks/useFinance';
 import { LeadDocumentsTab } from '@/components/financeiro/LeadDocumentsTab';
 
@@ -96,6 +97,7 @@ export const OpportunityModal = ({
         siteUrl: '',
         template: '',
         cpfCnpj: '',
+        totalValue: 0,
     });
 
     const [allLeads, setAllLeads] = useState<any[]>([]);
@@ -130,6 +132,7 @@ export const OpportunityModal = ({
                             siteUrl: opp.site_url || '',
                             template: '',
                             cpfCnpj: (opp as any).cpf_cnpj || (opp as any).cpfCnpj || '',
+                            totalValue: opp.total_value || 0,
                         });
                         setTasks(opp.tasks && opp.tasks.length > 0 ? opp.tasks : []);
                     }
@@ -153,6 +156,7 @@ export const OpportunityModal = ({
                 siteUrl: '', 
                 template: '',
                 cpfCnpj: '',
+                totalValue: 0,
             });
             setTasks([]);
         }
@@ -179,6 +183,7 @@ export const OpportunityModal = ({
                 niche: formData.niche,
                 site_url: formData.siteUrl,
                 cpf_cnpj: formData.cpfCnpj,
+                total_value: formData.totalValue,
             } as any);
 
             toast({ title: 'Sucesso', description: opportunityId ? 'Oportunidade atualizada.' : 'Oportunidade criada com sucesso.' });
