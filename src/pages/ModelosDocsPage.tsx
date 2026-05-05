@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { formatBRL } from "@/lib/formatters";
 import { PdfViewModal } from "@/components/PdfViewModal";
 import { Link as LinkIcon, Upload, Check } from "lucide-react";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { 
     Dialog, 
     DialogContent, 
@@ -622,11 +623,10 @@ export default function ModelosDocsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>Valor do Contrato (Opcional)</Label>
-                            <Input 
-                                type="number" 
+                            <CurrencyInput 
                                 placeholder="0,00" 
-                                value={linkForm.valor || ""} 
-                                onChange={e => setLinkForm(f => ({ ...f, valor: parseFloat(e.target.value) || 0 }))}
+                                value={linkForm.valor} 
+                                onChange={val => setLinkForm(f => ({ ...f, valor: val }))}
                             />
                         </div>
                     </div>
