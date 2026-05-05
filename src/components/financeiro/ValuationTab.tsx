@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
 import { formatBRL } from "@/lib/formatters";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 type MetodoValuation = "multiplos" | "fcd" | "patrimonial";
 
@@ -156,14 +157,13 @@ export default function ValuationTab() {
     saveConfig(m);
   };
 
-  const updateInput = (key: keyof ValuationInput, val: string) => {
-    const numVal = parseFloat(val) || 0;
-    const newInputs = { ...inputs, [key]: numVal };
+  const updateInput = (key: keyof ValuationInput, val: number) => {
+    const newInputs = { ...inputs, [key]: val };
     setInputs(newInputs);
     saveConfig(undefined, newInputs);
   };
 
-  const [novoBem, setNovoBem] = useState({ nome: "", valor: "" });
+  const [novoBem, setNovoBem] = useState({ nome: "", valor: 0 });
 
   const totalBens = bens.reduce((acc, b) => acc + b.valor, 0);
   const resultado = calcularValuation(inputs, bens, metodo);
@@ -173,16 +173,15 @@ export default function ValuationTab() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const valorNum = parseFloat(novoBem.valor);
     const { data, error } = await supabase.from('company_assets').insert([{
       user_id: user.id,
       nome: novoBem.nome,
-      valor: valorNum
+      valor: novoBem.valor
     }]).select();
 
     if (data) {
       setBens([...bens, { id: data[0].id, nome: data[0].nome, valor: Number(data[0].valor) }]);
-      setNovoBem({ nome: "", valor: "" });
+      setNovoBem({ nome: "", valor: 0 });
       toast.success("Bem adicionado com sucesso!");
     }
   };
@@ -226,11 +225,10 @@ export default function ValuationTab() {
           ].filter(f => f.show).map(field => (
             <div key={field.key} className="space-y-1">
               <label className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">{field.label}</label>
-              <input
-                type="number"
-                value={inputs[field.key as keyof ValuationInput]}
-                onChange={e => updateInput(field.key as keyof ValuationInput, e.target.value)}
-                className="w-full px-3 py-2.5 bg-muted/30 border border-border/50 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              <CurrencyInput
+                value={inputs[field.key as keyof ValuationInput] as number}
+                onChange={val => updateInput(field.key as keyof ValuationInput, val)}
+                className="w-full px-3 py-2.5 bg-muted/30 border border-border/50 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all h-[42px]"
               />
             </div>
           ))}
@@ -346,12 +344,11 @@ export default function ValuationTab() {
               <div className="col-span-2 space-y-1">
                 <label className="text-[9px] font-black text-muted-foreground uppercase">Valor (R$)</label>
                 <div className="flex gap-2">
-                  <input
-                    type="number"
+                  <CurrencyInput
                     placeholder="0,00"
                     value={novoBem.valor}
-                    onChange={e => setNovoBem({ ...novoBem, valor: e.target.value })}
-                    className="w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                    onChange={val => setNovoBem({ ...novoBem, valor: val })}
+                    className="w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none h-[34px]"
                   />
                   <button
                     onClick={addBem}
