@@ -5,6 +5,7 @@ import { ClientePerfilDrawer, ClientePerfilData } from "@/components/financeiro/
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { OpportunityModal } from "@/components/whatsapp/OpportunityModal";
 import { formatBRL } from "@/lib/formatters";
 import { toast } from "sonner";
 import {
@@ -22,6 +23,7 @@ export default function ClientesPage() {
   
   const [selectedCliente, setSelectedCliente] = useState<ClientePerfilData | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
 
   useEffect(() => {
     fetchClientes();
@@ -102,7 +104,7 @@ export default function ClientesPage() {
           <Button variant="outline" onClick={fetchClientes} className="text-xs font-semibold">
             Atualizar
           </Button>
-          <Button className="text-xs font-bold gap-1.5 shadow-md">
+          <Button onClick={() => setIsNewModalOpen(true)} className="text-xs font-bold gap-1.5 shadow-md">
             <UserPlus size={14} />
             Novo Cliente
           </Button>
@@ -240,6 +242,15 @@ export default function ClientesPage() {
         open={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         cliente={selectedCliente}
+      />
+
+      <OpportunityModal 
+        open={isNewModalOpen}
+        onClose={() => {
+          setIsNewModalOpen(false);
+          fetchClientes(); // Recarrega após possivelmente criar um novo
+        }}
+        stage="ganhou" // Preenche como 'ganhou' para cair direto como cliente
       />
     </div>
   );
