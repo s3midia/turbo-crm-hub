@@ -248,13 +248,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
           <div
             key={i}
             className={cn(
-              "group p-4 rounded-2xl border bg-card/60 backdrop-blur-sm hover:bg-card transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 cursor-default relative overflow-hidden",
-              kpi.color === "emerald" ? "hover:border-emerald-500/30" :
-              kpi.color === "rose" ? "hover:border-rose-500/30" :
-              kpi.color === "blue" ? "hover:border-blue-500/30" :
-              kpi.color === "amber" ? "hover:border-amber-500/30" :
-              kpi.color === "violet" ? "hover:border-violet-500/30" :
-              "hover:border-cyan-500/30"
+              "group p-4 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 cursor-default relative overflow-hidden"
             )}
           >
             <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-3 border", 
@@ -267,10 +261,10 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
             )}>
               <kpi.icon size={16} />
             </div>
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] mb-1 leading-none opacity-70">
+            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1 leading-none">
               {kpi.label}
             </p>
-            <p className="text-xl font-black text-foreground tracking-tight leading-none">
+            <p className="text-[17px] font-black text-zinc-900 dark:text-zinc-100 tracking-tight leading-none">
               {kpi.display ?? formatBRL(kpi.value!)}
             </p>
             <div className={cn(
@@ -288,105 +282,121 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       {/* --- MIDDLE ROW: MAIN CHARTS --- */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-        {/* Bar Chart: Receitas vs Despesas */}
-        <div className="lg:col-span-3 p-6 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Zap size={120} className="text-primary" />
-          </div>
+        {/* Chart: Receitas vs Despesas (Animated Lines) */}
+        <div className="lg:col-span-3 p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
           <div className="flex items-center justify-between mb-8 relative z-10">
             <div>
-              <h3 className="text-sm font-black text-foreground flex items-center gap-2">
-                <BarChart3 size={16} className="text-primary" />
+              <h3 className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-tighter">
+                <BarChart3 size={16} className="text-zinc-900 dark:text-zinc-100" />
                 Desempenho Financeiro
               </h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Visão comparativa de fluxo de caixa (6 meses)</p>
+              <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Análise Comparativa • 6 Meses</p>
             </div>
-            <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground">
+            <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-zinc-400">
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20" />Receitas
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20" />Receitas
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-sm shadow-rose-400/20" />Despesas
+                <span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/20" />Despesas
               </span>
             </div>
           </div>
           
           <div className="h-[220px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+              <LineChart data={data.barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
                 <XAxis 
                   dataKey="month" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 800, fill: '#888' }} 
+                  tick={{ fontSize: 9, fontWeight: 900, fill: '#A1A1AA' }} 
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 600, fill: '#888' }}
+                  tick={{ fontSize: 9, fontWeight: 700, fill: '#A1A1AA' }}
                   tickFormatter={(val) => `R$ ${val >= 1000 ? (val/1000).toFixed(0)+'k' : val}`}
                 />
                 <Tooltip 
-                  cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                  cursor={{ stroke: 'rgba(0,0,0,0.05)', strokeWidth: 1 }}
                   contentStyle={{ 
-                    borderRadius: '16px', 
-                    border: '1px solid rgba(0,0,0,0.05)', 
+                    borderRadius: '12px', 
+                    border: '1px solid rgba(0,0,0,0.1)', 
                     boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-                    fontSize: '11px',
-                    fontWeight: 'bold'
+                    fontSize: '10px',
+                    fontWeight: '900',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
                   }}
                   formatter={(value: any) => [formatBRL(value), '']}
                 />
-                <Bar dataKey="receita" fill="#10b981" radius={[6, 6, 0, 0]} barSize={20} />
-                <Bar dataKey="despesa" fill="#f87171" radius={[6, 6, 0, 0]} barSize={20} />
-              </BarChart>
+                <Line 
+                  type="monotone" 
+                  dataKey="receita" 
+                  stroke="#10b981" 
+                  strokeWidth={3} 
+                  dot={{ r: 3, strokeWidth: 2, fill: "#fff" }}
+                  activeDot={{ r: 5, strokeWidth: 0, fill: "#10b981" }}
+                  animationDuration={2000}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="despesa" 
+                  stroke="#f87171" 
+                  strokeWidth={3} 
+                  dot={{ r: 3, strokeWidth: 2, fill: "#fff" }}
+                  activeDot={{ r: 5, strokeWidth: 0, fill: "#f87171" }}
+                  animationDuration={2000}
+                />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Top Clients & EBITDA */}
+        {/* Top Clients & EBITDA */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm h-full">
-            <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-6">
-              <Users size={16} className="text-blue-500" />
-              Maiores Clientes (Receita)
+          <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm h-full flex flex-col">
+            <h3 className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6 uppercase tracking-tighter">
+              <Users size={16} className="text-zinc-400" />
+              Maiores Clientes
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1">
               {data.topClients.map((client, i) => (
                 <div key={i} className="flex items-center justify-between group">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-muted/50 flex items-center justify-center text-[10px] font-black group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                    <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-black group-hover:bg-zinc-900 group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-zinc-900 transition-all">
                       {client.name.substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-foreground leading-none">{client.name}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">Sócio Parceiro</p>
+                      <p className="text-[12px] font-black text-zinc-900 dark:text-zinc-100 leading-none">{client.name}</p>
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Sócio Parceiro</p>
                     </div>
                   </div>
-                  <p className="text-xs font-black text-foreground">{formatBRL(client.total)}</p>
+                  <p className="text-[12px] font-black text-zinc-900 dark:text-zinc-100">{formatBRL(client.total)}</p>
                 </div>
               ))}
               {data.topClients.length === 0 && (
                 <div className="text-center py-10 opacity-30">
                   <Info size={32} className="mx-auto mb-2" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">Sem dados de clientes</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest">Sem dados de clientes</p>
                 </div>
               )}
             </div>
 
-            <div className="mt-8 pt-6 border-t border-border/40">
+            <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">EBITDA Estimado</p>
-                  <p className="text-lg font-black text-emerald-500">{formatBRL(data.ebitda)}</p>
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">EBITDA Estimado</p>
+                  <p className="text-[18px] font-black text-emerald-500 tracking-tighter">{formatBRL(data.ebitda)}</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
                   <TrendingUp size={20} className="text-emerald-500" />
                 </div>
               </div>
-              <p className="text-[9px] text-muted-foreground leading-relaxed">
-                Resultado operacional antes de impostos, amortização e depreciação. Reflete a saúde operacional bruta.
+              <p className="text-[9px] font-bold text-zinc-400 uppercase leading-relaxed tracking-tight">
+                Resultado operacional antes de impostos, amortização e depreciação. Saúde operacional bruta.
               </p>
             </div>
           </div>
