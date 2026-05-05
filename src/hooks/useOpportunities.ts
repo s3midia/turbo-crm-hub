@@ -93,7 +93,8 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
     }
 
     if (opportunity.id) {
-        await supabase.from('leads').update(leadData).eq('id', opportunity.id);
+        const { error: updateError } = await supabase.from('leads').update(leadData).eq('id', opportunity.id);
+        if (updateError) throw updateError;
         try {
             const { data, error } = await supabase
                 .from('opportunities')
