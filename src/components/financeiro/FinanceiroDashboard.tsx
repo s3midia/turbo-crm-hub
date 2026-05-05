@@ -1,3 +1,4 @@
+// Updated UI - Compact & Stretched Infographics
 import React, { useEffect, useState, useMemo } from "react";
 import {
   TrendingUp, TrendingDown, Scale, Clock, Percent, Building2,
