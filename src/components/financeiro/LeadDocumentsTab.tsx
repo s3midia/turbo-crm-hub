@@ -336,13 +336,12 @@ export const LeadDocumentsTab = ({ leadId, leadName }: LeadDocumentsTabProps) =>
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                                 <Label>Valor (Opcional)</Label>
-                                <Input 
-                                    type="number" 
+                                <CurrencyInput 
                                     placeholder="0,00" 
-                                    value={linkForm.valor || ""} 
-                                    onChange={e => setLinkForm(f => ({ ...f, valor: parseFloat(e.target.value) || 0 }))}
+                                    value={Number(linkForm.valor || 0)} 
+                                    onChange={val => setLinkForm(f => ({ ...f, valor: val }))}
                                 />
                             </div>
                         </div>
