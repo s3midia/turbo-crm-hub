@@ -71,7 +71,7 @@ export function ApiConsumptionDashboard() {
               <div key={day.name} className="flex-1 flex flex-col items-center group">
                 <div className="relative w-full flex flex-col justify-end h-32">
                   <div 
-                    className="w-full bg-gradient-to-t from-[hsl(265,85%,60%)] to-[hsl(215,85%,65%)] rounded-t-md transition-all duration-1000 ease-out delay-[200ms]"
+                    className="w-full bg-gradient-to-t from-[hsl(265,85%,60%)] to-[hsl(215,85%,65%)] rounded-t-md transition-all duration-1000 ease-out delay-200"
                     style={{ 
                         height: `${(day.value / maxUsage) * 100}%`,
                         opacity: 0.8 + (i * 0.05)
