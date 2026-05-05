@@ -46,6 +46,7 @@ interface Contrato {
   email?: string;
   telefone?: string;
   empresa?: string;
+  cpfCnpj?: string;
   plano: string;
   valor: number;
   diaVencimento: number;
@@ -204,6 +205,7 @@ export default function CobrancasFiscalTab({
           email: lead.email || "contato@empresa.com",
           telefone: lead.phone || "(11) 99999-9999",
           empresa: lead.company_name || "N/A",
+          cpfCnpj: lead.documento || lead.cpf_cnpj || "",
           plano: lead.plano || "N/A",
           valor: lead.valor || 0,
           diaVencimento: 10,
@@ -271,7 +273,7 @@ export default function CobrancasFiscalTab({
         date: defaultDate,
         value: contrato.valor,
         client: contrato.cliente,
-        cpfCnpj: "" // Inicializa vazio para o usuário preencher
+        cpfCnpj: contrato.cpfCnpj || "" 
       });
       setIsReviewingBoleto(true);
       setShowBoletoModal(true);
@@ -383,6 +385,14 @@ export default function CobrancasFiscalTab({
                         />
                       </div>
                       <div className="flex gap-2">
+                        <Input 
+                          value={editedClient?.cpfCnpj} 
+                          onChange={(e) => setEditedClient({...editedClient, cpfCnpj: e.target.value})}
+                          className="bg-background border-primary/20 h-8 text-xs font-bold w-full"
+                          placeholder="CPF / CNPJ (Opcional)"
+                        />
+                      </div>
+                      <div className="flex gap-2">
                         <Button size="sm" className="h-7 text-[10px] font-black" onClick={handleSaveProfile}>SALVAR</Button>
                         <Button size="sm" variant="ghost" className="h-7 text-[10px] font-black" onClick={() => setIsEditing(false)}>CANCELAR</Button>
                       </div>
@@ -390,6 +400,9 @@ export default function CobrancasFiscalTab({
                   ) : (
                     <>
                       <span className="flex items-center gap-1.5"><Building2 size={14} className="text-primary/60" /> {selectedClient?.empresa || "N/A"}</span>
+                      {selectedClient?.cpfCnpj && (
+                        <span className="flex items-center gap-1.5"><FileText size={14} className="text-primary/60" /> {selectedClient.cpfCnpj}</span>
+                      )}
                       <span className="flex items-center gap-1.5"><Calendar size={14} className="text-primary/60" /> Início: {selectedClient?.dataInicio || "N/A"}</span>
                       <span className="bg-muted px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">ID: {formatDisplayId(selectedClient?.clientId || selectedClient?.id)}</span>
                       <button 
