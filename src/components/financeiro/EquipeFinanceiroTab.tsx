@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Users, Check, AlertCircle, Plus, Trash2, Calendar, FileText, Upload, MoreVertical, ExternalLink } from "lucide-react";
+import { Users, Check, AlertCircle, Plus, Trash2, Calendar, FileText, Upload, MoreVertical, ExternalLink, Percent, Target } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -328,21 +328,104 @@ export default function EquipeFinanceiroTab() {
         ))}
       </div>
 
-      {/* Comprometimento Bar */}
-      <div className="p-5 rounded-2xl bg-card border border-border/50 space-y-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-bold">Comprometimento da Receita com Custos Fixos</span>
-          <span className={cn("text-sm font-black", comprometimentoState > 60 ? "text-rose-500" : "text-emerald-500")}>
-            {comprometimentoState.toFixed(1)}% da receita mensal
-          </span>
+      {/* Comprometimento Bar - Elegant Premium Version */}
+      <div className="relative p-7 rounded-[2.5rem] bg-gradient-to-br from-card to-card/50 border border-border/50 shadow-2xl overflow-hidden group">
+        {/* Subtle background decorative element */}
+        <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-1000" />
+        
+        <div className="relative z-10 space-y-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "w-2 h-2 rounded-full animate-pulse",
+                  comprometimentoState > 60 ? "bg-rose-500" : comprometimentoState > 40 ? "bg-amber-500" : "bg-emerald-500"
+                )} />
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Saúde Financeira da Operação</span>
+              </div>
+              <h3 className="text-2xl font-black tracking-tight text-foreground flex items-baseline gap-2">
+                Comprometimento da Receita
+                <span className={cn(
+                  "text-3xl font-black",
+                  comprometimentoState > 60 ? "text-rose-500" : comprometimentoState > 40 ? "text-amber-500" : "text-emerald-500"
+                )}>
+                  {comprometimentoState.toFixed(1)}%
+                </span>
+              </h3>
+            </div>
+            
+            <div className="flex flex-col items-start md:items-end gap-1">
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Custos Fixos Totais</p>
+              <p className="text-xl font-black text-foreground">{formatBRL(totalFolhaState + despesasFixasState)}</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="relative h-4 w-full bg-muted/30 rounded-full overflow-hidden border border-border/20 p-[2px]">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-1000 ease-out relative shadow-lg",
+                  comprometimentoState > 60 
+                    ? "bg-gradient-to-r from-rose-500 to-rose-600 shadow-rose-500/20" 
+                    : comprometimentoState > 40 
+                      ? "bg-gradient-to-r from-amber-400 to-orange-500 shadow-amber-500/20" 
+                      : "bg-gradient-to-r from-emerald-400 to-teal-500 shadow-emerald-500/20"
+                )}
+                style={{ width: `${Math.min(comprometimentoState, 100)}%` }}
+              >
+                {/* Gloss effect */}
+                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent h-[50%] rounded-full" />
+                
+                {/* Glow point at the end */}
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white/40 blur-md rounded-full" />
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center text-[11px] font-bold text-muted-foreground uppercase tracking-tighter">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span>Ideal: <span className="text-emerald-500">{"< 40%"}</span></span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span>Atenção: <span className="text-amber-500">{"40% - 60%"}</span></span>
+                </div>
+              </div>
+              <p className="hidden sm:block">Total Receita: <span className="text-foreground">{formatBRL(receitaMensal)}</span></p>
+            </div>
+          </div>
+          
+          <div className="pt-4 border-t border-border/30 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <Users size={14} />
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-muted-foreground uppercase">Folha</p>
+                <p className="text-[12px] font-bold">{formatBRL(totalFolhaState)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+                <AlertCircle size={14} />
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-muted-foreground uppercase">Despesas Fixas</p>
+                <p className="text-[12px] font-bold">{formatBRL(despesasFixasState)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                <TrendingUp size={14} className="rotate-0" />
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-muted-foreground uppercase">Capacidade de Lucro</p>
+                <p className="text-[12px] font-bold">{formatBRL(Math.max(0, receitaMensal - (totalFolhaState + despesasFixasState)))}</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="h-2.5 rounded-full bg-muted/40 overflow-hidden">
-          <div
-            className={cn("h-full rounded-full transition-all duration-700", comprometimentoState > 60 ? "bg-rose-500" : comprometimentoState > 40 ? "bg-amber-500" : "bg-emerald-500")}
-            style={{ width: `${Math.min(comprometimentoState, 100)}%` }}
-          />
-        </div>
-        <p className="text-[11px] text-muted-foreground">Folha + Fixas = {formatBRL(totalFolhaState + despesasFixasState)} de {formatBRL(receitaMensal)} de receita</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
