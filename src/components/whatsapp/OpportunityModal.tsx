@@ -493,6 +493,93 @@ export const OpportunityModal = ({
                             )}
                         </TabsContent>
                         
+                        {/* ── TAB: Pipeline ────────────────────────────────── */}
+                        <TabsContent value="pipeline" className="flex-1 overflow-y-auto mt-0 p-8">
+                            <div className="space-y-5">
+                                <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                                            <Zap size={13} className="text-zinc-400" />Posição no Funil
+                                        </p>
+                                    </div>
+
+                                    {/* Stepper */}
+                                    <div className="relative pt-1 pb-5">
+                                        <div className="absolute top-[1.05rem] left-0 right-0 h-0.5 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+                                        <div className="relative flex justify-between">
+                                            {PIPELINE_STAGES.map((stage, idx) => {
+                                                const currentStageIdx = PIPELINE_STAGES.findIndex(s => s.key === formData.status);
+                                                const isActive = idx <= (currentStageIdx === -1 ? 0 : currentStageIdx);
+                                                const isCurrent = idx === (currentStageIdx === -1 ? 0 : currentStageIdx);
+                                                return (
+                                                    <div key={stage.key} className="flex flex-col items-center gap-2 z-10">
+                                                        <div className={`w-4 h-4 rounded-full border-2 border-white dark:border-zinc-950 transition-all ${
+                                                            isCurrent ? "bg-zinc-900 dark:bg-zinc-100 ring-2 ring-zinc-900/30 dark:ring-zinc-100/30 scale-125" :
+                                                            isActive ? "bg-zinc-500 dark:bg-zinc-400" : "bg-zinc-200 dark:bg-zinc-800"
+                                                        }`} />
+                                                        <span className={`text-[9px] font-semibold uppercase tracking-tight ${
+                                                            isCurrent ? "text-zinc-900 dark:text-zinc-100" : isActive ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-300 dark:text-zinc-700"
+                                                        }`}>
+                                                            {stage.label}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <p className="text-center text-sm font-semibold text-zinc-900 dark:text-zinc-100 capitalize mt-1">
+                                        {PIPELINE_STAGES.find(s => s.key === formData.status)?.label || "Novo lead"}
+                                    </p>
+                                </div>
+                                
+                                {/* Fluxo de pagamentos */}
+                                <div>
+                                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Fluxo de mensalidades — {new Date().getFullYear()}</p>
+                                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                                        {["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"].map((mes, idx) => {
+                                            const year = new Date().getFullYear();
+                                            const monthTransactions = transactions.filter(t => {
+                                                const d = new Date(t.vencimento);
+                                                return d.getMonth() === idx && d.getFullYear() === year && t.tipo === 'entrada';
+                                            });
+
+                                            const status = monthTransactions.length === 0 ? 'vazio' :
+                                                monthTransactions.some(t => t.status === 'pago') ? 'pago' :
+                                                monthTransactions.some(t => t.status === 'pendente' && new Date(t.vencimento) < new Date()) ? 'atrasado' : 'pendente';
+
+                                            return (
+                                                <div key={mes} className={`flex flex-col items-center p-2 rounded-xl border text-center transition-all ${
+                                                    status === 'pago' ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/30" : 
+                                                    status === 'atrasado' ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800/30" :
+                                                    status === 'pendente' ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/30" :
+                                                    "bg-zinc-50 border-zinc-200 text-zinc-400 dark:bg-zinc-900 dark:border-zinc-800 opacity-60"
+                                                }`}>
+                                                    <span className="text-[9px] font-bold uppercase">{mes}</span>
+                                                    <div className={`w-2 h-2 rounded-full my-1 ${
+                                                        status === 'pago' ? "bg-emerald-500" : 
+                                                        status === 'atrasado' ? "bg-red-500 animate-pulse" :
+                                                        status === 'pendente' ? "bg-amber-500" :
+                                                        "bg-zinc-300 dark:bg-zinc-700"
+                                                    }`} />
+                                                    <span className={`text-[8px] font-semibold uppercase ${
+                                                        status === 'pago' ? "text-emerald-600" : 
+                                                        status === 'atrasado' ? "text-red-600" :
+                                                        status === 'pendente' ? "text-amber-600" :
+                                                        "text-zinc-400"
+                                                    }`}>
+                                                        {status === 'pago' ? "PAGO" : 
+                                                         status === 'atrasado' ? "ATR." :
+                                                         status === 'pendente' ? "PEND." : "—"}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </TabsContent>
+                        
                         {/* ── TAB: Documentos ────────────────────────────────── */}
                         <TabsContent value="documents" className="flex-1 overflow-y-auto mt-0 p-8">
                             {opportunityId ? (
