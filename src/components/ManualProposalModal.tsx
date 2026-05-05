@@ -273,11 +273,19 @@ export function ManualProposalModal({ open, onOpenChange, onSave, doc }: ManualP
                             </div>
                             <div className="space-y-2 col-span-3">
                                 <Label>Valor Original</Label>
-                                <Input type="number" placeholder="2500" value={inv.valorOriginal || ""} onChange={(e) => updateInvestment(i, "valorOriginal", parseFloat(e.target.value))} />
+                                <CurrencyInput 
+                                    placeholder="2.500,00" 
+                                    value={Number(inv.valorOriginal || 0)} 
+                                    onChange={(val) => updateInvestment(i, "valorOriginal", val)} 
+                                />
                             </div>
                             <div className="space-y-2 col-span-3">
                                 <Label>Valor S3 (Final)</Label>
-                                <Input type="number" placeholder="1500" value={inv.valorFinal || ""} onChange={(e) => updateInvestment(i, "valorFinal", parseFloat(e.target.value))} />
+                                <CurrencyInput 
+                                    placeholder="1.500,00" 
+                                    value={Number(inv.valorFinal || 0)} 
+                                    onChange={(val) => updateInvestment(i, "valorFinal", val)} 
+                                />
                             </div>
                             <div className="space-y-2 col-span-1 pt-8 flex items-center justify-center">
                                 <label className="flex flex-col items-center gap-1 cursor-pointer">
