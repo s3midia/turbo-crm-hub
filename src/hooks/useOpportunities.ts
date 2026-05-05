@@ -185,7 +185,9 @@ export const getTimelineEntries = async (opportunityId: string): Promise<Timelin
 export const addTimelineComment = async (opportunityId: string, comment: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado");
-    await supabase.from('opportunity_timeline').insert({ opportunity_id: opportunityId, user_id: user.id, comment: comment });
+    try {
+        await supabase.from('opportunity_timeline').insert({ opportunity_id: opportunityId, user_id: user.id, comment: comment });
+    } catch (e) {}
 };
 
 export const getOpportunities = async (): Promise<Opportunity[]> => {
