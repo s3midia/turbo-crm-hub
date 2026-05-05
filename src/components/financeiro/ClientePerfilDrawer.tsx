@@ -301,7 +301,7 @@ export function ClientePerfilDrawer({ open, onClose, cliente }: Props) {
         {/* Tabs */}
         <div className="flex border-b border-border/30 px-6 shrink-0">
           {([
-            { id: "lancamentos", label: "Lançamentos", icon: Receipt },
+            { id: "lancamentos", label: "Financeiro", icon: Receipt },
             { id: "pipeline", label: "Pipeline", icon: Zap },
             { id: "documentos", label: "Documentos", icon: Paperclip },
           ] as { id: ProfileTab; label: string; icon: any }[]).map(tab => (
