@@ -40,6 +40,8 @@ export default function AgendaPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<AgendaEvent | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [appleConnected, setAppleConnected] = useState(false);
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -453,6 +455,7 @@ export default function AgendaPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Google Calendar */}
             <div className="p-4 rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-white dark:bg-card border border-slate-200 dark:border-border/50 flex items-center justify-center shadow-sm">
@@ -460,12 +463,30 @@ export default function AgendaPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-800 dark:text-slate-200">Google Calendar</h4>
-                  <p className="text-xs text-slate-500 font-medium">Sincronize com sua conta Gmail</p>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {googleConnected ? "Sincronizado com sua conta Gmail" : "Sincronize com sua conta Gmail"}
+                  </p>
                 </div>
               </div>
-              <Button variant="default" size="sm" className="rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white">Conectar</Button>
+              <Button 
+                variant={googleConnected ? "outline" : "default"} 
+                size="sm" 
+                className={cn(
+                  "rounded-xl font-bold transition-all",
+                  !googleConnected && "bg-blue-600 hover:bg-blue-700 text-white shadow-sm",
+                  googleConnected && "border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                )}
+                onClick={() => setGoogleConnected(!googleConnected)}
+              >
+                {googleConnected ? (
+                  <><CheckCircle2 size={14} className="mr-1.5" /> Conectado</>
+                ) : (
+                  "Conectar"
+                )}
+              </Button>
             </div>
 
+            {/* Apple Calendar */}
             <div className="p-4 rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-white dark:bg-card border border-slate-200 dark:border-border/50 flex items-center justify-center shadow-sm">
@@ -473,23 +494,26 @@ export default function AgendaPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-800 dark:text-slate-200">Apple Calendar</h4>
-                  <p className="text-xs text-slate-500 font-medium">Sincronize via iCloud</p>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {appleConnected ? "Sincronizado via iCloud" : "Sincronize via iCloud"}
+                  </p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="rounded-xl font-bold border-slate-300 dark:border-border">Conectar</Button>
-            </div>
-
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white dark:bg-card border border-slate-200 dark:border-border/50 flex items-center justify-center shadow-sm">
-                  <Globe size={24} className="text-blue-500" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 dark:text-slate-200">Outlook / Exchange</h4>
-                  <p className="text-xs text-slate-500 font-medium">Contas corporativas Microsoft</p>
-                </div>
-              </div>
-              <Button variant="outline" size="sm" className="rounded-xl font-bold border-slate-300 dark:border-border">Conectar</Button>
+              <Button 
+                variant={appleConnected ? "outline" : "outline"} 
+                size="sm" 
+                className={cn(
+                  "rounded-xl font-bold transition-all border-slate-300 dark:border-border",
+                  appleConnected && "border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                )}
+                onClick={() => setAppleConnected(!appleConnected)}
+              >
+                {appleConnected ? (
+                  <><CheckCircle2 size={14} className="mr-1.5" /> Conectado</>
+                ) : (
+                  "Conectar"
+                )}
+              </Button>
             </div>
           </div>
           
