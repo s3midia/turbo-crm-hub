@@ -259,14 +259,14 @@ export const OpportunityModal = ({
                     </div>
 
                     {/* ── Tabs ───────────────────────────────────────────────── */}
-                    <Tabs defaultValue="general" className="flex flex-col flex-1 overflow-hidden">
+                    <Tabs defaultValue="finance" className="flex flex-col flex-1 overflow-hidden">
                         <div className="flex items-center px-8 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
                             <TabsList className="h-10 bg-transparent gap-1 p-0">
                                 {[
-                                    { value: 'general', label: 'Geral' },
                                     { value: 'finance', label: 'Financeiro' },
                                     { value: 'pipeline', label: 'Pipeline' },
                                     { value: 'documents', label: 'Documentos' },
+                                    { value: 'general', label: 'Geral' },
                                     { value: 'timeline', label: 'Histórico' },
                                 ].map(tab => (
                                     <TabsTrigger
