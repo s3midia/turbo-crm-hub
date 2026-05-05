@@ -515,10 +515,10 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         {/* Health Score & Actions */}
         <div className="p-4 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
           <div className="mb-3">
-            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight flex items-center gap-2">
-               <Zap size={18} className="text-amber-500 fill-amber-500/20" />
-               Saúde Financeira
-            </h3>
+            <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight flex items-center gap-2 mb-4">
+              <TrendingUp size={18} className="text-zinc-400" />
+              Desempenho Financeiro (ATUALIZADO)
+            </h2>
             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Score Dinâmico de Performance</p>
           </div>
 
