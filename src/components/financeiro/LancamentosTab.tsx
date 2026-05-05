@@ -510,6 +510,18 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                           {t.lead_nome} {t.lead_id && <span className="opacity-50 text-[8px] font-mono">({formatDisplayId(t.lead_id)})</span>}
                         </button>
                       )}
+                      {t.document_url && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(t.document_url, "_blank");
+                          }}
+                          className="text-[10px] text-emerald-600 hover:underline font-bold mt-1 flex items-center gap-1"
+                        >
+                          <FileSpreadsheet size={10} />
+                          Comprovante anexado
+                        </button>
+                      )}
                     </div>
                   </div>
                 </td>
