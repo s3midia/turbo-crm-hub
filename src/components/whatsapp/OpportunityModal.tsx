@@ -256,6 +256,7 @@ export const OpportunityModal = ({
                                 {[
                                     { value: 'general', label: 'Geral' },
                                     { value: 'finance', label: 'Financeiro' },
+                                    { value: 'pipeline', label: 'Pipeline' },
                                     { value: 'documents', label: 'Documentos' },
                                     { value: 'timeline', label: 'Histórico' },
                                 ].map(tab => (
