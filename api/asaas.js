@@ -30,7 +30,7 @@ app.post('/api/asaas', async (req, res) => {
         };
 
         if (action === 'find_or_create_customer') {
-            const { name, email, phone } = payload;
+            const { name, email, phone, cpfCnpj } = payload;
 
             // 1. Buscar cliente pelo e-mail
             const searchRes = await fetch(`${BASE_URL}/customers?email=${encodeURIComponent(email)}`, { headers });
@@ -47,12 +47,13 @@ app.post('/api/asaas', async (req, res) => {
                         name,
                         email,
                         phone,
+                        cpfCnpj: cpfCnpj || undefined, // Envia o CPF/CNPJ
                         notificationDisabled: false
                     })
                 });
                 
                 const customer = await createRes.json();
-                if (!createRes.ok) throw new Error(customer.errors?.[0]?.description || 'Erro ao criar cliente');
+                if (!createRes.ok) throw new Error(customer.errors?.[0]?.description || 'Erro ao criar cliente. Verifique se o CPF/CNPJ é válido.');
                 
                 return res.status(200).json({ customerId: customer.id });
             }

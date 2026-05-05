@@ -23,14 +23,15 @@ export class AsaasService {
   async findOrCreateCustomer(
     name: string,
     email: string,
-    phone?: string
+    phone?: string,
+    cpfCnpj?: string
   ): Promise<string> {
     const response = await fetch("/api/asaas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "find_or_create_customer",
-        payload: { name, email, phone },
+        payload: { name, email, phone, cpfCnpj },
       }),
     });
 

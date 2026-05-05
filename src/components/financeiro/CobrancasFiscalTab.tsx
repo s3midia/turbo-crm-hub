@@ -177,7 +177,7 @@ export default function CobrancasFiscalTab({
     content: "",
     attachBoleto: true,
   });
-  const [generatedBoleto, setGeneratedBoleto] = useState<{ url: string, barcode: string, date: string, value: number, client: string } | null>(null);
+  const [generatedBoleto, setGeneratedBoleto] = useState<{ url: string, barcode: string, date: string, value: number, client: string, cpfCnpj?: string } | null>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const [timelineEvents, setTimelineEvents] = useState<Record<string, TimelineEvent[]>>({});
@@ -270,7 +270,8 @@ export default function CobrancasFiscalTab({
         barcode: "", 
         date: defaultDate,
         value: contrato.valor,
-        client: contrato.cliente
+        client: contrato.cliente,
+        cpfCnpj: "" // Inicializa vazio para o usuário preencher
       });
       setIsReviewingBoleto(true);
       setShowBoletoModal(true);
@@ -1031,19 +1032,30 @@ export default function CobrancasFiscalTab({
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cliente / Sacado</Label>
-                    <Input 
-                      value={generatedBoleto?.client}
-                      onChange={(e) => setGeneratedBoleto(prev => prev ? { ...prev, client: e.target.value } : null)}
-                      className="rounded-xl border-border/40 font-bold"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cliente / Sacado</Label>
+                      <Input 
+                        value={generatedBoleto?.client}
+                        onChange={(e) => setGeneratedBoleto(prev => prev ? { ...prev, client: e.target.value } : null)}
+                        className="rounded-xl border-border/40 font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CPF / CNPJ</Label>
+                      <Input 
+                        value={generatedBoleto?.cpfCnpj || ""}
+                        onChange={(e) => setGeneratedBoleto(prev => prev ? { ...prev, cpfCnpj: e.target.value } : null)}
+                        placeholder="Somente números"
+                        className="rounded-xl border-border/40 font-bold"
+                      />
+                    </div>
                   </div>
 
                   <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex gap-3 items-start">
                     <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
                     <p className="text-[11px] text-amber-700 font-medium leading-relaxed">
-                      Ao clicar em gerar, o sistema irá processar o boleto no gateway configurado (Asaas) e criar a linha digitável para pagamento.
+                      Ao clicar em gerar, o sistema irá processar o boleto no gateway configurado (Asaas) e criar a linha digitável para pagamento. É obrigatório informar CPF/CNPJ válido.
                     </p>
                   </div>
                 </div>
@@ -1063,11 +1075,18 @@ export default function CobrancasFiscalTab({
                         // 2. Initialize Service (A chave está protegida no servidor Vercel)
                         const asaas = new AsaasService();
 
+                        if (!generatedBoleto?.cpfCnpj) {
+                          toast.error("Obrigatório: Preencha o CPF ou CNPJ do cliente para emitir o boleto.");
+                          setLoadingAction(null);
+                          return;
+                        }
+
                         // 3. Find or Create Customer
                         const customerId = await asaas.findOrCreateCustomer(
                           generatedBoleto?.client || selectedClient?.cliente,
                           selectedClient?.email || "contato@cliente.com",
-                          selectedClient?.telefone
+                          selectedClient?.telefone,
+                          generatedBoleto?.cpfCnpj
                         );
 
                         // 4. Create Payment
