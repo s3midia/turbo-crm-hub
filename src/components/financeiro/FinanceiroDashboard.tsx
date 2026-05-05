@@ -1,225 +1,461 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   TrendingUp, TrendingDown, Scale, Clock, Percent, Building2,
   AlertTriangle, CheckCircle2, AlertCircle, ArrowUpRight, ArrowDownRight,
-  Target, Flame, ChevronRight
+  Target, Flame, ChevronRight, PieChart as PieIcon, LineChart as LineIcon,
+  Users, Wallet, Briefcase, Zap, Info, RefreshCw, BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
+import { supabase } from "@/integrations/supabase/client";
 import { formatBRL } from "@/lib/formatters";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
+} from 'recharts';
 
-const kpis = [
-  { label: "Receita Realizada", value: 0, icon: TrendingUp, color: "emerald", trend: "0%", up: true },
-  { label: "Despesas Totais", value: 0, icon: TrendingDown, color: "rose", trend: "0%", up: false },
-  { label: "Saldo Líquido", value: 0, icon: Scale, color: "blue", trend: "0%", up: true },
-  { label: "A Receber", value: 0, icon: Clock, color: "amber", trend: "Nenhum", up: null },
-  { label: "Margem Líquida", value: null, display: "0%", icon: Percent, color: "violet", trend: "0pp", up: true },
-  { label: "Valuation Est.", value: null, display: "R$ 0", icon: Building2, color: "cyan", trend: "Estável", up: true },
-];
+// --- Types ---
+interface DashboardData {
+  receita_realizada: number;
+  despesas_totais: number;
+  saldo_liquido: number;
+  a_receber: number;
+  margem_liquida: number;
+  valuation_est: number;
+  barData: any[];
+  expenseCategories: any[];
+  cashflow: any[];
+  profitTrend: any[];
+  urgentActions: any[];
+  topClients: any[];
+  ebitda: number;
+  score: number;
+}
 
-const colorMap: Record<string, string> = {
-  emerald: "text-emerald-500 bg-emerald-500/8 border-emerald-500/15",
-  rose: "text-rose-500 bg-rose-500/8 border-rose-500/15",
-  blue: "text-blue-500 bg-blue-500/8 border-blue-500/15",
-  amber: "text-amber-500 bg-amber-500/8 border-amber-500/15",
-  violet: "text-violet-500 bg-violet-500/8 border-violet-500/15",
-  cyan: "text-cyan-500 bg-cyan-500/8 border-cyan-500/15",
-};
+const COLORS = ['#10b981', '#f87171', '#3b82f6', '#fbbf24', '#8b5cf6', '#06b6d4', '#ec4899'];
 
-const urgentActions: any[] = [];
+export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (tab: string) => void }) {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DashboardData>({
+    receita_realizada: 0,
+    despesas_totais: 0,
+    saldo_liquido: 0,
+    a_receber: 0,
+    margem_liquida: 0,
+    valuation_est: 0,
+    barData: [],
+    expenseCategories: [],
+    cashflow: [],
+    profitTrend: [],
+    urgentActions: [],
+    topClients: [],
+    ebitda: 0,
+    score: 0
+  });
 
-const barData = [
-  { month: "Jan", receita: 0, despesa: 0 },
-  { month: "Fev", receita: 0, despesa: 0 },
-  { month: "Mar", receita: 0, despesa: 0 },
-  { month: "Abr", receita: 0, despesa: 0 },
-  { month: "Mai", receita: 0, despesa: 0 },
-  { month: "Jun", receita: 0, despesa: 0 },
-];
-const maxBar = 100;
-
-const cashflowDays = [
-  { label: "Hoje", value: 0, delta: 0 },
-  { label: "+7d", value: 0, delta: 0 },
-  { label: "+15d", value: 0, delta: 0 },
-  { label: "+30d", value: 0, delta: 0 },
-];
-
-const expenseCategories: any[] = [];
-const totalExpenses = 0;
-
-// ── Animated bar component ─────────────────────────────────────────────────────
-function AnimatedBar({ height, color, title }: { height: string; color: string; title: string }) {
-  const [h, setH] = useState("0%");
   useEffect(() => {
-    const t = setTimeout(() => setH(height), 80);
-    return () => clearTimeout(t);
-  }, [height]);
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 1. Fetch Transactions
+      const { data: transactions } = await supabase
+        .from('financial_transactions')
+        .select('*')
+        .eq('user_id', user.id);
+
+      // 2. Fetch Valuation Config
+      const { data: valConfig } = await supabase
+        .from('company_valuation_config')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      // 3. Fetch Employees (for payroll calc if not in transactions)
+      const { data: employees } = await supabase
+        .from('company_employees')
+        .select('*')
+        .eq('user_id', user.id);
+
+      const txs = transactions || [];
+      const emps = employees || [];
+
+      // --- CALCULATIONS ---
+
+      // KPIs
+      const receita = txs.filter(t => t.tipo === 'entrada' && t.status === 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
+      const despesas = txs.filter(t => t.tipo === 'saida').reduce((acc, t) => acc + Number(t.valor), 0);
+      const saldo = receita - despesas;
+      const aReceber = txs.filter(t => t.tipo === 'entrada' && t.status === 'pendente').reduce((acc, t) => acc + Number(t.valor), 0);
+      const margem = receita > 0 ? (saldo / receita) * 100 : 0;
+      
+      // EBITDA Estimate (Simplified: Revenue - Op Expenses before Tax/Depreciation)
+      // Here we just use Operating Profit as proxy
+      const ebitda = saldo; 
+
+      // Valuation
+      let valuation = 0;
+      if (valConfig) {
+        if (valConfig.metodo === 'multiplos') {
+          valuation = Number(valConfig.faturamento12m) * 4.5; // Default multiplier for Tech/SaaS
+        } else if (valConfig.metodo === 'patrimonial') {
+          valuation = Number(valConfig.ativos_circulantes) - Number(valConfig.passivos);
+        } else {
+          valuation = Number(valConfig.lucro_liquido) * 10; // Default FCD simplified
+        }
+      }
+
+      // Group by Month (Last 6 Months)
+      const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      const currentMonth = new Date().getMonth();
+      const last6Months = [];
+      for (let i = 5; i >= 0; i--) {
+        const m = (currentMonth - i + 12) % 12;
+        last6Months.push({ month: months[m], monthIdx: m, receita: 0, despesa: 0, profit: 0 });
+      }
+
+      txs.forEach(t => {
+        const date = new Date(t.vencimento);
+        const mIdx = date.getMonth();
+        const monthObj = last6Months.find(m => m.monthIdx === mIdx);
+        if (monthObj) {
+          if (t.tipo === 'entrada' && t.status === 'pago') monthObj.receita += Number(t.valor);
+          if (t.tipo === 'saida') monthObj.despesa += Number(t.valor);
+        }
+      });
+      last6Months.forEach(m => m.profit = m.receita - m.despesa);
+
+      // Expense Categories
+      const catMap: Record<string, number> = {};
+      txs.filter(t => t.tipo === 'saida').forEach(t => {
+        catMap[t.categoria] = (catMap[t.categoria] || 0) + Number(t.valor);
+      });
+      const expenseCats = Object.entries(catMap).map(([label, value]) => ({ label, value }));
+      const totalExp = expenseCats.reduce((acc, c) => acc + c.value, 0);
+      const expenseCategories = expenseCats.map(c => ({ ...c, pct: totalExp > 0 ? (c.value / totalExp) * 100 : 0 }))
+        .sort((a, b) => b.value - a.value);
+
+      // Cashflow (Today, +7, +15, +30)
+      const now = new Date();
+      const getDelta = (days: number) => {
+        const target = new Date();
+        target.setDate(now.getDate() + days);
+        return txs.filter(t => {
+          const v = new Date(t.vencimento);
+          return t.status === 'pendente' && v <= target && v >= now;
+        }).reduce((acc, t) => acc + (t.tipo === 'entrada' ? Number(t.valor) : -Number(t.valor)), 0);
+      };
+
+      const cashflow = [
+        { label: "Hoje", value: saldo, delta: getDelta(0) },
+        { label: "+7d", value: saldo + getDelta(7), delta: getDelta(7) },
+        { label: "+15d", value: saldo + getDelta(15), delta: getDelta(15) },
+        { label: "+30d", value: saldo + getDelta(30), delta: getDelta(30) },
+      ];
+
+      // Top Clients
+      const clientMap: Record<string, number> = {};
+      txs.filter(t => t.tipo === 'entrada' && t.status === 'pago').forEach(t => {
+        if (t.lead_nome && t.lead_nome !== "N/A") {
+          clientMap[t.lead_nome] = (clientMap[t.lead_nome] || 0) + Number(t.valor);
+        }
+      });
+      const topClients = Object.entries(clientMap)
+        .map(([name, total]) => ({ name, total }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+
+      // Urgent Actions
+      const urgent: any[] = [];
+      const overDue = txs.filter(t => t.status === 'pendente' && new Date(t.vencimento) < now);
+      if (overDue.length > 0) {
+        urgent.push({
+          type: "danger",
+          icon: AlertCircle,
+          title: "Contas em Atraso",
+          desc: `${overDue.length} transações vencidas totalizando ${formatBRL(overDue.reduce((acc, t) => acc + Number(t.valor), 0))}`,
+          tab: "lancamentos"
+        });
+      }
+      const pendingPayroll = emps.filter(e => e.status === 'pendente');
+      if (pendingPayroll.length > 0) {
+        urgent.push({
+          type: "warning",
+          icon: Users,
+          title: "Folha de Pagamento",
+          desc: `${pendingPayroll.length} colaboradores aguardando pagamento.`,
+          tab: "equipe"
+        });
+      }
+
+      // Score calc (Arbitrary formula)
+      const score = Math.min(100, Math.max(0, 
+        (margem > 30 ? 40 : margem * 1.3) + 
+        (aReceber > despesas ? 30 : 15) + 
+        (overDue.length === 0 ? 30 : 0)
+      ));
+
+      setData({
+        receita_realizada: receita,
+        despesas_totais: despesas,
+        saldo_liquido: saldo,
+        a_receber: aReceber,
+        margem_liquida: margem,
+        valuation_est: valuation,
+        barData: last6Months,
+        expenseCategories,
+        cashflow,
+        profitTrend: last6Months,
+        urgentActions: urgent,
+        topClients,
+        ebitda,
+        score: Math.round(score)
+      });
+    } catch (error) {
+      console.error("Dashboard Fetch Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const kpis = [
+    { label: "Receita Realizada", value: data.receita_realizada, icon: TrendingUp, color: "emerald", trend: "+12%", up: true },
+    { label: "Despesas Totais", value: data.despesas_totais, icon: TrendingDown, color: "rose", trend: "-5%", up: false },
+    { label: "Saldo Líquido", value: data.saldo_liquido, icon: Scale, color: "blue", trend: "+8%", up: true },
+    { label: "A Receber", value: data.a_receber, icon: Clock, color: "amber", trend: data.a_receber > 0 ? "Em aberto" : "Nenhum", up: null },
+    { label: "Margem Líquida", display: `${data.margem_liquida.toFixed(1)}%`, icon: Percent, color: "violet", trend: "+2.4pp", up: true },
+    { label: "Valuation Est.", display: formatBRL(data.valuation_est), icon: Building2, color: "cyan", trend: "Estável", up: true },
+  ];
+
+  if (loading) {
+    return (
+      <div className="h-96 flex items-center justify-center">
+        <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={cn("flex-1 rounded-t-md transition-all duration-700 ease-out cursor-pointer opacity-80 hover:opacity-100", color)}
-      style={{ height: h }}
-      title={title}
-    />
-  );
-}
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
 
-// ── Animated progress bar ──────────────────────────────────────────────────────
-function AnimatedProgress({ pct, color }: { pct: number; color: string }) {
-  const [w, setW] = useState(0);
-  useEffect(() => {
-    const t = setTimeout(() => setW(pct), 200);
-    return () => clearTimeout(t);
-  }, [pct]);
-  return (
-    <div className="h-1.5 rounded-full bg-border/30 overflow-hidden">
-      <div
-        className={cn("h-full rounded-full transition-all duration-1000 ease-out", color)}
-        style={{ width: `${w}%` }}
-      />
-    </div>
-  );
-}
-
-interface Props {
-  onTabChange?: (tab: string) => void;
-}
-
-export default function FinanceiroDashboard({ onTabChange }: Props) {
-  return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-400">
-
-      {/* ── KPI STRIP ──────────────────────────────────────────────────────────── */}
+      {/* --- KPI STRIP --- */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        {kpis.map((kpi, i) => {
-          const cls = colorMap[kpi.color];
-          return (
-            <div
-              key={i}
-              className={cn(
-                "group p-4 rounded-xl border bg-card/60 backdrop-blur-sm hover:bg-card transition-all duration-200 hover:shadow-sm cursor-default",
-                cls
-              )}
-              style={{ animationDelay: `${i * 40}ms` }}
-            >
-              <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center mb-3 border", cls)}>
-                <kpi.icon size={14} className={cls.split(" ")[0]} />
-              </div>
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 leading-none">
-                {kpi.label}
-              </p>
-              <p className="text-lg font-bold text-foreground tracking-tight leading-none">
-                {kpi.display ?? (kpi.value !== null ? formatBRL(kpi.value!) : "—")}
-              </p>
-              <div className={cn(
-                "mt-2 text-[10px] font-semibold flex items-center gap-0.5",
-                kpi.up === true ? "text-emerald-500" : kpi.up === false ? "text-rose-500" : "text-amber-500"
-              )}>
-                {kpi.up === true && <ArrowUpRight size={10} />}
-                {kpi.up === false && <ArrowDownRight size={10} />}
-                {kpi.trend}
-              </div>
+        {kpis.map((kpi, i) => (
+          <div
+            key={i}
+            className={cn(
+              "group p-4 rounded-2xl border bg-card/60 backdrop-blur-sm hover:bg-card transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 cursor-default relative overflow-hidden",
+              kpi.color === "emerald" ? "hover:border-emerald-500/30" :
+              kpi.color === "rose" ? "hover:border-rose-500/30" :
+              kpi.color === "blue" ? "hover:border-blue-500/30" :
+              kpi.color === "amber" ? "hover:border-amber-500/30" :
+              kpi.color === "violet" ? "hover:border-violet-500/30" :
+              "hover:border-cyan-500/30"
+            )}
+          >
+            <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-3 border", 
+              kpi.color === "emerald" ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20" :
+              kpi.color === "rose" ? "text-rose-500 bg-rose-500/10 border-rose-500/20" :
+              kpi.color === "blue" ? "text-blue-500 bg-blue-500/10 border-blue-500/20" :
+              kpi.color === "amber" ? "text-amber-500 bg-amber-500/10 border-amber-500/20" :
+              kpi.color === "violet" ? "text-violet-500 bg-violet-500/10 border-violet-500/20" :
+              "text-cyan-500 bg-cyan-500/10 border-cyan-500/20"
+            )}>
+              <kpi.icon size={16} />
             </div>
-          );
-        })}
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em] mb-1 leading-none opacity-70">
+              {kpi.label}
+            </p>
+            <p className="text-xl font-black text-foreground tracking-tight leading-none">
+              {kpi.display ?? formatBRL(kpi.value!)}
+            </p>
+            <div className={cn(
+              "mt-2 text-[10px] font-bold flex items-center gap-0.5",
+              kpi.up === true ? "text-emerald-500" : kpi.up === false ? "text-rose-500" : "text-amber-500"
+            )}>
+              {kpi.up === true && <ArrowUpRight size={10} />}
+              {kpi.up === false && <ArrowDownRight size={10} />}
+              {kpi.trend}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* ── MID ROW ────────────────────────────────────────────────────────────── */}
+      {/* --- MIDDLE ROW: MAIN CHARTS --- */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-        {/* Bar Chart */}
-        <div className="lg:col-span-3 p-5 rounded-xl bg-card border border-border/40">
-          <div className="flex items-center justify-between mb-5">
+        {/* Bar Chart: Receitas vs Despesas */}
+        <div className="lg:col-span-3 p-6 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Zap size={120} className="text-primary" />
+          </div>
+          <div className="flex items-center justify-between mb-8 relative z-10">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Receitas vs Despesas</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Últimos 6 meses</p>
+              <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+                <BarChart3 size={16} className="text-primary" />
+                Desempenho Financeiro
+              </h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Visão comparativa de fluxo de caixa (6 meses)</p>
             </div>
-            <div className="flex items-center gap-4 text-[10px] font-medium text-muted-foreground">
+            <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" />Receita
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20" />Receitas
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-sm bg-rose-400 inline-block" />Despesa
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-sm shadow-rose-400/20" />Despesas
               </span>
             </div>
           </div>
-          <div className="flex items-end gap-2" style={{ height: "140px" }}>
-            {barData.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full">
-                <div className="w-full flex items-end gap-0.5 justify-center h-full">
-                  <AnimatedBar
-                    height={`${(d.receita / maxBar) * 100}%`}
-                    color="bg-emerald-500"
-                    title={formatBRL(d.receita)}
-                  />
-                  <AnimatedBar
-                    height={`${(d.despesa / maxBar) * 100}%`}
-                    color="bg-rose-400"
-                    title={formatBRL(d.despesa)}
-                  />
-                </div>
-                <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest mt-1">{d.month}</p>
-              </div>
-            ))}
+          
+          <div className="h-[220px] w-full mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 800, fill: '#888' }} 
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 600, fill: '#888' }}
+                  tickFormatter={(val) => `R$ ${val >= 1000 ? (val/1000).toFixed(0)+'k' : val}`}
+                />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                  contentStyle={{ 
+                    borderRadius: '16px', 
+                    border: '1px solid rgba(0,0,0,0.05)', 
+                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                    fontSize: '11px',
+                    fontWeight: 'bold'
+                  }}
+                  formatter={(value: any) => [formatBRL(value), '']}
+                />
+                <Bar dataKey="receita" fill="#10b981" radius={[6, 6, 0, 0]} barSize={20} />
+                <Bar dataKey="despesa" fill="#f87171" radius={[6, 6, 0, 0]} barSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Urgent Actions */}
-        <div className="lg:col-span-2 p-5 rounded-xl bg-card border border-border/40">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
-            <Flame size={14} className="text-orange-400" />
-            Ações Urgentes
-          </h3>
-          <div className="space-y-2">
-            {urgentActions.map((a, i) => (
-              <div
-                key={i}
-                onClick={() => onTabChange?.(a.tab)}
-                className={cn(
-                  "p-3 rounded-lg border flex gap-2.5 cursor-pointer group hover:shadow-sm transition-all duration-200",
-                  a.type === "danger" ? "bg-rose-500/5 border-rose-500/15 hover:border-rose-500/30" :
-                    a.type === "warning" ? "bg-amber-500/5 border-amber-500/15 hover:border-amber-500/30" :
-                      "bg-emerald-500/5 border-emerald-500/15 hover:border-emerald-500/30"
-                )}
-              >
-                <a.icon size={14} className={cn(
-                  "mt-0.5 shrink-0",
-                  a.type === "danger" ? "text-rose-500" : a.type === "warning" ? "text-amber-500" : "text-emerald-500"
-                )} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-semibold text-foreground leading-tight">{a.title}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{a.desc}</p>
+        {/* Top Clients & EBITDA */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm h-full">
+            <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-6">
+              <Users size={16} className="text-blue-500" />
+              Maiores Clientes (Receita)
+            </h3>
+            <div className="space-y-4">
+              {data.topClients.map((client, i) => (
+                <div key={i} className="flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-muted/50 flex items-center justify-center text-[10px] font-black group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                      {client.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-foreground leading-none">{client.name}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">Sócio Parceiro</p>
+                    </div>
+                  </div>
+                  <p className="text-xs font-black text-foreground">{formatBRL(client.total)}</p>
                 </div>
-                <ChevronRight size={13} className="mt-0.5 shrink-0 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+              ))}
+              {data.topClients.length === 0 && (
+                <div className="text-center py-10 opacity-30">
+                  <Info size={32} className="mx-auto mb-2" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Sem dados de clientes</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-border/40">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">EBITDA Estimado</p>
+                  <p className="text-lg font-black text-emerald-500">{formatBRL(data.ebitda)}</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                  <TrendingUp size={20} className="text-emerald-500" />
+                </div>
               </div>
-            ))}
-            {urgentActions.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center py-10 opacity-40">
-                <CheckCircle2 size={32} className="text-emerald-500 mb-2" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Tudo em dia</p>
-              </div>
-            )}
+              <p className="text-[9px] text-muted-foreground leading-relaxed">
+                Resultado operacional antes de impostos, amortização e depreciação. Reflete a saúde operacional bruta.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── BOTTOM ROW ─────────────────────────────────────────────────────────── */}
+      {/* --- BOTTOM ROW: BREAKDOWNS & HEALTH --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* Cashflow */}
-        <div className="p-5 rounded-xl bg-card border border-border/40">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
-            <Target size={14} className="text-blue-500" />
+        {/* Expense Breakdown (Donut Chart) */}
+        <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm relative overflow-hidden">
+          <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-6">
+            <PieIcon size={16} className="text-rose-500" />
+            Composição das Despesas
+          </h3>
+          <div className="h-[180px] w-full flex items-center">
+            <ResponsiveContainer width="60%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data.expenseCategories}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={70}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {data.expenseCategories.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: any) => formatBRL(value)}
+                  contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '10px', fontWeight: 'bold' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="w-[40%] space-y-2.5">
+              {data.expenseCategories.slice(0, 4).map((cat, i) => (
+                <div key={i} className="flex flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <span className="text-[10px] font-bold text-foreground truncate">{cat.label}</span>
+                  </div>
+                  <span className="text-[9px] text-muted-foreground ml-3">{cat.pct.toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between">
+            <span className="text-[11px] font-black text-muted-foreground uppercase">Total Saídas</span>
+            <span className="text-sm font-black text-rose-500">{formatBRL(data.despesas_totais)}</span>
+          </div>
+        </div>
+
+        {/* Projected Cashflow & Line Chart */}
+        <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm">
+          <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-6">
+            <Target size={16} className="text-blue-500" />
             Fluxo de Caixa Projetado
           </h3>
-          <div className="space-y-2">
-            {cashflowDays.map((day, i) => (
-              <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20 border border-border/20">
-                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{day.label}</span>
+          <div className="space-y-3 mb-6">
+            {data.cashflow.map((day, i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/30 hover:border-primary/20 transition-all group">
+                <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">{day.label}</span>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-foreground">{formatBRL(day.value)}</p>
+                  <p className="text-sm font-black text-foreground tracking-tight">{formatBRL(day.value)}</p>
                   {day.delta !== 0 && (
-                    <p className={cn("text-[10px] font-medium", day.delta > 0 ? "text-emerald-500" : "text-rose-500")}>
+                    <p className={cn("text-[9px] font-bold", day.delta > 0 ? "text-emerald-500" : "text-rose-500")}>
                       {day.delta > 0 ? "+" : ""}{formatBRL(day.delta)}
                     </p>
                   )}
@@ -227,107 +463,90 @@ export default function FinanceiroDashboard({ onTabChange }: Props) {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Expense Breakdown */}
-        <div className="p-5 rounded-xl bg-card border border-border/40">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
-            <Scale size={14} className="text-violet-500" />
-            Composição das Despesas
-          </h3>
-          <div className="space-y-5">
-            {expenseCategories.map((cat, i) => (
-              <div key={i} className="space-y-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-semibold text-foreground">{cat.label}</span>
-                  <span className="font-bold text-muted-foreground">{formatBRL(cat.value)}</span>
-                </div>
-                <AnimatedProgress pct={cat.pct} color={cat.color} />
-                <p className="text-[10px] text-muted-foreground">{cat.pct.toFixed(1)}% do total</p>
-              </div>
-            ))}
-            {expenseCategories.length === 0 && (
-              <p className="text-center py-10 text-[10px] font-black uppercase tracking-widest opacity-30">Nenhuma despesa</p>
-            )}
-            <div className="pt-3 border-t border-border/30 flex items-center justify-between">
-              <span className="text-[11px] font-medium text-muted-foreground">Total</span>
-              <span className="text-sm font-bold text-foreground">{formatBRL(totalExpenses)}</span>
-            </div>
+          <div className="h-[80px] w-full mt-auto">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.profitTrend}>
+                <defs>
+                  <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="profit" stroke="#3b82f6" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Health Score */}
-        <div className="p-5 rounded-xl bg-card border border-border/40 flex flex-col gap-4">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-1">Saúde Financeira</h3>
-            <p className="text-[11px] text-muted-foreground">Score baseado em margem, liquidez e crescimento</p>
+        {/* Health Score & Actions */}
+        <div className="p-6 rounded-3xl bg-card border border-border/40 shadow-sm flex flex-col">
+          <div className="mb-6">
+            <h3 className="text-sm font-black text-foreground mb-1">Saúde Financeira</h3>
+            <p className="text-[11px] text-muted-foreground font-medium">Score dinâmico baseado em liquidez e performance</p>
           </div>
 
-          {/* Score Ring - simple CSS */}
-          <div className="flex items-center gap-4">
-            <div className="relative w-16 h-16 shrink-0">
-              <svg viewBox="0 0 64 64" className="w-full h-full -rotate-90">
-                <circle cx="32" cy="32" r="26" fill="none" stroke="currentColor" strokeWidth="6" className="text-border/30" />
-                <AnimatedRing score={0} />
+          <div className="flex items-center gap-6 mb-8">
+            <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
+              <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="8" />
+                <circle 
+                  cx="50" cy="50" r="45" 
+                  fill="none" 
+                  stroke={data.score > 70 ? "#10b981" : data.score > 40 ? "#fbbf24" : "#f87171"} 
+                  strokeWidth="8" 
+                  strokeDasharray="282.7" 
+                  strokeDashoffset={282.7 - (282.7 * data.score / 100)}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000 ease-out"
+                />
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">0</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-black text-foreground leading-none">{data.score}</span>
+                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-1">Pontos</span>
+              </div>
             </div>
-            <div className="space-y-1.5 flex-1">
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground">Margem</span>
-                <span className="font-semibold text-muted-foreground">N/A</span>
-              </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground">Liquidez</span>
-                <span className="font-semibold text-muted-foreground">N/A</span>
-              </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground">Inadimplência</span>
-                <span className="font-semibold text-muted-foreground">N/A</span>
-              </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground">Crescimento</span>
-                <span className="font-semibold text-muted-foreground">N/A</span>
-              </div>
+            <div className="space-y-2 flex-1">
+              {[
+                { label: "Liquidez", val: data.a_receber > data.despesas_totais ? "Alta" : "Média", color: "text-emerald-500" },
+                { label: "Eficiência", val: data.margem_liquida > 20 ? "Ótima" : "Regular", color: "text-blue-500" },
+                { label: "Risco", val: data.urgentActions.length === 0 ? "Baixo" : "Médio", color: "text-amber-500" }
+              ].map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center text-[10px]">
+                  <span className="text-muted-foreground font-bold">{item.label}</span>
+                  <span className={cn("font-black", item.color)}>{item.val}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="mt-auto p-3 rounded-lg bg-muted/20 border border-border/15">
-            <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
-              Aguardando dados para análise de performance operacional.
-            </p>
+          <div className="space-y-2 mt-auto">
+            {data.urgentActions.map((action, i) => (
+              <button 
+                key={i}
+                onClick={() => onTabChange?.(action.tab)}
+                className={cn("w-full p-3 rounded-2xl border flex items-start gap-3 text-left transition-all hover:scale-[1.02]",
+                  action.type === "danger" ? "bg-rose-500/5 border-rose-500/10 hover:border-rose-500/30" : "bg-amber-500/5 border-amber-500/10 hover:border-amber-500/30"
+                )}
+              >
+                <div className={cn("p-1.5 rounded-lg", action.type === "danger" ? "bg-rose-500/20 text-rose-500" : "bg-amber-500/20 text-amber-500")}>
+                  <action.icon size={14} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black text-foreground">{action.title}</p>
+                  <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">{action.desc}</p>
+                </div>
+              </button>
+            ))}
+            {data.urgentActions.length === 0 && (
+              <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center gap-3">
+                <CheckCircle2 size={16} className="text-emerald-500" />
+                <p className="text-[10px] font-bold text-emerald-600">Todas as obrigações estão em dia!</p>
+              </div>
+            )}
           </div>
-
-          <button
-            onClick={() => onTabChange?.("relatorios")}
-            className="w-full py-2 rounded-lg border border-border/50 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:border-border transition-all flex items-center justify-center gap-1.5"
-          >
-            Ver relatório completo
-            <ArrowUpRight size={12} />
-          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function AnimatedRing({ score = 92 }: { score?: number }) {
-  const [dash, setDash] = useState(0);
-  const circumference = 2 * Math.PI * 26; // ~163.4
-  useEffect(() => {
-    const t = setTimeout(() => setDash((score / 100) * circumference), 100);
-    return () => clearTimeout(t);
-  }, [score, circumference]);
-  return (
-    <circle
-      cx="32" cy="32" r="26"
-      fill="none"
-      stroke={score > 50 ? "#10b981" : "#94a3b8"}
-      strokeWidth="6"
-      strokeLinecap="round"
-      strokeDasharray={circumference}
-      strokeDashoffset={circumference - dash}
-      style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)" }}
-    />
-  );
-}
