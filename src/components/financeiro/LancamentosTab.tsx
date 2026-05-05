@@ -559,7 +559,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                     {t.status === "pago" ? "Liquidado" : t.status === "pendente" ? "Pendente" : "Agendado"}
                   </span>
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-2.5">
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={(e) => { e.stopPropagation(); t.id && handleDelete(t.id); }}
