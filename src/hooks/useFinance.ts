@@ -42,6 +42,14 @@ export const useFinance = (leadId?: string) => {
   const fetchTransactions = async () => {
     try {
       setLoading(true);
+      
+      // Se leadId for uma string vazia, retornamos vazio (caso de novo lead não salvo)
+      if (leadId === "") {
+        setTransactions([]);
+        setLoading(false);
+        return;
+      }
+
       let query = supabase.from('financial_transactions').select('*').order('vencimento', { ascending: false });
       if (leadId) query = query.eq('lead_id', leadId);
       const { data, error } = await query;
