@@ -50,6 +50,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
     profitTrend: [],
     urgentActions: [],
     topClients: [],
+    recentTransactions: [],
     ebitda: 0,
     score: 0
   });
