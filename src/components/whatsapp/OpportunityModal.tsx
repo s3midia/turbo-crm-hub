@@ -13,7 +13,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { X, Loader2, Archive, ExternalLink, MessageSquare, Bot, Plus, Search, FileText } from 'lucide-react';
+import { X, Loader2, Archive, ExternalLink, MessageSquare, Bot, Plus, Search, FileText, Zap } from 'lucide-react';
 import { saveOpportunity, archiveOpportunity, getTimelineEntries, addTimelineComment, getOpportunityById, type Task, type TimelineEntry } from '@/hooks/useOpportunities';
 import { useToast } from '@/hooks/use-toast';
 import { useProfiles } from '@/hooks/useProfiles';
