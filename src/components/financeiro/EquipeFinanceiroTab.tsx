@@ -7,12 +7,13 @@ import { toast } from "sonner";
 import { formatBRL } from "@/lib/formatters";
 
 interface Funcionario {
-  id: number;
+  id: string | number;
   nome: string;
   cargo: string;
   salario: number;
   inss: number;
   fgts: number;
+  prolabore: number;
   status: "pago" | "pendente";
   vencimento: string;
   email?: string;
@@ -35,7 +36,7 @@ const FUNCIONARIOS: Funcionario[] = [];
 
 const DESPESAS: Despesa[] = [];
 
-const totalFolha = FUNCIONARIOS.reduce((s, f) => s + f.salario + f.inss + f.fgts, 0);
+const totalFolha = FUNCIONARIOS.reduce((s, f) => s + f.salario + f.inss + f.fgts + f.prolabore, 0);
 const despesasFixas = DESPESAS.filter(d => d.tipo === "fixa").reduce((s, d) => s + d.valor, 0);
 const despesasVariaveis = DESPESAS.filter(d => d.tipo === "variavel").reduce((s, d) => s + d.valor, 0);
 const receitaRef = 0;
@@ -62,9 +63,10 @@ export default function EquipeFinanceiroTab() {
         id: f.id,
         nome: f.nome,
         cargo: f.cargo,
-        salario: Number(f.salario),
-        inss: Number(f.inss),
-        fgts: Number(f.fgts),
+        salario: Number(f.salario || 0),
+        inss: Number(f.inss || 0),
+        fgts: Number(f.fgts || 0),
+        prolabore: Number(f.prolabore || 0),
         status: f.status as "pago" | "pendente",
         vencimento: f.vencimento,
         email: f.email,
@@ -135,24 +137,33 @@ export default function EquipeFinanceiroTab() {
     const payload = {
       nome: data.nome,
       cargo: data.cargo,
-      salario: data.salario,
-      inss: data.inss,
-      fgts: data.fgts,
+      salario: data.salario || 0,
+      inss: data.inss || 0,
+      fgts: data.fgts || 0,
+      prolabore: data.prolabore || 0,
       vencimento: data.vencimento,
       user_id: user.id
     };
 
     if (String(id).length > 15) { // UUID
       const { error } = await supabase.from('company_employees').update(payload).eq('id', id);
-      if (error) toast.error("Erro ao atualizar colaborador");
+      if (error) {
+        toast.error("Erro ao atualizar colaborador");
+        return;
+      }
     } else {
       const { data: newData, error } = await supabase.from('company_employees').insert([payload]).select();
+      if (error) {
+        toast.error("Erro ao salvar novo colaborador");
+        return;
+      }
       if (newData) {
         setFuncionarios(prev => prev.map(f => String(f.id) === String(id) ? { ...f, id: newData[0].id } : f));
       }
     }
     setEditingFuncId(null);
     toast.success("Dados salvos!");
+    fetchEquipeData();
   }
 
   async function handleSaveDesp(id: string, data: Partial<Despesa>) {
@@ -191,6 +202,7 @@ export default function EquipeFinanceiroTab() {
       salario: 0,
       inss: 0,
       fgts: 0,
+      prolabore: 0,
       status: "pendente",
       vencimento: new Date().toISOString().split('T')[0],
     };
@@ -231,7 +243,7 @@ export default function EquipeFinanceiroTab() {
     toast.success("Despesa removida");
   }
 
-  const totalFolhaState = funcionarios.reduce((s, f) => s + f.salario + f.inss + f.fgts, 0);
+  const totalFolhaState = funcionarios.reduce((s, f) => s + f.salario + f.inss + f.fgts + f.prolabore, 0);
   const despesasFixasState = despesas.filter(d => d.tipo === "fixa").reduce((s, d) => s + d.valor, 0);
   const despesasVariaveisState = despesas.filter(d => d.tipo === "variavel").reduce((s, d) => s + d.valor, 0);
   const comprometimentoState = ((totalFolhaState + despesasFixasState) / receitaRef) * 100;
@@ -297,26 +309,75 @@ export default function EquipeFinanceiroTab() {
             {funcionarios.map(f => (
               <div key={f.id} className="p-4 rounded-2xl border border-border/30 bg-muted/10 hover:bg-muted/20 transition-all group relative">
                 {editingFuncId === String(f.id) ? (
-                  <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="grid grid-cols-2 gap-2">
-                      <input 
-                        className="col-span-2 px-3 py-2 text-[12px] font-bold bg-background border border-border rounded-lg"
-                        defaultValue={f.nome}
-                        onChange={e => f.nome = e.target.value}
-                      />
-                      <input 
-                        className="px-3 py-2 text-[12px] bg-background border border-border rounded-lg"
-                        defaultValue={f.cargo}
-                        onChange={e => f.cargo = e.target.value}
-                      />
-                      <input 
-                        type="number"
-                        className="px-3 py-2 text-[12px] bg-background border border-border rounded-lg"
-                        defaultValue={f.salario}
-                        onChange={e => f.salario = Number(e.target.value)}
-                      />
+                                    <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2 space-y-1">
+                        <label className="text-[10px] font-black text-muted-foreground uppercase px-1">Nome do Colaborador</label>
+                        <input 
+                          className="w-full px-3 py-2 text-[12px] font-bold bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                          defaultValue={f.nome}
+                          onChange={e => f.nome = e.target.value}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-muted-foreground uppercase px-1">Cargo</label>
+                        <input 
+                          className="w-full px-3 py-2 text-[12px] bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                          defaultValue={f.cargo}
+                          onChange={e => f.cargo = e.target.value}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-muted-foreground uppercase px-1">Vencimento</label>
+                        <input 
+                          type="date"
+                          className="w-full px-3 py-2 text-[12px] bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                          defaultValue={f.vencimento}
+                          onChange={e => f.vencimento = e.target.value}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-muted-foreground uppercase px-1">Salário (R$)</label>
+                        <input 
+                          type="number"
+                          step="0.01"
+                          className="w-full px-3 py-2 text-[12px] font-bold bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                          defaultValue={f.salario}
+                          onChange={e => f.salario = Number(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-muted-foreground uppercase px-1">Pró-labore (R$)</label>
+                        <input 
+                          type="number"
+                          step="0.01"
+                          className="w-full px-3 py-2 text-[12px] font-bold bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                          defaultValue={f.prolabore}
+                          onChange={e => f.prolabore = Number(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-muted-foreground uppercase px-1">INSS (R$)</label>
+                        <input 
+                          type="number"
+                          step="0.01"
+                          className="w-full px-3 py-2 text-[12px] bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                          defaultValue={f.inss}
+                          onChange={e => f.inss = Number(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-muted-foreground uppercase px-1">FGTS (R$)</label>
+                        <input 
+                          type="number"
+                          step="0.01"
+                          className="w-full px-3 py-2 text-[12px] bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                          defaultValue={f.fgts}
+                          onChange={e => f.fgts = Number(e.target.value)}
+                        />
+                      </div>
                     </div>
-                    <div className="flex gap-2 justify-end">
+                    <div className="flex gap-2 justify-end pt-2 border-t border-border/30">
                       <button 
                         onClick={() => handleDeleteFunc(String(f.id))}
                         className="mr-auto px-3 py-1.5 text-[10px] font-bold text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
@@ -325,15 +386,15 @@ export default function EquipeFinanceiroTab() {
                       </button>
                       <button 
                         onClick={() => setEditingFuncId(null)}
-                        className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground"
+                        className="px-4 py-2 text-[11px] font-bold text-muted-foreground hover:bg-muted rounded-lg transition-all"
                       >
                         Cancelar
                       </button>
                       <button 
                         onClick={() => handleSaveFunc(String(f.id), f)}
-                        className="px-3 py-1.5 text-[10px] font-bold bg-primary text-primary-foreground rounded-lg"
+                        className="px-6 py-2 text-[11px] font-bold bg-primary text-primary-foreground rounded-lg shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
                       >
-                        Salvar
+                        Salvar Alterações
                       </button>
                     </div>
                   </div>
@@ -352,16 +413,17 @@ export default function EquipeFinanceiroTab() {
                         </span>
                         <button 
                           onClick={() => setEditingFuncId(String(f.id))}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-bold text-primary hover:underline"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-black hover:bg-primary/20 transition-all border border-primary/20"
                         >
-                          Editar dados
+                          Editar
                         </button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 mt-1">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
                       {[
                         { label: "Salário", value: f.salario },
+                        { label: "Pró-labore", value: f.prolabore },
                         { label: "INSS", value: f.inss },
                         { label: "FGTS", value: f.fgts },
                       ].map((item, ii) => (
@@ -521,8 +583,9 @@ export default function EquipeFinanceiroTab() {
                     <tr className="text-left border-b border-border/50">
                       <th className="pb-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Colaborador</th>
                       <th className="pb-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Salário Base</th>
-                      <th className="pb-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">INSS (11%)</th>
-                      <th className="pb-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">FGTS (8%)</th>
+                      <th className="pb-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Pró-labore</th>
+                      <th className="pb-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">INSS</th>
+                      <th className="pb-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">FGTS</th>
                       <th className="pb-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Total Custo</th>
                       <th className="pb-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center">Status</th>
                     </tr>
@@ -535,9 +598,10 @@ export default function EquipeFinanceiroTab() {
                           <p className="text-[10px] text-muted-foreground">{f.cargo} · {f.email}</p>
                         </td>
                         <td className="py-5 text-right font-bold text-sm">{formatBRL(f.salario)}</td>
+                        <td className="py-5 text-right text-sm text-primary">{formatBRL(f.prolabore)}</td>
                         <td className="py-5 text-right text-sm text-rose-500">-{formatBRL(f.inss)}</td>
                         <td className="py-5 text-right text-sm text-blue-500">+{formatBRL(f.fgts)}</td>
-                        <td className="py-5 text-right font-black text-sm">{formatBRL(f.salario + f.inss + f.fgts)}</td>
+                        <td className="py-5 text-right font-black text-sm">{formatBRL(f.salario + f.prolabore + f.inss + f.fgts)}</td>
                         <td className="py-5 text-center">
                           <span className={cn("text-[9px] font-black px-2 py-1 rounded-full border",
                             f.status === "pago" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
@@ -551,11 +615,11 @@ export default function EquipeFinanceiroTab() {
                 </table>
                 <div className="grid grid-cols-3 gap-6 pt-6">
                   <div className="p-6 rounded-3xl bg-muted/20 border border-border/50">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase mb-2">Total Salários</p>
-                    <p className="text-2xl font-black">{formatBRL(funcionarios.reduce((s,f) => s + f.salario, 0))}</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase mb-2">Total Remunerações</p>
+                    <p className="text-2xl font-black">{formatBRL(funcionarios.reduce((s,f) => s + f.salario + f.prolabore, 0))}</p>
                   </div>
                   <div className="p-6 rounded-3xl bg-muted/20 border border-border/50">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase mb-2">Total Encargos</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase mb-2">Total Encargos (INSS+FGTS)</p>
                     <p className="text-2xl font-black text-rose-500">{formatBRL(funcionarios.reduce((s,f) => s + f.inss + f.fgts, 0))}</p>
                   </div>
                   <div className="p-6 rounded-3xl bg-primary/10 border border-primary/20">
