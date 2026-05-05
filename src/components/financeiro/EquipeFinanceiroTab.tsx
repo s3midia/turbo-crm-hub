@@ -42,7 +42,6 @@ const receitaRef = 0;
 const comprometimento = ((totalFolha + despesasFixas) / receitaRef) * 100;
 
 export default function EquipeFinanceiroTab() {
-export default function EquipeFinanceiroTab() {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [despesas, setDespesas] = useState<Despesa[]>([]);
   const [loading, setLoading] = useState(true);
