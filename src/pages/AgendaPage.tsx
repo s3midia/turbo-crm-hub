@@ -90,6 +90,10 @@ export default function AgendaPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [appleConnected, setAppleConnected] = useState(false);
+  const [isAppleFormOpen, setIsAppleFormOpen] = useState(false);
+  const [appleId, setAppleId] = useState("");
+  const [appleAppPassword, setAppleAppPassword] = useState("");
+  const [isAppleSyncing, setIsAppleSyncing] = useState(false);
   const [isNewEventOpen, setIsNewEventOpen] = useState(false);
 
   // Form State
@@ -160,6 +164,34 @@ export default function AgendaPage() {
       const novos = converted.filter(c => !existingIds.has(c.id));
       return [...prev, ...novos];
     });
+  };
+
+  const handleAppleConnect = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsAppleSyncing(true);
+    try {
+      // Mock chamada para a edge function "apple-caldav-sync"
+      // await supabase.functions.invoke('apple-caldav-sync', { body: { appleId, appleAppPassword } })
+      await new Promise(r => setTimeout(r, 2000)); // Simulando delay
+      
+      setAppleConnected(true);
+      setIsAppleFormOpen(false);
+      
+      // Adicionando evento mockado para confirmar funcionamento visual
+      const mockAppleEvent: AgendaEvent = {
+        id: Math.random().toString(36).substr(2, 9),
+        day: now.getDate() + 1,
+        title: "Reunião iCloud",
+        type: "meeting",
+        time: "15:00",
+        description: "Evento importado do Apple Calendar."
+      };
+      setEvents(prev => [...prev, mockAppleEvent]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsAppleSyncing(false);
+    }
   };
 
   const handleSync = () => {
@@ -572,33 +604,62 @@ export default function AgendaPage() {
               </div>
 
             {/* Apple Calendar */}
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white dark:bg-card border border-slate-200 dark:border-border/50 flex items-center justify-center shadow-sm">
-                  <Smartphone size={24} className="text-slate-800 dark:text-slate-200" />
+            <div className="flex flex-col rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 overflow-hidden transition-all">
+              <div className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white dark:bg-card border border-slate-200 dark:border-border/50 flex items-center justify-center shadow-sm">
+                    <Smartphone size={24} className="text-slate-800 dark:text-slate-200" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-200">Apple Calendar</h4>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {appleConnected ? "Sincronizado via iCloud" : "Sincronize via iCloud"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 dark:text-slate-200">Apple Calendar</h4>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {appleConnected ? "Sincronizado via iCloud" : "Sincronize via iCloud"}
-                  </p>
-                </div>
+                <Button 
+                  variant={appleConnected ? "outline" : "outline"} 
+                  size="sm" 
+                  className={cn(
+                    "rounded-xl font-bold transition-all border-slate-300 dark:border-border",
+                    appleConnected && "border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                  )}
+                  onClick={() => {
+                    if (appleConnected) setAppleConnected(false);
+                    else setIsAppleFormOpen(!isAppleFormOpen);
+                  }}
+                >
+                  {appleConnected ? (
+                    <><CheckCircle2 size={14} className="mr-1.5" /> Conectado</>
+                  ) : (
+                    isAppleFormOpen ? "Cancelar" : "Conectar"
+                  )}
+                </Button>
               </div>
-              <Button 
-                variant={appleConnected ? "outline" : "outline"} 
-                size="sm" 
-                className={cn(
-                  "rounded-xl font-bold transition-all border-slate-300 dark:border-border",
-                  appleConnected && "border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                )}
-                onClick={() => setAppleConnected(!appleConnected)}
-              >
-                {appleConnected ? (
-                  <><CheckCircle2 size={14} className="mr-1.5" /> Conectado</>
-                ) : (
-                  "Conectar"
-                )}
-              </Button>
+
+              {isAppleFormOpen && !appleConnected && (
+                <div className="px-4 pb-4 pt-2 border-t border-slate-200 dark:border-border/50 bg-white/50 dark:bg-background/50">
+                  <form onSubmit={handleAppleConnect} className="space-y-3">
+                    <p className="text-xs text-slate-500 mb-2">
+                      Para conectar, gere uma <strong>Senha Específica de App</strong> em <a href="https://appleid.apple.com" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">appleid.apple.com</a>.
+                    </p>
+                    <div className="space-y-1">
+                      <Label htmlFor="appleId" className="text-xs font-bold text-slate-600">ID Apple (E-mail)</Label>
+                      <Input id="appleId" type="email" placeholder="seuemail@icloud.com" value={appleId} onChange={e => setAppleId(e.target.value)} required className="h-8 text-sm rounded-lg" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="applePass" className="text-xs font-bold text-slate-600">Senha Específica de App</Label>
+                      <Input id="applePass" type="password" placeholder="xxxx-xxxx-xxxx-xxxx" value={appleAppPassword} onChange={e => setAppleAppPassword(e.target.value)} required className="h-8 text-sm rounded-lg" />
+                    </div>
+                    <div className="pt-2 flex justify-end">
+                      <Button type="submit" disabled={isAppleSyncing} size="sm" className="rounded-xl font-bold bg-slate-800 text-white hover:bg-slate-700">
+                        {isAppleSyncing ? <RefreshCw size={14} className="animate-spin mr-1.5" /> : null}
+                        {isAppleSyncing ? "Conectando..." : "Conectar e Sincronizar"}
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           </div>
           
