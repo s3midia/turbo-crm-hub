@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { formatBRL, formatDateTime, formatDisplayId } from "@/lib/formatters";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface TimelineEvent {
   id: string;
@@ -376,10 +377,9 @@ export default function CobrancasFiscalTab({
                           className="bg-background border-primary/20 h-8 text-xs font-bold"
                           placeholder="Plano"
                         />
-                        <Input 
-                          type="number"
-                          value={editedClient?.valor} 
-                          onChange={(e) => setEditedClient({...editedClient, valor: parseFloat(e.target.value)})}
+                        <CurrencyInput 
+                          value={editedClient?.valor || 0} 
+                          onChange={(val) => setEditedClient({...editedClient, valor: val})}
                           className="bg-background border-primary/20 h-8 text-xs font-bold"
                           placeholder="Valor"
                         />
@@ -1023,11 +1023,10 @@ export default function CobrancasFiscalTab({
                       <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Valor da Cobrança</Label>
                       <div className="relative">
                         <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <Input 
-                          type="number"
-                          value={generatedBoleto?.value}
-                          onChange={(e) => setGeneratedBoleto(prev => prev ? { ...prev, value: parseFloat(e.target.value) } : null)}
-                          className="pl-9 rounded-xl border-border/40 font-bold"
+                        <CurrencyInput 
+                          value={generatedBoleto?.value || 0}
+                          onChange={(val) => setGeneratedBoleto(prev => prev ? { ...prev, value: val } : null)}
+                          className="pl-2 rounded-xl border-border/40 font-bold h-10"
                         />
                       </div>
                     </div>
