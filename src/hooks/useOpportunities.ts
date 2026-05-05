@@ -64,6 +64,7 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
     };
 
     const opportunityData: any = {
+        user_id: user.id,
         lead_identification: opportunity.lead_identification,
         contact_phone: opportunity.contact_phone,
         contact_name: opportunity.contact_name,
@@ -87,12 +88,17 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
 
     if (opportunity.id) {
         await supabase.from('leads').update(leadData).eq('id', opportunity.id);
-        const { data, error } = await supabase
-            .from('opportunities')
-            .upsert({ id: opportunity.id, ...opportunityData })
-            .select()
-            .single();
-        return data || { id: opportunity.id, ...opportunityData };
+        try {
+            const { data, error } = await supabase
+                .from('opportunities')
+                .upsert({ id: opportunity.id, ...opportunityData })
+                .select()
+                .single();
+            if (error && error.code !== 'PGRST205') console.error("Erro ao dar upsert em oportunidade:", error);
+            return data || { id: opportunity.id, ...opportunityData };
+        } catch (e) {
+            return { id: opportunity.id, ...opportunityData };
+        }
     } else {
         const { data: newLead, error: leadError } = await supabase
             .from('leads')
@@ -101,10 +107,13 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
             .single();
         if (leadError) throw leadError;
         
-        const { error: oppError } = await supabase.from('opportunities').insert([{ id: newLead.id, ...opportunityData }]);
-        if (oppError) {
-            console.error("Erro ao inserir oportunidade:", oppError);
-            throw oppError;
+        try {
+            const { error: oppError } = await supabase.from('opportunities').insert([{ id: newLead.id, ...opportunityData }]);
+            if (oppError && oppError.code !== 'PGRST205') {
+                console.error("Erro ao inserir oportunidade:", oppError);
+            }
+        } catch (e) {
+            console.warn("Table opportunities likely does not exist.");
         }
         
         return newLead;
@@ -112,24 +121,28 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
 };
 
 export const getOpportunityById = async (id: string) => {
-    const { data: opp, error: oppError } = await supabase.from('opportunities').select('*').eq('id', id).single();
-    if (!oppError && opp) {
-        return {
-            id: opp.id,
-            lead_identification: opp.lead_identification,
-            contact_phone: opp.contact_phone,
-            contact_name: opp.contact_name,
-            contact_email: opp.contact_email,
-            stage: opp.stage,
-            priority: opp.priority,
-            observation: opp.observation,
-            responsible_id: opp.responsible_id,
-            total_value: parseCurrency(opp.total_value),
-            products: opp.products || [],
-            tasks: opp.tasks || [],
-            created_at: opp.created_at,
-            updated_at: opp.updated_at,
-        } as Opportunity;
+    try {
+        const { data: opp, error: oppError } = await supabase.from('opportunities').select('*').eq('id', id).single();
+        if (!oppError && opp) {
+            return {
+                id: opp.id,
+                lead_identification: opp.lead_identification,
+                contact_phone: opp.contact_phone,
+                contact_name: opp.contact_name,
+                contact_email: opp.contact_email,
+                stage: opp.stage,
+                priority: opp.priority,
+                observation: opp.observation,
+                responsible_id: opp.responsible_id,
+                total_value: parseCurrency(opp.total_value),
+                products: opp.products || [],
+                tasks: opp.tasks || [],
+                created_at: opp.created_at,
+                updated_at: opp.updated_at,
+            } as Opportunity;
+        }
+    } catch (e) {
+        console.warn("Error fetching from opportunities:", e);
     }
 
     const { data: lead, error: leadError } = await supabase.from('leads').select('*').eq('id', id).single();
@@ -150,12 +163,16 @@ export const getOpportunityById = async (id: string) => {
 };
 
 export const updateOpportunityStage = async (id: string, stage: string) => {
-    await supabase.from('opportunities').update({ stage }).eq('id', id);
+    try {
+        await supabase.from('opportunities').update({ stage }).eq('id', id);
+    } catch (e) {}
     await supabase.from('leads').update({ status: stage }).eq('id', id);
 };
 
 export const archiveOpportunity = async (id: string) => {
-    await supabase.from('opportunities').update({ stage: 'arquivado' }).eq('id', id);
+    try {
+        await supabase.from('opportunities').update({ stage: 'arquivado' }).eq('id', id);
+    } catch (e) {}
     await supabase.from('leads').update({ status: 'arquivado' }).eq('id', id);
 };
 
