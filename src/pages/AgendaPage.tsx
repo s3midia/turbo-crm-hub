@@ -2,12 +2,14 @@ import React, { useState, useMemo } from "react";
 import { 
   Calendar as CalendarIcon, ChevronLeft, ChevronRight, Filter, 
   DollarSign, Clock, Video, AlertTriangle, CheckCircle2, 
-  Wallet, RefreshCw, Zap, Briefcase, Plus
+  Wallet, RefreshCw, Zap, Briefcase, Plus, Settings, MapPin, 
+  PanelRightClose, PanelRightOpen, ArrowRight, Smartphone, Mail, Globe, AlignLeft, Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatBRL } from "@/lib/formatters";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // --- Tipos de Eventos ---
 type FilterMode = "all" | "meetings" | "finance";
@@ -15,13 +17,15 @@ type EventType = "meeting" | "task" | "finance_in" | "finance_out" | "finance_ov
 
 interface AgendaEvent {
   id: string;
-  day: number; // dia do mês atual para o mock
+  day: number;
   title: string;
   type: EventType;
   time?: string;
   value?: number;
   client?: string;
   status?: string;
+  location?: string;
+  description?: string;
 }
 
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -33,6 +37,9 @@ export default function AgendaPage() {
   const [month, setMonth] = useState(now.getMonth());
   const [filter, setFilter] = useState<FilterMode>("all");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<AgendaEvent | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -43,11 +50,11 @@ export default function AgendaPage() {
   // --- Mock Data ---
   const mockEvents = useMemo<AgendaEvent[]>(() => {
     return [
-      { id: "1", day: 5, title: "Reunião de Kickoff", type: "meeting", time: "10:00", client: "Acme Corp" },
-      { id: "2", day: 5, title: "Fatura Mensal", type: "finance_in", value: 5000, client: "Acme Corp", status: "Pago" },
+      { id: "1", day: 5, title: "Reunião de Kickoff", type: "meeting", time: "10:00 - 11:30", client: "Acme Corp", location: "Google Meet", description: "Alinhamento inicial do projeto e definição de cronogramas." },
+      { id: "2", day: 5, title: "Fatura Mensal", type: "finance_in", value: 5000, client: "Acme Corp", status: "Pago", description: "Referente ao desenvolvimento do portal institucional." },
       { id: "3", day: 10, title: "Mensalidade Gestão", type: "finance_in", value: 3500, client: "TechFlow" },
-      { id: "4", day: 10, title: "Pagamento Atrasado", type: "finance_overdue", value: 1200, client: "Loja Silva" },
-      { id: "5", day: 12, title: "Apresentação de Layout", type: "meeting", time: "14:30", client: "Mega Imports" },
+      { id: "4", day: 10, title: "Pagamento Atrasado", type: "finance_overdue", value: 1200, client: "Loja Silva", description: "Entrar em contato com o financeiro da Loja Silva para negociação." },
+      { id: "5", day: 12, title: "Apresentação de Layout", type: "meeting", time: "14:30 - 15:30", client: "Mega Imports", location: "Av. Paulista, 1000 - São Paulo, SP", description: "Apresentação presencial do protótipo de alta fidelidade." },
       { id: "6", day: 15, title: "Impostos (DAS)", type: "finance_out", value: 850 },
       { id: "7", day: 20, title: "Faturamento Final", type: "finance_in", value: 12000, client: "Global Tech" },
       { id: "8", day: 22, title: "Revisão Contratual", type: "task", time: "16:00" },
@@ -86,30 +93,42 @@ export default function AgendaPage() {
           <p className="text-sm font-semibold text-muted-foreground mt-1">Seu centro de previsibilidade e compromissos.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 bg-muted/30 p-2 rounded-2xl border border-border/40">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 bg-muted/30 p-2 rounded-2xl border border-border/40">
+            <Button 
+              variant={filter === "all" ? "default" : "ghost"} 
+              size="sm" 
+              className={cn("rounded-xl text-xs font-bold transition-all", filter === "all" && "shadow-md")}
+              onClick={() => setFilter("all")}
+            >
+              <Zap size={14} className="mr-2" /> Visão Geral
+            </Button>
+            <Button 
+              variant={filter === "meetings" ? "default" : "ghost"} 
+              size="sm" 
+              className={cn("rounded-xl text-xs font-bold transition-all", filter === "meetings" && "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20")}
+              onClick={() => setFilter("meetings")}
+            >
+              <Video size={14} className="mr-2" /> Compromissos
+            </Button>
+            <Button 
+              variant={filter === "finance" ? "default" : "ghost"} 
+              size="sm" 
+              className={cn("rounded-xl text-xs font-bold transition-all", filter === "finance" && "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20")}
+              onClick={() => setFilter("finance")}
+            >
+              <Wallet size={14} className="mr-2" /> Financeiro
+            </Button>
+          </div>
+          
           <Button 
-            variant={filter === "all" ? "default" : "ghost"} 
-            size="sm" 
-            className={cn("rounded-xl text-xs font-bold", filter === "all" && "shadow-md")}
-            onClick={() => setFilter("all")}
+            variant="outline" 
+            size="icon" 
+            className={cn("rounded-xl transition-colors", isSidebarOpen ? "bg-primary/10 text-primary border-primary/30" : "bg-card text-muted-foreground")}
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            title="Alternar Painel Lateral"
           >
-            <Zap size={14} className="mr-2" /> Visão Geral
-          </Button>
-          <Button 
-            variant={filter === "meetings" ? "default" : "ghost"} 
-            size="sm" 
-            className={cn("rounded-xl text-xs font-bold", filter === "meetings" && "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20")}
-            onClick={() => setFilter("meetings")}
-          >
-            <Video size={14} className="mr-2" /> Compromissos
-          </Button>
-          <Button 
-            variant={filter === "finance" ? "default" : "ghost"} 
-            size="sm" 
-            className={cn("rounded-xl text-xs font-bold", filter === "finance" && "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20")}
-            onClick={() => setFilter("finance")}
-          >
-            <Wallet size={14} className="mr-2" /> Financeiro
+            {isSidebarOpen ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
           </Button>
         </div>
       </div>
@@ -129,48 +148,60 @@ export default function AgendaPage() {
                 <Button variant="ghost" size="icon" onClick={nextMonth} className="h-7 w-7 rounded-lg hover:bg-background shadow-sm"><ChevronRight size={14} /></Button>
               </div>
 
-              {/* Previsibilidade ao lado do Mês (Pequeno e Organizado) */}
+              {/* Previsibilidade ao lado do Mês (Botões Destacados) */}
               {filter !== "meetings" && (
-                <div className="flex items-center gap-2 hidden md:flex">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span className="text-[10px] font-bold text-emerald-700 uppercase">Receitas: {formatBRL(totalReceitas)}</span>
+                <div className="flex items-center gap-3 hidden lg:flex">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00E676] text-slate-900 font-black shadow-sm border border-[#00C853]/50">
+                    <DollarSign size={14} className="opacity-70" />
+                    <span className="text-xs tracking-tight">Receitas: {formatBRL(totalReceitas)}</span>
                   </div>
                   {totalAtrasado > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                      <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                      <span className="text-[10px] font-bold text-rose-700 uppercase">Atrasos: {formatBRL(totalAtrasado)}</span>
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF3D00] text-white font-black shadow-sm shadow-red-500/20 border border-red-600/50">
+                      <AlertTriangle size={14} className="opacity-90" />
+                      <span className="text-xs tracking-tight">Atrasos: {formatBRL(totalAtrasado)}</span>
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="rounded-xl h-8 text-[10px] font-bold border-border/40 shadow-sm bg-background"
-              onClick={handleSync}
-              disabled={isSyncing}
-            >
-              {isSyncing ? <RefreshCw size={12} className="mr-2 animate-spin text-primary" /> : <RefreshCw size={12} className="mr-2 text-primary" />}
-              {isSyncing ? "Sincronizando..." : "Sincronizar CRM"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="rounded-xl h-9 w-9 border-border/60 shadow-sm bg-background hover:bg-muted"
+                onClick={() => setIsSettingsOpen(true)}
+                title="Configurações de Integração"
+              >
+                <Settings size={16} className="text-slate-600 dark:text-slate-400" />
+              </Button>
+
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="rounded-xl h-9 text-xs font-bold border-border/40 shadow-sm bg-background"
+                onClick={handleSync}
+                disabled={isSyncing}
+              >
+                {isSyncing ? <RefreshCw size={14} className="mr-2 animate-spin text-primary" /> : <RefreshCw size={14} className="mr-2 text-primary" />}
+                {isSyncing ? "Sincronizando..." : "Sincronizar"}
+              </Button>
+            </div>
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0 bg-background">
+          <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-background">
             {/* Header Dias da Semana */}
-            <div className="grid grid-cols-7 border-b border-border/50 shrink-0">
+            <div className="grid grid-cols-7 border-b border-border/60 shrink-0 bg-slate-50/80 dark:bg-muted/10">
               {DAYS.map(d => (
-                <div key={d} className="py-2.5 text-center text-[10px] font-black text-muted-foreground uppercase tracking-widest border-r border-border/50 last:border-0">
+                <div key={d} className="py-3 text-center text-[11px] font-bold text-slate-500 dark:text-muted-foreground uppercase tracking-widest border-r border-border/60 last:border-0">
                   <span className="hidden md:inline">{d}</span>
                   <span className="md:hidden">{d.slice(0,3)}</span>
                 </div>
               ))}
             </div>
             
-            {/* Grid do Calendário */}
-            <div className="grid grid-cols-7 flex-1 auto-rows-fr overflow-y-auto custom-scrollbar">
+            {/* Grid do Calendário com Design Melhorado */}
+            <div className="grid grid-cols-7 flex-1 auto-rows-fr overflow-y-auto custom-scrollbar bg-slate-50/30 dark:bg-transparent">
               {cells.map((day, i) => {
                 const isToday = day === now.getDate() && month === now.getMonth() && year === now.getFullYear();
                 const dayEvents = filteredEvents.filter(e => e.day === day);
@@ -179,55 +210,61 @@ export default function AgendaPage() {
                   <div 
                     key={i} 
                     className={cn(
-                      "min-h-[90px] border-r border-b border-border/50 p-1.5 transition-colors relative flex flex-col",
-                      !day && "bg-muted/5 opacity-50",
-                      day && "hover:bg-muted/10 cursor-pointer",
-                      isToday && "bg-primary/[0.03]"
+                      "min-h-[100px] border-r border-b border-slate-200 dark:border-border/60 p-1.5 transition-colors relative flex flex-col",
+                      !day && "bg-slate-100/50 dark:bg-muted/5 opacity-50",
+                      day && "hover:bg-slate-50 dark:hover:bg-muted/10",
+                      isToday && "bg-blue-50/30 dark:bg-primary/[0.02]"
                     )}
                   >
                     {day && (
-                      <span className={cn(
-                        "text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 shrink-0",
-                        isToday ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
-                      )}>
-                        {day}
-                      </span>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className={cn(
+                          "text-[11px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0",
+                          isToday ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-slate-600 dark:text-muted-foreground"
+                        )}>
+                          {day}
+                        </span>
+                        {dayEvents.length > 0 && (
+                          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 mr-1">{dayEvents.length}</span>
+                        )}
+                      </div>
                     )}
 
-                    <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-0.5 pb-1">
+                    <div className="flex-1 overflow-y-auto space-y-1.5 custom-scrollbar pr-0.5 pb-1">
                       {dayEvents.map(ev => {
-                        let bg = "bg-slate-100 text-slate-700 border-slate-200";
-                        let icon = <Clock size={8} />;
+                        let bg = "bg-slate-100 text-slate-700 border-slate-200 hover:border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+                        let icon = <Clock size={10} />;
                         
                         if (ev.type === "meeting") {
-                          bg = "bg-blue-50 text-blue-700 border-blue-200/50";
-                          icon = <Video size={8} />;
+                          bg = "bg-blue-100/80 text-blue-800 border-blue-200 hover:border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50";
+                          icon = <Video size={10} />;
                         } else if (ev.type === "finance_in") {
-                          bg = "bg-emerald-50 text-emerald-700 border-emerald-200/50 font-bold";
-                          icon = <DollarSign size={8} />;
+                          bg = "bg-emerald-100/80 text-emerald-800 border-emerald-200 hover:border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50 font-bold";
+                          icon = <DollarSign size={10} />;
                         } else if (ev.type === "finance_overdue") {
-                          bg = "bg-rose-500 text-white border-rose-600 font-black shadow-sm animate-pulse";
-                          icon = <AlertTriangle size={8} />;
+                          bg = "bg-rose-100 text-rose-800 border-rose-300 hover:border-rose-400 font-black shadow-sm dark:bg-rose-900/40 dark:text-rose-200 dark:border-rose-800";
+                          icon = <AlertTriangle size={10} />;
                         } else if (ev.type === "finance_out") {
-                          bg = "bg-amber-50 text-amber-700 border-amber-200/50";
-                          icon = <DollarSign size={8} />;
+                          bg = "bg-amber-100/80 text-amber-800 border-amber-200 hover:border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50";
+                          icon = <DollarSign size={10} />;
                         }
 
                         return (
                           <div 
                             key={ev.id} 
+                            onClick={(e) => { e.stopPropagation(); setSelectedEvent(ev); }}
                             className={cn(
-                              "text-[9px] px-1.5 py-1 rounded border flex flex-col gap-0.5 leading-tight truncate hover:brightness-95 transition-all",
+                              "text-[10px] px-2 py-1.5 rounded-lg border flex flex-col gap-0.5 leading-tight truncate transition-all cursor-pointer shadow-sm",
                               bg
                             )}
                             title={ev.title}
                           >
                             <div className="flex items-center justify-between">
-                              <span className="flex items-center gap-1 font-semibold truncate">
+                              <span className="flex items-center gap-1 font-bold truncate">
                                 {ev.type.startsWith("finance") && ev.value ? formatBRL(ev.value) : ev.time}
                               </span>
                             </div>
-                            <span className="truncate opacity-90">{ev.client || ev.title}</span>
+                            <span className="truncate opacity-90 font-medium">{ev.client || ev.title}</span>
                           </div>
                         );
                       })}
@@ -239,72 +276,228 @@ export default function AgendaPage() {
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR (Upcoming & Reminders - Reference Image Style) */}
-        <div className="w-full xl:w-80 flex flex-col gap-6 shrink-0">
-          
-          {/* Upcoming Events */}
-          <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-5 flex-1 flex flex-col">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-sm font-black text-foreground">Up Coming Events</h3>
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-blue-600 font-bold hover:text-blue-700 hover:bg-blue-50"><Plus size={10} className="mr-1"/> Add events</Button>
-            </div>
+        {/* RIGHT SIDEBAR (Upcoming & Reminders) - Toggled via state */}
+        {isSidebarOpen && (
+          <div className="w-full xl:w-80 flex flex-col gap-6 shrink-0 animate-in slide-in-from-right-8 duration-300">
             
-            <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-              {mockEvents.filter(e => e.type === "meeting" || e.type === "task").slice(0, 4).map((ev, i) => (
-                <div key={i} className="p-3 rounded-2xl border border-border/50 bg-background hover:border-border transition-colors group">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className={cn("w-3 h-3 rounded-[3px]", ev.type === "meeting" ? "bg-blue-500" : "bg-purple-500")} />
-                      <span className="text-[11px] font-black text-slate-700">{ev.time || "10:00"} - 11:00</span>
-                    </div>
-                    <button className="text-muted-foreground opacity-0 group-hover:opacity-100"><span className="text-lg leading-none">⋯</span></button>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground font-medium pl-5">{ev.title} {ev.client && `with ${ev.client}`}</p>
-                </div>
-              ))}
-            </div>
-            <Button variant="secondary" className="w-full mt-4 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-[11px] rounded-xl h-9">View all events</Button>
-          </div>
-
-          {/* Reminders / Alertas Financeiros */}
-          <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-5 flex-1 flex flex-col">
-            <h3 className="text-sm font-black text-foreground mb-5">Reminders & Alerts</h3>
-            
-            <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-              {mockEvents.filter(e => e.type.startsWith("finance")).slice(0, 3).map((ev, i) => {
-                const isOverdue = ev.type === "finance_overdue";
-                const isIncoming = ev.type === "finance_in";
-                return (
-                  <div key={i} className="p-3 rounded-2xl border border-border/50 bg-background flex gap-3 items-center group">
-                    <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                      isOverdue ? "bg-rose-50 text-rose-500" : 
-                      isIncoming ? "bg-emerald-50 text-emerald-500" : "bg-amber-50 text-amber-500"
-                    )}>
-                      {isOverdue ? <AlertTriangle size={16} /> : isIncoming ? <DollarSign size={16} /> : <Wallet size={16} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-bold text-slate-700 truncate pr-2">{ev.title}</p>
-                        {isOverdue && <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />}
+            {/* Upcoming Events */}
+            <div className="bg-white dark:bg-card rounded-3xl border border-border/60 shadow-sm p-5 flex-1 flex flex-col">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-sm font-black text-slate-800 dark:text-foreground">Eventos Próximos</h3>
+                <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[10px] text-blue-600 font-bold hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg"><Plus size={12} className="mr-1"/> Novo</Button>
+              </div>
+              
+              <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                {mockEvents.filter(e => e.type === "meeting" || e.type === "task").slice(0, 4).map((ev, i) => (
+                  <div key={i} className="p-3.5 rounded-2xl border border-slate-100 dark:border-border/50 bg-slate-50/50 dark:bg-background hover:border-blue-200 dark:hover:border-blue-800/50 transition-colors group cursor-pointer" onClick={() => setSelectedEvent(ev)}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className={cn("w-2 h-2 rounded-full", ev.type === "meeting" ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-purple-500")} />
+                        <span className="text-[11px] font-black text-slate-700 dark:text-slate-300">{ev.time || "10:00"}</span>
                       </div>
-                      <p className={cn(
-                        "text-[9px] font-medium truncate",
-                        isOverdue ? "text-rose-500" : "text-muted-foreground"
-                      )}>
-                        {ev.client} • {ev.value && formatBRL(ev.value)}
-                      </p>
                     </div>
+                    <p className="text-[11px] text-slate-600 dark:text-muted-foreground font-semibold leading-snug">{ev.title} {ev.client && `com ${ev.client}`}</p>
                   </div>
-                );
-              })}
+                ))}
+              </div>
+              <Button variant="secondary" className="w-full mt-4 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 font-bold text-xs rounded-xl h-10 transition-colors">Ver todos os eventos</Button>
             </div>
-            <Button variant="secondary" className="w-full mt-4 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-[11px] rounded-xl h-9">View all</Button>
+
+            {/* Reminders / Alertas Financeiros */}
+            <div className="bg-white dark:bg-card rounded-3xl border border-border/60 shadow-sm p-5 flex-1 flex flex-col">
+              <h3 className="text-sm font-black text-slate-800 dark:text-foreground mb-5 flex items-center gap-2"><Bell size={16} className="text-amber-500"/> Lembretes Financeiros</h3>
+              
+              <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                {mockEvents.filter(e => e.type.startsWith("finance")).slice(0, 3).map((ev, i) => {
+                  const isOverdue = ev.type === "finance_overdue";
+                  const isIncoming = ev.type === "finance_in";
+                  return (
+                    <div key={i} className="p-3 rounded-2xl border border-slate-100 dark:border-border/50 bg-slate-50/50 dark:bg-background flex gap-3 items-center group cursor-pointer hover:border-slate-300 dark:hover:border-border transition-colors" onClick={() => setSelectedEvent(ev)}>
+                      <div className={cn(
+                        "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
+                        isOverdue ? "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400" : 
+                        isIncoming ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                      )}>
+                        {isOverdue ? <AlertTriangle size={18} /> : isIncoming ? <DollarSign size={18} /> : <Wallet size={18} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{ev.title}</p>
+                          {isOverdue && <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 shadow-[0_0_5px_rgba(244,63,94,0.8)]" />}
+                        </div>
+                        <p className={cn(
+                          "text-[10px] font-semibold mt-0.5 truncate",
+                          isOverdue ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-muted-foreground"
+                        )}>
+                          {ev.client} • {ev.value && formatBRL(ev.value)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+          </div>
+        )}
+      </div>
+
+      {/* --- MODAL DE DETALHES DO EVENTO (Estilo Google Calendar) --- */}
+      <Dialog open={!!selectedEvent} onOpenChange={(open) => !open && setSelectedEvent(null)}>
+        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden border-border/50 rounded-2xl">
+          {selectedEvent && (
+            <>
+              <div className={cn(
+                "h-16 w-full relative",
+                selectedEvent.type === "meeting" ? "bg-blue-500" :
+                selectedEvent.type === "finance_in" ? "bg-emerald-500" :
+                selectedEvent.type === "finance_overdue" ? "bg-rose-500" :
+                selectedEvent.type === "finance_out" ? "bg-amber-500" : "bg-purple-500"
+              )}>
+                <div className="absolute -bottom-6 left-6 w-12 h-12 rounded-2xl bg-white dark:bg-card border-4 border-white dark:border-card flex items-center justify-center shadow-sm">
+                  {selectedEvent.type === "meeting" ? <Video size={20} className="text-blue-500" /> :
+                   selectedEvent.type.startsWith("finance") ? <DollarSign size={20} className={
+                     selectedEvent.type === "finance_overdue" ? "text-rose-500" :
+                     selectedEvent.type === "finance_out" ? "text-amber-500" : "text-emerald-500"
+                   } /> : <Briefcase size={20} className="text-purple-500" />}
+                </div>
+              </div>
+
+              <div className="p-6 pt-10">
+                <DialogHeader className="text-left mb-6">
+                  <DialogTitle className="text-xl font-black text-slate-800 dark:text-slate-100">{selectedEvent.title}</DialogTitle>
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
+                    {MONTHS[month]} {selectedEvent.day}, {year} {selectedEvent.time ? `• ${selectedEvent.time}` : ""}
+                  </p>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  {selectedEvent.client && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                        <Briefcase size={14} className="text-slate-500" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Cliente / Contato</p>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{selectedEvent.client}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEvent.value && (
+                    <div className="flex items-start gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                        selectedEvent.type === "finance_overdue" ? "bg-rose-100 dark:bg-rose-900/30" : "bg-emerald-100 dark:bg-emerald-900/30"
+                      )}>
+                        <DollarSign size={14} className={selectedEvent.type === "finance_overdue" ? "text-rose-600" : "text-emerald-600"} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Valor</p>
+                        <p className={cn(
+                          "text-lg font-black",
+                          selectedEvent.type === "finance_overdue" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                        )}>
+                          {formatBRL(selectedEvent.value)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEvent.location && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                        <MapPin size={14} className="text-slate-500" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Local / Link</p>
+                        <p className="text-sm font-bold text-blue-600 hover:underline cursor-pointer">{selectedEvent.location}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEvent.description && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                        <AlignLeft size={14} className="text-slate-500" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Descrição</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mt-1">{selectedEvent.description}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-8 flex justify-end gap-3">
+                  <Button variant="outline" className="rounded-xl font-bold" onClick={() => setSelectedEvent(null)}>Fechar</Button>
+                  <Button className="rounded-xl font-bold">Editar Evento</Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* --- MODAL DE INTEGRAÇÕES DE CALENDÁRIO --- */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="sm:max-w-[500px] border-border/50 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black flex items-center gap-2">
+              <Settings className="text-primary" size={24} />
+              Integrações de Calendário
+            </DialogTitle>
+            <DialogDescription className="font-medium text-slate-500 mt-2">
+              Conecte suas contas do Google e Apple para sincronizar seus compromissos automaticamente com o Turbo CRM.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="p-4 rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white dark:bg-card border border-slate-200 dark:border-border/50 flex items-center justify-center shadow-sm">
+                  <Mail size={24} className="text-red-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200">Google Calendar</h4>
+                  <p className="text-xs text-slate-500 font-medium">Sincronize com sua conta Gmail</p>
+                </div>
+              </div>
+              <Button variant="default" size="sm" className="rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white">Conectar</Button>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white dark:bg-card border border-slate-200 dark:border-border/50 flex items-center justify-center shadow-sm">
+                  <Smartphone size={24} className="text-slate-800 dark:text-slate-200" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200">Apple Calendar</h4>
+                  <p className="text-xs text-slate-500 font-medium">Sincronize via iCloud</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="rounded-xl font-bold border-slate-300 dark:border-border">Conectar</Button>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-slate-200 dark:border-border/50 bg-slate-50/50 dark:bg-muted/10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white dark:bg-card border border-slate-200 dark:border-border/50 flex items-center justify-center shadow-sm">
+                  <Globe size={24} className="text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200">Outlook / Exchange</h4>
+                  <p className="text-xs text-slate-500 font-medium">Contas corporativas Microsoft</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="rounded-xl font-bold border-slate-300 dark:border-border">Conectar</Button>
+            </div>
           </div>
           
-        </div>
-
-      </div>
+          <div className="flex justify-end pt-4 border-t border-border/40">
+            <Button variant="ghost" onClick={() => setIsSettingsOpen(false)} className="rounded-xl font-bold">Fechar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
