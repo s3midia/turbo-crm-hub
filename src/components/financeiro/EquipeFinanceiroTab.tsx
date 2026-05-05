@@ -313,7 +313,7 @@ export default function EquipeFinanceiroTab() {
   const comprometimentoState = receitaMensal > 0 ? ((totalFolhaState + despesasFixasState) / receitaMensal) * 100 : 0;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-4 animate-in fade-in duration-500 pb-10">
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -322,7 +322,7 @@ export default function EquipeFinanceiroTab() {
           { label: "Despesas Variáveis", value: formatBRL(despesasVariaveisState), color: "text-amber-500", bg: "bg-amber-500/10", icon: TrendingUp },
           { label: "Comprometimento", value: `${comprometimentoState.toFixed(1)}%`, color: comprometimentoState > 60 ? "text-rose-500" : "text-emerald-500", bg: comprometimentoState > 60 ? "bg-rose-500/10" : "bg-emerald-500/10", icon: Percent },
         ].map((k, i) => (
-          <div key={i} className={cn("p-5 rounded-[1.5rem] border border-border/40 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all", k.bg)}>
+          <div key={i} className={cn("p-4 rounded-[1.5rem] border border-border/40 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all", k.bg)}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{k.label}</p>
               <k.icon size={14} className="opacity-40 group-hover:opacity-100 transition-opacity" />
@@ -333,11 +333,11 @@ export default function EquipeFinanceiroTab() {
       </div>
 
       {/* Comprometimento Bar - Elegant Premium Version */}
-      <div className="relative p-7 rounded-[2.5rem] bg-gradient-to-br from-card to-card/50 border border-border/50 shadow-2xl overflow-hidden group">
+      <div className="relative p-5 lg:p-6 rounded-[2.5rem] bg-gradient-to-br from-card to-card/50 border border-border/50 shadow-2xl overflow-hidden group">
         {/* Subtle background decorative element */}
         <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-1000" />
         
-        <div className="relative z-10 space-y-6">
+        <div className="relative z-10 space-y-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -432,9 +432,9 @@ export default function EquipeFinanceiroTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Folha de Pagamento */}
-        <div className="p-6 rounded-3xl border border-border/50 bg-card shadow-sm flex flex-col h-full">
+        <div className="p-5 rounded-3xl border border-border/50 bg-card shadow-sm flex flex-col h-full">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-black flex items-center gap-2">
               <Users size={16} className="text-primary" />
@@ -597,7 +597,7 @@ export default function EquipeFinanceiroTab() {
         </div>
 
         {/* Despesas Operacionais */}
-        <div className="p-6 rounded-3xl border border-border/50 bg-card shadow-sm flex flex-col h-full">
+        <div className="p-5 rounded-3xl border border-border/50 bg-card shadow-sm flex flex-col h-full">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-black flex items-center gap-2">
               <AlertCircle size={16} className="text-amber-500" />
