@@ -16,11 +16,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
 // --- Componente do Botão do Google ---
-const GoogleButtonLogic = ({ googleConnected, setGoogleConnected }: { googleConnected: boolean, setGoogleConnected: (v: boolean) => void }) => {
+const GoogleButtonLogic = ({ googleConnected, setGoogleConnected, onEventsFetched }: { googleConnected: boolean, setGoogleConnected: (v: boolean) => void, onEventsFetched: (events: any[]) => void }) => {
   const login = useGoogleLogin({
-    onSuccess: (codeResponse) => {
+    onSuccess: async (codeResponse) => {
       console.log('Login Success:', codeResponse);
       setGoogleConnected(true);
+      
+      try {
+        // Fetch real events from Google Calendar
+        const timeMin = new Date();
+        timeMin.setDate(1); // Inicio do mes
+        const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin.toISOString()}&maxResults=50&singleEvents=true&orderBy=startTime`, {
+          headers: {
+            Authorization: `Bearer ${codeResponse.access_token}`
+          }
+        });
+        const data = await response.json();
+        if (data.items) {
+          onEventsFetched(data.items);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar eventos do Google Calendar:", err);
+      }
     },
     onError: (error) => console.log('Login Failed:', error),
     scope: 'https://www.googleapis.com/auth/calendar.readonly',
@@ -121,6 +138,28 @@ export default function AgendaPage() {
     setNewEventTime("");
     setNewEventClient("");
     setNewEventValue("");
+  };
+
+  const handleGoogleEventsFetched = (googleItems: any[]) => {
+    const converted: AgendaEvent[] = googleItems.map(item => {
+       const startStr = item.start.dateTime || item.start.date;
+       const dateObj = new Date(startStr);
+       return {
+         id: item.id,
+         day: dateObj.getDate(),
+         title: item.summary || "Evento Google",
+         type: "meeting",
+         time: item.start.dateTime ? dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Dia Inteiro",
+         location: item.location,
+         description: item.description,
+       };
+    });
+    // Add to existing events avoiding duplicates by ID
+    setEvents(prev => {
+      const existingIds = new Set(prev.map(e => e.id));
+      const novos = converted.filter(c => !existingIds.has(c.id));
+      return [...prev, ...novos];
+    });
   };
 
   const handleSync = () => {
@@ -529,7 +568,7 @@ export default function AgendaPage() {
                     </p>
                   </div>
                 </div>
-                <GoogleButtonLogic googleConnected={googleConnected} setGoogleConnected={setGoogleConnected} />
+                <GoogleButtonLogic googleConnected={googleConnected} setGoogleConnected={setGoogleConnected} onEventsFetched={handleGoogleEventsFetched} />
               </div>
 
             {/* Apple Calendar */}
