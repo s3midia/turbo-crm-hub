@@ -141,13 +141,11 @@ export function DealGeneralTab({ opportunity, onUpdate }: DealGeneralTabProps) {
 
                     <div className="space-y-2">
                         <Label htmlFor="value">Valor Estimado (R$)</Label>
-                        <Input
+                        <CurrencyInput
                             id="value"
-                            type="number"
-                            step="0.01"
-                            value={formData.value}
-                            onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
-                            placeholder="0.00"
+                            value={Number(formData.value || 0)}
+                            onChange={(val) => setFormData({ ...formData, value: val })}
+                            placeholder="0,00"
                         />
                     </div>
 
