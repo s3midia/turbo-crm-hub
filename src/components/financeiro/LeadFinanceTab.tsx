@@ -112,6 +112,20 @@ export const LeadFinanceTab = ({
         />
       )}
 
+      {/* ── KPIs Rápidos (Estilo Drawer) ── */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Recebido", value: totals.paid, color: "text-emerald-500", bg: "bg-emerald-500/8" },
+          { label: "Pendente", value: totals.pending, color: "text-amber-500", bg: "bg-amber-500/8" },
+          { label: "Total Oportunidade", value: contractTotal, color: "text-primary", bg: "bg-primary/8" },
+        ].map((k, i) => (
+          <div key={i} className={cn("rounded-xl p-3 border border-border/20 shadow-sm", k.bg)}>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mb-1">{k.label}</p>
+            <p className={cn("text-sm font-black", k.color)}>{formatBRL(k.value)}</p>
+          </div>
+        ))}
+      </div>
+
       {/* ── Resumo do Contrato ── */}
       {contractTotal > 0 && (
         <Card className="border-primary/15 bg-gradient-to-br from-primary/5 to-background shadow-sm overflow-hidden">
