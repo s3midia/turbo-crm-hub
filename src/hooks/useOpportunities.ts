@@ -176,6 +176,17 @@ export const archiveOpportunity = async (id: string) => {
     await supabase.from('leads').update({ status: 'arquivado' }).eq('id', id);
 };
 
+export const deleteOpportunity = async (id: string) => {
+    try {
+        // Tenta deletar da tabela de oportunidades se existir
+        await supabase.from('opportunities').delete().eq('id', id);
+    } catch (e) {}
+    
+    // Deleta da tabela de leads (que é a principal)
+    const { error } = await supabase.from('leads').delete().eq('id', id);
+    if (error) throw error;
+};
+
 export const getTimelineEntries = async (opportunityId: string): Promise<TimelineEntry[]> => {
     const { data, error } = await supabase.from('opportunity_timeline').select('*').eq('opportunity_id', opportunityId).order('created_at', { ascending: false });
     if (error) return [];
