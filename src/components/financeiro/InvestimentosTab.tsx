@@ -28,9 +28,6 @@ const TIPOS_COLOR: Record<string, string> = {
 
 const INITIAL: Investimento[] = [];
 
-const evolutionData: any[] = [];
-const maxEvol = Math.max(...evolutionData.map(d => d.valor));
-
 export default function InvestimentosTab() {
   const [investimentos, setInvestimentos] = useState<Investimento[]>([]);
   const [showForm, setShowForm] = useState(false);
