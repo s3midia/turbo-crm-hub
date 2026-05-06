@@ -360,11 +360,12 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
         </div>
 
         <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 py-3 rounded-2xl border border-border bg-background hover:bg-muted text-sm font-bold transition-all">
+          <button onClick={onClose} disabled={saving} className="flex-1 py-3 rounded-2xl border border-border bg-background hover:bg-muted text-sm font-bold transition-all disabled:opacity-50">
             Cancelar
           </button>
-          <button onClick={handleSave} className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all">
-            {transaction ? "Salvar Alterações" : "Salvar Transação"}
+          <button onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all disabled:opacity-70 flex items-center justify-center gap-2">
+            {saving && <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+            {saving ? "Salvando..." : transaction ? "Salvar Alterações" : "Salvar Transação"}
           </button>
         </div>
       </div>
