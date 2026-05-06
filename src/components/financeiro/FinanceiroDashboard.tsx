@@ -50,6 +50,10 @@ function computeMetrics(transactions: FinancialTransaction[]) {
     .filter(t => t.tipo === "saida" && t.status === "pago")
     .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
 
+  const despesaTotal = transactions
+    .filter(t => t.tipo === "saida")
+    .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
+
   const saldoLiquido = receitaPaga - despesaPaga;
 
   // A receber = entradas pendentes/agendadas
@@ -179,7 +183,7 @@ function computeMetrics(transactions: FinancialTransaction[]) {
     : "Atenção: revise despesas e inadimplência.";
 
   return {
-    receitaPaga, despesaPaga, saldoLiquido, aReceber,
+    receitaPaga, despesaPaga, despesaTotal, saldoLiquido, aReceber,
     margem, valuation, barData, maxBar,
     cashflowDays, expenseCategories, totalExp,
     urgentActions, healthScore, healthDesc,
@@ -252,7 +256,7 @@ export default function FinanceiroDashboard({ onTabChange }: Props) {
 
   const kpis = [
     { label: "Receita Realizada", value: m.receitaPaga, icon: TrendingUp, color: "emerald", trend: formatBRL(m.receitaPaga), up: true, tab: "lancamentos" },
-    { label: "Despesas Totais", value: m.despesaPaga, icon: TrendingDown, color: "rose", trend: formatBRL(m.despesaPaga), up: false, tab: "lancamentos" },
+    { label: "Despesas Totais", value: m.despesaTotal, icon: TrendingDown, color: "rose", trend: formatBRL(m.despesaTotal), up: false, tab: "lancamentos" },
     { label: "Saldo Líquido", value: m.saldoLiquido, icon: Scale, color: "blue", trend: m.saldoLiquido >= 0 ? "Positivo" : "Negativo", up: m.saldoLiquido >= 0, tab: "relatorios" },
     { label: "A Receber", value: m.aReceber, icon: Clock, color: "amber", trend: m.aReceber > 0 ? formatBRL(m.aReceber) : "Nenhum", up: null, tab: "lancamentos" },
     { label: "Margem Líquida", value: null, display: `${m.margem.toFixed(1)}%`, icon: Percent, color: "violet", trend: m.margem >= 0 ? "Saudável" : "Negativa", up: m.margem >= 0, tab: "relatorios" },
