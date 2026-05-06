@@ -183,19 +183,23 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2 space-y-1">
             <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Descrição *</label>
-            <input value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
-              className="w-full px-4 py-3 bg-muted/30 border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            <input value={form.descricao} onChange={e => { setForm(f => ({ ...f, descricao: e.target.value })); setErrors(p => ({ ...p, descricao: "" })); }}
+              className={cn("w-full px-4 py-3 bg-muted/30 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all",
+                errors.descricao ? "border-rose-500" : "border-border/50")}
               placeholder="Ex: Criação de site" />
+            {errors.descricao && <p className="text-[10px] text-rose-500 font-medium">{errors.descricao}</p>}
           </div>
 
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Valor (R$) *</label>
-            <CurrencyInput 
-              value={Number(form.valor)} 
-              onChange={val => setForm(f => ({ ...f, valor: val }))}
-              className="w-full px-4 py-3 bg-muted/30 border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-              placeholder="0,00" 
+            <CurrencyInput
+              value={Number(form.valor)}
+              onChange={val => { setForm(f => ({ ...f, valor: val })); setErrors(p => ({ ...p, valor: "" })); }}
+              className={cn("w-full px-4 py-3 bg-muted/30 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all",
+                errors.valor ? "border-rose-500" : "border-border/50")}
+              placeholder="0,00"
             />
+            {errors.valor && <p className="text-[10px] text-rose-500 font-medium">{errors.valor}</p>}
           </div>
 
           <div className="space-y-1">
