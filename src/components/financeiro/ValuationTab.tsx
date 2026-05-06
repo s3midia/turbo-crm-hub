@@ -54,7 +54,12 @@ function calcularValuation(inputs: ValuationInput, bens: Bem[], metodo: MetodoVa
       total += projetado / Math.pow(1 + inputs.wacc / 100, i);
     }
     // Terminal value (Gordon Growth Model, simplified)
-    const valorTerminal = (fcf * Math.pow(1 + inputs.taxaCrescimento / 100, 5) * 1.02) / ((inputs.wacc / 100) - 0.02);
+    const taxaCustoCapital = inputs.wacc / 100;
+    const taxaPerpetuidade = 0.02; // 2% perpetuidade padrão
+    const denominador = taxaCustoCapital - taxaPerpetuidade;
+    
+    // Evita divisão por zero ou valores negativos que distorcem o cálculo
+    const valorTerminal = (fcf * Math.pow(1 + inputs.taxaCrescimento / 100, 5) * 1.02) / (denominador <= 0 ? 0.05 : denominador);
     const valorTerminalDescontado = valorTerminal / Math.pow(1 + inputs.wacc / 100, 5);
     const valor = total + valorTerminalDescontado;
     return { valor, min: valor * 0.8, max: valor * 1.25 };
