@@ -267,7 +267,7 @@ export default function ValuationTab() {
               <label className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Setor de Atuação</label>
               <select value={inputs.setor} onChange={e => setInputs(prev => ({ ...prev, setor: e.target.value }))}
                 className="w-full px-3 py-2.5 bg-muted/30 border border-border/50 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
-                {SETORES.map(s => <option key={s.nome}>{s.nome} (×{s.multiplo})</option>)}
+                {SETORES.map(s => <option key={s.nome} value={s.nome}>{s.nome} (×{s.multiplo})</option>)}
               </select>
             </div>
           )}
