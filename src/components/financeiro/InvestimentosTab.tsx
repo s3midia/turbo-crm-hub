@@ -9,7 +9,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 function formatPct(v: number) { return `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`; }
 
 interface Investimento {
-  id: number;
+  id: string;
   nome: string;
   tipo: "Renda Fixa" | "Fundos" | "Imóveis" | "Equipamentos" | "Participações";
   aporte: number;
@@ -85,38 +85,52 @@ export default function InvestimentosTab() {
   const maxEvol = Math.max(...evolutionData.map(d => d.valor), 1);
 
   async function handleAdd() {
-    if (!form.nome || !form.aporte) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      if (!form.nome || !form.aporte) {
+        toast.error("Preencha o nome e o valor do aporte.");
+        return;
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado.");
+        return;
+      }
 
-    const aporte = form.aporte;
-    const rendPct = parseFloat(form.rendimento) || 0;
-    const saldoAtual = aporte * (1 + rendPct / 100);
+      const aporte = Number(form.aporte);
+      const rendPct = parseFloat(form.rendimento) || 0;
+      const saldoAtual = aporte * (1 + rendPct / 100);
 
-    const { data, error } = await supabase.from('company_investments').insert([{
-      user_id: user.id,
-      nome: form.nome,
-      tipo: form.tipo,
-      aporte: aporte,
-      rendimento_pct: rendPct,
-      data_aporte: form.data || new Date().toISOString().split('T')[0],
-      saldo_atual: saldoAtual
-    }]).select();
+      const { data, error } = await supabase.from('company_investments').insert([{
+        user_id: user.id,
+        nome: form.nome,
+        tipo: form.tipo,
+        aporte: aporte,
+        rendimento_pct: rendPct,
+        data_aporte: form.data || new Date().toISOString().split('T')[0],
+        saldo_atual: saldoAtual
+      }]).select();
 
-    if (data) {
-      const inv = data[0];
-      setInvestimentos(prev => [...prev, {
-        id: inv.id,
-        nome: inv.nome,
-        tipo: inv.tipo as Investimento["tipo"],
-        aporte: Number(inv.aporte),
-        rendimentoPct: Number(inv.rendimento_pct),
-        dataAporte: inv.data_aporte,
-        saldoAtual: Number(inv.saldo_atual)
-      }]);
-      setShowForm(false);
-      setForm({ nome: "", tipo: "Renda Fixa", aporte: 0, rendimento: "", data: "" });
-      toast.success("Investimento salvo com sucesso!");
+      if (error) throw error;
+
+      if (data && data[0]) {
+        const inv = data[0];
+        setInvestimentos(prev => [...prev, {
+          id: inv.id,
+          nome: inv.nome,
+          tipo: inv.tipo as Investimento["tipo"],
+          aporte: Number(inv.aporte),
+          rendimentoPct: Number(inv.rendimento_pct),
+          dataAporte: inv.data_aporte,
+          saldoAtual: Number(inv.saldo_atual)
+        }]);
+        setShowForm(false);
+        setForm({ nome: "", tipo: "Renda Fixa", aporte: 0, rendimento: "", data: "" });
+        toast.success("Investimento salvo com sucesso!");
+      }
+    } catch (err: any) {
+      console.error("Erro ao salvar investimento:", err);
+      toast.error("Erro ao salvar investimento: " + (err.message || "Tente novamente."));
     }
   }
 
