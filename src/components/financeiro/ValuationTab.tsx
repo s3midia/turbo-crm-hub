@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Building2, TrendingUp, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -170,9 +170,9 @@ export default function ValuationTab() {
     }, 1500); // Save 1.5s after last input change
 
     return () => clearTimeout(timer);
-  }, [inputs, loading]);
+  }, [inputs, loading, saveConfig]);
 
-  const saveConfig = async (newMetodo?: MetodoValuation, newInputs?: ValuationInput) => {
+  const saveConfig = useCallback(async (newMetodo?: MetodoValuation, newInputs?: ValuationInput) => {
     try {
       setIsSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -202,7 +202,7 @@ export default function ValuationTab() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [metodo, inputs]);
 
   const handleMetodoChange = (m: MetodoValuation) => {
     setMetodo(m);
