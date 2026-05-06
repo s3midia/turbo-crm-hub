@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Plus, Search, Filter, FileSpreadsheet, Trash2, Check, Users, Calendar,
   RefreshCw, Tag, ArrowUpCircle, ArrowDownCircle, Edit3 as Edit3Icon, X,
@@ -385,11 +386,36 @@ interface LancamentosTabProps {
 
 export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   const { transactions, loading, saveTransaction, deleteTransaction } = useFinance();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterTipo, setFilterTipo] = useState<"todos" | "entrada" | "saida">("todos");
-  const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado">("todos");
+  
+  const initialTipo = searchParams.get("tipo") as "todos" | "entrada" | "saida" || "todos";
+  const initialStatus = searchParams.get("status") as "todos" | "pago" | "pendente" | "agendado" || "todos";
+
+  const [filterTipo, setFilterTipo] = useState<"todos" | "entrada" | "saida">(
+    ["todos", "entrada", "saida"].includes(initialTipo) ? initialTipo : "todos"
+  );
+  const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado">(
+    ["todos", "pago", "pendente", "agendado"].includes(initialStatus) ? initialStatus : "todos"
+  );
+  
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
+
+  // Sync filters with URL
+  useEffect(() => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (filterTipo !== "todos") newParams.set("tipo", filterTipo);
+      else newParams.delete("tipo");
+      
+      if (filterStatus !== "todos") newParams.set("status", filterStatus);
+      else newParams.delete("status");
+      
+      return newParams;
+    }, { replace: true });
+  }, [filterTipo, filterStatus, setSearchParams]);
 
   const filtered = transactions.filter(t => {
     const matchSearch = t.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || (t.lead_nome || "").toLowerCase().includes(searchTerm.toLowerCase());
