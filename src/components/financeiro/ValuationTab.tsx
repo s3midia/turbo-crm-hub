@@ -269,17 +269,24 @@ export default function ValuationTab() {
         <div className="lg:col-span-2 p-6 rounded-3xl border border-border/50 bg-card shadow-sm space-y-4 relative">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-black">Parâmetros de Avaliação</h3>
-            <button 
-              onClick={() => saveConfig()}
-              disabled={isSaving}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
-                isSaving ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary hover:bg-primary/20"
+            <div className="flex flex-col items-end gap-1">
+              <button 
+                onClick={() => saveConfig()}
+                disabled={isSaving}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                  isSaving ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary hover:bg-primary/20"
+                )}
+              >
+                {isSaving ? <RefreshCw size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                {isSaving ? "Salvando..." : "Salvar Alterações"}
+              </button>
+              {lastSaved && !isSaving && (
+                <span className="text-[9px] text-muted-foreground font-medium italic">
+                  Salvo às {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               )}
-            >
-              {isSaving ? <RefreshCw size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-              {isSaving ? "Salvando..." : "Salvar Alterações"}
-            </button>
+            </div>
           </div>
 
           {[
