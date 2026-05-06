@@ -122,10 +122,14 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
     // Cashflow
     const getDelta = (days: number) => {
       const target = new Date();
+      target.setHours(23, 59, 59, 999);
       target.setDate(now.getDate() + days);
+      
       return txs.filter(t => {
-        const v = new Date(t.vencimento);
-        return t.status !== 'pago' && v <= target && v >= now;
+        if (t.status === 'pago') return false;
+        const v = new Date(t.vencimento || t.data_lancamento);
+        // Inclui tudo que venceu até hoje (atrasados) e o que vencerá até a data alvo
+        return v <= target;
       }).reduce((acc, t) => acc + (t.tipo === 'entrada' ? Number(t.valor) : -Number(t.valor)), 0);
     };
 
@@ -483,7 +487,10 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         </div>
 
         {/* Health Score & Actions */}
-        <div className="p-4 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
+        <div 
+          onClick={() => onTabChange?.("relatorios")}
+          className="p-4 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col cursor-pointer hover:bg-zinc-50/50 transition-all group select-none"
+        >
           <div className="mb-3">
             <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight flex items-center gap-2 mb-4">
               <Zap size={18} className="text-amber-500 fill-amber-500/20" />
