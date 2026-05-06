@@ -85,6 +85,8 @@ export default function ValuationTab() {
 
   const [bens, setBens] = useState<Bem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -112,10 +114,9 @@ export default function ValuationTab() {
         });
       }
 
-      // Se faturamento12m ainda está zerado (config inexistente ou nunca preenchido),
+      // Se faturamento12m ainda está zerado (config inexistente),
       // pré-popular a partir dos dados reais das transações para coincidir com o dashboard
-      const savedFaturamento = configData ? Number(configData.faturamento12m) : 0;
-      if (savedFaturamento === 0) {
+      if (!configData) {
         const { data: txData } = await supabase
           .from('financial_transactions')
           .select('tipo, valor, status')
@@ -162,6 +163,7 @@ export default function ValuationTab() {
 
   const saveConfig = async (newMetodo?: MetodoValuation, newInputs?: ValuationInput) => {
     try {
+      setIsSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -182,9 +184,12 @@ export default function ValuationTab() {
       }, { onConflict: 'user_id' });
 
       if (error) throw error;
+      setLastSaved(new Date());
     } catch (err: any) {
       console.error('Erro ao salvar configuração de valuation:', err);
       toast.error('Erro ao salvar configuração.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -194,15 +199,11 @@ export default function ValuationTab() {
   };
 
   const updateInput = (key: keyof ValuationInput, val: number) => {
-    const newInputs = { ...inputs, [key]: val };
-    setInputs(newInputs);
-    saveConfig(undefined, newInputs);
+    setInputs(prev => ({ ...prev, [key]: val }));
   };
 
   const updateSetor = (setor: string) => {
-    const newInputs = { ...inputs, setor };
-    setInputs(newInputs);
-    saveConfig(undefined, newInputs);
+    setInputs(prev => ({ ...prev, setor }));
   };
 
   const [novoBem, setNovoBem] = useState({ nome: "", valor: 0 });
@@ -254,8 +255,21 @@ export default function ValuationTab() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Inputs */}
-        <div className="lg:col-span-2 p-6 rounded-3xl border border-border/50 bg-card shadow-sm space-y-4">
-          <h3 className="text-sm font-black mb-4">Parâmetros de Avaliação</h3>
+        <div className="lg:col-span-2 p-6 rounded-3xl border border-border/50 bg-card shadow-sm space-y-4 relative">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-black">Parâmetros de Avaliação</h3>
+            <button 
+              onClick={() => saveConfig()}
+              disabled={isSaving}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                isSaving ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary hover:bg-primary/20"
+              )}
+            >
+              {isSaving ? <RefreshCw size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              {isSaving ? "Salvando..." : "Salvar Alterações"}
+            </button>
+          </div>
 
           {[
             { key: "faturamento12m", label: "Faturamento Últimos 12m (R$)", show: true },
