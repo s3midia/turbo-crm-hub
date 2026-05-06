@@ -110,8 +110,12 @@ export default function ValuationTab() {
           setor: configData.setor,
           wacc: Number(configData.wacc),
         });
-      } else {
-        // Sem config salvo: pré-popular com dados reais das transações
+      }
+
+      // Se faturamento12m ainda está zerado (config inexistente ou nunca preenchido),
+      // pré-popular a partir dos dados reais das transações para coincidir com o dashboard
+      const savedFaturamento = configData ? Number(configData.faturamento12m) : 0;
+      if (savedFaturamento === 0) {
         const { data: txData } = await supabase
           .from('financial_transactions')
           .select('tipo, valor, status')
