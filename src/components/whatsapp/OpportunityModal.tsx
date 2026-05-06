@@ -13,12 +13,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { X, Loader2, Archive, ExternalLink, Search, FileText, Zap } from 'lucide-react';
+import { X, Loader2, Archive, ExternalLink, Search, FileText, Zap, Calendar, Phone, Mail } from 'lucide-react';
 import { saveOpportunity, archiveOpportunity, getOpportunityById, type Task } from '@/hooks/useOpportunities';
 import { useToast } from '@/hooks/use-toast';
 import { useProfiles } from '@/hooks/useProfiles';
 import { LeadFinanceTab } from '@/components/financeiro/LeadFinanceTab';
-import { formatBRL, parseBRL } from '@/lib/formatters';
+import { formatBRL, parseBRL, formatDate } from '@/lib/formatters';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { useFinance } from '@/hooks/useFinance';
 import { LeadDocumentsTab } from '@/components/financeiro/LeadDocumentsTab';
@@ -107,7 +107,7 @@ export const OpportunityModal = ({
 
     useEffect(() => {
         const fetchLeads = async () => {
-            const { data } = await supabase.from('leads').select('id, company_name, phone, niche').order('company_name');
+            const { data } = await supabase.from('leads').select('id, company_name, phone, niche, created_at').order('created_at', { ascending: false });
             if (data) setAllLeads(data);
         };
         fetchLeads();
@@ -305,9 +305,25 @@ export const OpportunityModal = ({
                                                                 <button key={l.id} onClick={() => {
                                                                     setFormData(prev => ({ ...prev, leadIdentification: l.company_name, contact: l.phone || prev.contact, niche: l.niche || prev.niche }));
                                                                     setIsSearchingLeads(false);
-                                                                }} className="w-full text-left px-4 py-2 text-[12px] hover:bg-zinc-50 dark:hover:bg-zinc-800 flex flex-col border-b last:border-0">
-                                                                    <span className="font-bold">{l.company_name}</span>
-                                                                    <span className="text-[10px] text-zinc-400">{l.phone || 'Sem telefone'}</span>
+                                                                }} className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex flex-col border-b last:border-0 transition-colors group">
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <span className="text-[12px] font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-primary transition-colors">{l.company_name}</span>
+                                                                        <span className="text-[9px] font-medium text-zinc-400 flex items-center gap-1 shrink-0">
+                                                                            <Calendar size={10} /> {formatDate(l.created_at)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3 mt-1">
+                                                                        {l.phone && (
+                                                                            <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+                                                                                <Phone size={10} className="text-zinc-300" /> {l.phone}
+                                                                            </span>
+                                                                        )}
+                                                                        {l.niche && (
+                                                                            <span className="text-[9px] font-black uppercase tracking-tighter bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded leading-none">
+                                                                                {l.niche}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </button>
                                                             ))}
                                                         </div>
