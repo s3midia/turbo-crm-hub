@@ -154,16 +154,22 @@ export default function InvestimentosTab() {
           <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Últimos 6 meses</span>
         </div>
         <div className="flex items-end gap-3 h-36 mt-4">
-          {evolutionData.map((d, i) => (
+          {evolutionData.every(d => d.valor === 0) ? (
+            <div className="w-full flex items-center justify-center h-full text-muted-foreground text-[10px] uppercase font-black tracking-widest opacity-40">
+              Nenhum investimento nos últimos 6 meses
+            </div>
+          ) : evolutionData.map((d, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
               <div className="w-full relative group">
                 <div
                   className="w-full bg-primary/80 hover:bg-primary transition-all rounded-t-xl cursor-pointer relative"
-                  style={{ height: `${(d.valor / maxEvol) * 120}px` }}
+                  style={{ height: `${Math.max((d.valor / maxEvol) * 120, d.valor > 0 ? 4 : 0)}px` }}
                 >
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-popover text-[10px] font-bold px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    {formatBRL(d.valor)}
-                  </div>
+                  {d.valor > 0 && (
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-popover text-[10px] font-bold px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      {formatBRL(d.valor)}
+                    </div>
+                  )}
                 </div>
               </div>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{d.month}</p>
