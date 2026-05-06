@@ -312,123 +312,215 @@ export default function EquipeFinanceiroTab() {
   const despesasVariaveisState = despesas.filter(d => d.tipo === "variavel").reduce((s, d) => s + d.valor, 0);
   const comprometimentoState = receitaMensal > 0 ? ((totalFolhaState + despesasFixasState) / receitaMensal) * 100 : 0;
 
+  // Gauge SVG helpers
+  const gaugePercent = Math.min(comprometimentoState, 100);
+  const gaugeRadius = 70;
+  const gaugeCircumference = Math.PI * gaugeRadius; // half circle arc
+  const gaugeDashOffset = gaugeCircumference * (1 - gaugePercent / 100);
+  const gaugeColor = comprometimentoState > 60 ? "#f43f5e" : comprometimentoState > 40 ? "#f59e0b" : "#10b981";
+  const gaugeLabel = comprometimentoState > 60 ? "Crítico" : comprometimentoState > 40 ? "Atenção" : "Saudável";
+
+  // KPI tiles data
+  const totalCustosFixos = totalFolhaState + despesasFixasState;
+  const margemLucro = receitaMensal > 0 ? Math.max(0, receitaMensal - totalCustosFixos - despesasVariaveisState) : 0;
+  const margemPct = receitaMensal > 0 ? (margemLucro / receitaMensal) * 100 : 0;
+
   return (
-    <div className="space-y-4 animate-in fade-in duration-500 pb-10">
-      {/* Summary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Total da Folha", value: formatBRL(totalFolhaState), color: "text-foreground", bg: "bg-muted/30", icon: Users },
-          { label: "Despesas Fixas", value: formatBRL(despesasFixasState), color: "text-rose-500", bg: "bg-rose-500/10", icon: AlertCircle },
-          { label: "Despesas Variáveis", value: formatBRL(despesasVariaveisState), color: "text-amber-500", bg: "bg-amber-500/10", icon: TrendingUp },
-          { label: "Comprometimento", value: `${comprometimentoState.toFixed(1)}%`, color: comprometimentoState > 60 ? "text-rose-500" : "text-emerald-500", bg: comprometimentoState > 60 ? "bg-rose-500/10" : "bg-emerald-500/10", icon: Percent },
-        ].map((k, i) => (
-          <div key={i} className={cn("p-3 rounded-[1.2rem] border border-border/40 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all", k.bg)}>
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{k.label}</p>
-              <k.icon size={12} className="opacity-100" />
-            </div>
-            <p className={cn("text-xl font-black tracking-tighter", k.color)}>{k.value}</p>
-          </div>
-        ))}
-      </div>
+    <div className="space-y-5 animate-in fade-in duration-500 pb-10">
 
-      {/* Comprometimento Bar - Elegant Premium Version */}
-      <div className="relative p-4 lg:p-5 rounded-[2rem] bg-gradient-to-br from-card to-card/50 border border-border/50 shadow-2xl overflow-hidden group">
-        {/* Subtle background decorative element */}
-        <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-1000" />
-        
-        <div className="relative z-10 space-y-3">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      {/* ── HERO: Saúde Financeira ── */}
+      <div className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-gradient-to-br from-card via-card/95 to-background shadow-xl">
+        {/* Ambient glow blobs */}
+        <div className="pointer-events-none absolute -top-16 -left-16 w-64 h-64 rounded-full opacity-20 blur-3xl"
+          style={{ background: gaugeColor }} />
+        <div className="pointer-events-none absolute -bottom-20 -right-20 w-72 h-72 rounded-full bg-primary/10 blur-3xl" />
+
+        <div className="relative z-10 p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-center">
+          {/* Left: title + KPI strip */}
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                  style={{ backgroundColor: gaugeColor }} />
+                <span className="relative inline-flex rounded-full h-3 w-3"
+                  style={{ backgroundColor: gaugeColor }} />
+              </div>
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em]">
+                Saúde Financeira da Operação
+              </span>
+              <span className="ml-auto text-[10px] font-black px-3 py-1 rounded-full border"
+                style={{
+                  color: gaugeColor,
+                  borderColor: `${gaugeColor}40`,
+                  backgroundColor: `${gaugeColor}12`
+                }}>
+                {gaugeLabel}
+              </span>
+            </div>
+
+            {/* KPI 4-strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                {
+                  label: "Total da Folha",
+                  value: formatBRL(totalFolhaState),
+                  sub: `${funcionarios.length} colaboradores`,
+                  accent: "#6366f1",
+                  icon: Users,
+                },
+                {
+                  label: "Despesas Fixas",
+                  value: formatBRL(despesasFixasState),
+                  sub: "recorrentes",
+                  accent: "#f43f5e",
+                  icon: AlertCircle,
+                },
+                {
+                  label: "Desp. Variáveis",
+                  value: formatBRL(despesasVariaveisState),
+                  sub: "não recorrentes",
+                  accent: "#f59e0b",
+                  icon: TrendingUp,
+                },
+                {
+                  label: "Margem de Lucro",
+                  value: `${margemPct.toFixed(1)}%`,
+                  sub: formatBRL(margemLucro),
+                  accent: margemPct < 10 ? "#f43f5e" : "#10b981",
+                  icon: Target,
+                },
+              ].map((k, i) => (
+                <div
+                  key={i}
+                  className="group relative rounded-2xl p-4 border border-border/30 bg-background/50 hover:bg-background/80 hover:shadow-lg transition-all duration-300 cursor-default overflow-hidden"
+                >
+                  {/* subtle left accent bar */}
+                  <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full transition-all duration-300"
+                    style={{ backgroundColor: `${k.accent}60` }} />
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-7 h-7 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: `${k.accent}18` }}>
+                      <k.icon size={13} style={{ color: k.accent }} />
+                    </div>
+                  </div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">{k.label}</p>
+                  <p className="text-[15px] font-black tracking-tight text-foreground leading-none">{k.value}</p>
+                  <p className="text-[9px] text-muted-foreground/70 mt-1">{k.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Segmented progress bar */}
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className={cn(
-                  "w-2 h-2 rounded-full animate-pulse",
-                  comprometimentoState > 60 ? "bg-rose-500" : comprometimentoState > 40 ? "bg-amber-500" : "bg-emerald-500"
-                )} />
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Saúde Financeira da Operação</span>
+              <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                <span>Comprometimento da Receita</span>
+                <span>Receita: <span className="text-foreground font-black">{formatBRL(receitaMensal)}</span></span>
               </div>
-              <h3 className="text-xl font-black tracking-tight text-foreground flex items-baseline gap-2">
-                Comprometimento
-                <span className={cn(
-                  "text-2xl font-black",
-                  comprometimentoState > 60 ? "text-rose-500" : comprometimentoState > 40 ? "text-amber-500" : "text-emerald-500"
-                )}>
-                  {comprometimentoState.toFixed(1)}%
-                </span>
-              </h3>
-            </div>
-            
-            <div className="flex flex-col items-start md:items-end gap-1">
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Custos Fixos Totais</p>
-              <p className="text-lg font-black text-foreground">{formatBRL(totalFolhaState + despesasFixasState)}</p>
+              <div className="relative h-3 w-full rounded-full bg-muted/30 overflow-hidden border border-border/20">
+                {/* zone markers */}
+                <div className="absolute left-[40%] top-0 bottom-0 w-px bg-amber-500/40 z-10" />
+                <div className="absolute left-[60%] top-0 bottom-0 w-px bg-rose-500/40 z-10" />
+                {/* fill */}
+                <div
+                  className="h-full rounded-full transition-all duration-1000 ease-out relative"
+                  style={{
+                    width: `${Math.min(gaugePercent, 100)}%`,
+                    background: comprometimentoState > 60
+                      ? "linear-gradient(90deg, #10b981 40%, #f59e0b 60%, #f43f5e)"
+                      : comprometimentoState > 40
+                        ? "linear-gradient(90deg, #10b981 40%, #f59e0b)"
+                        : "linear-gradient(90deg, #10b981)",
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent rounded-full" />
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white/50 blur-sm rounded-full" />
+                </div>
+              </div>
+              <div className="flex justify-between text-[9px] font-bold text-muted-foreground">
+                <span className="text-emerald-500">✓ Ideal &lt;40%</span>
+                <span className="text-amber-500">⚠ Atenção 40–60%</span>
+                <span className="text-rose-500">✕ Crítico &gt;60%</span>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="relative h-4 w-full bg-muted/30 rounded-full overflow-hidden border border-border/20 p-[2px]">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-1000 ease-out relative shadow-lg",
-                  comprometimentoState > 60 
-                    ? "bg-gradient-to-r from-rose-500 to-rose-600 shadow-rose-500/20" 
-                    : comprometimentoState > 40 
-                      ? "bg-gradient-to-r from-amber-400 to-orange-500 shadow-amber-500/20" 
-                      : "bg-gradient-to-r from-emerald-400 to-teal-500 shadow-emerald-500/20"
-                )}
-                style={{ width: `${Math.min(comprometimentoState, 100)}%` }}
-              >
-                {/* Gloss effect */}
-                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent h-[50%] rounded-full" />
-                
-                {/* Glow point at the end */}
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white/40 blur-md rounded-full" />
-              </div>
-            </div>
-            
-            <div className="flex justify-between items-center text-[11px] font-bold text-muted-foreground uppercase tracking-tighter">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  <span>Ideal: <span className="text-emerald-500">{"< 40%"}</span></span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  <span>Atenção: <span className="text-amber-500">{"40% - 60%"}</span></span>
-                </div>
-              </div>
-              <p className="hidden sm:block">Total Receita: <span className="text-foreground">{formatBRL(receitaMensal)}</span></p>
-            </div>
+          {/* Right: Gauge SVG */}
+          <div className="flex flex-col items-center justify-center shrink-0 select-none">
+            <svg width="170" height="105" viewBox="0 0 170 105" className="overflow-visible">
+              {/* background track */}
+              <path
+                d="M 15 95 A 70 70 0 0 1 155 95"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="12"
+                strokeLinecap="round"
+                className="text-muted/20"
+              />
+              {/* colored fill arc */}
+              <path
+                d="M 15 95 A 70 70 0 0 1 155 95"
+                fill="none"
+                stroke={gaugeColor}
+                strokeWidth="12"
+                strokeLinecap="round"
+                strokeDasharray={gaugeCircumference}
+                strokeDashoffset={gaugeDashOffset}
+                style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.34,1.56,0.64,1)", filter: `drop-shadow(0 0 6px ${gaugeColor}80)` }}
+              />
+              {/* tick marks */}
+              {[0, 20, 40, 60, 80, 100].map((tick) => {
+                const angle = (tick / 100) * 180 - 180;
+                const rad = (angle * Math.PI) / 180;
+                const cx = 85 + 70 * Math.cos(rad);
+                const cy = 95 + 70 * Math.sin(rad);
+                const cx2 = 85 + 58 * Math.cos(rad);
+                const cy2 = 95 + 58 * Math.sin(rad);
+                return (
+                  <line key={tick} x1={cx} y1={cy} x2={cx2} y2={cy2}
+                    stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground/30" strokeLinecap="round" />
+                );
+              })}
+              {/* center value */}
+              <text x="85" y="82" textAnchor="middle" className="fill-foreground"
+                style={{ fontSize: "22px", fontWeight: 900, fontFamily: "inherit", letterSpacing: "-1px" }}>
+                {comprometimentoState.toFixed(1)}%
+              </text>
+              <text x="85" y="100" textAnchor="middle"
+                style={{ fontSize: "9px", fontWeight: 700, fontFamily: "inherit", fill: gaugeColor, textTransform: "uppercase", letterSpacing: "2px" }}>
+                {gaugeLabel}
+              </text>
+            </svg>
+            <p className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1">Comprometimento</p>
           </div>
-          
-          <div className="pt-4 border-t border-border/30 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <Users size={14} />
+        </div>
+
+        {/* Bottom breakdown strip */}
+        <div className="relative z-10 border-t border-border/20 grid grid-cols-3 divide-x divide-border/20">
+          {[
+            { label: "Folha de Pagamento", value: totalFolhaState, total: receitaMensal, color: "#6366f1", icon: Users },
+            { label: "Despesas Fixas", value: despesasFixasState, total: receitaMensal, color: "#f43f5e", icon: AlertCircle },
+            { label: "Capacidade de Lucro", value: Math.max(0, receitaMensal - totalCustosFixos), total: receitaMensal, color: "#10b981", icon: TrendingUp },
+          ].map((item, i) => {
+            const pct = receitaMensal > 0 ? Math.min((item.value / receitaMensal) * 100, 100) : 0;
+            return (
+              <div key={i} className="px-5 py-4 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${item.color}18` }}>
+                    <item.icon size={10} style={{ color: item.color }} />
+                  </div>
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-wider truncate">{item.label}</p>
+                </div>
+                <p className="text-[13px] font-black text-foreground">{formatBRL(item.value)}</p>
+                <div className="h-1 w-full rounded-full bg-muted/20 overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-1000 ease-out"
+                    style={{ width: `${pct}%`, backgroundColor: item.color }} />
+                </div>
+                <p className="text-[9px] text-muted-foreground/60">{pct.toFixed(1)}% da receita</p>
               </div>
-              <div>
-                <p className="text-[9px] font-black text-muted-foreground uppercase">Folha</p>
-                <p className="text-[12px] font-bold">{formatBRL(totalFolhaState)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
-                <AlertCircle size={14} />
-              </div>
-              <div>
-                <p className="text-[9px] font-black text-muted-foreground uppercase">Despesas Fixas</p>
-                <p className="text-[12px] font-bold">{formatBRL(despesasFixasState)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
-                <TrendingUp size={14} className="rotate-0" />
-              </div>
-              <div>
-                <p className="text-[9px] font-black text-muted-foreground uppercase">Capacidade de Lucro</p>
-                <p className="text-[12px] font-bold">{formatBRL(Math.max(0, receitaMensal - (totalFolhaState + despesasFixasState)))}</p>
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
 
