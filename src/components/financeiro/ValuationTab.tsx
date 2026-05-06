@@ -161,6 +161,17 @@ export default function ValuationTab() {
     fetchData();
   }, []);
 
+  // Auto-save logic with debounce
+  useEffect(() => {
+    if (loading) return;
+    
+    const timer = setTimeout(() => {
+      saveConfig();
+    }, 1500); // Save 1.5s after last input change
+
+    return () => clearTimeout(timer);
+  }, [inputs, loading]);
+
   const saveConfig = async (newMetodo?: MetodoValuation, newInputs?: ValuationInput) => {
     try {
       setIsSaving(true);
