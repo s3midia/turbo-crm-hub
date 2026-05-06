@@ -235,7 +235,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
             return (
               <div 
                 key={i} 
-                onDoubleClick={() => {
+                onClick={() => {
                   if (kpi.label === "Valuation Est.") onTabChange?.("valuation");
                   else if (kpi.label === "Margem Líquida") onTabChange?.("relatorios");
                   else onTabChange?.("lancamentos");
