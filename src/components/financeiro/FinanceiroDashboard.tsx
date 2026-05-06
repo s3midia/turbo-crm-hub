@@ -361,7 +361,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         {/* Top Clients & EBITDA */}
         <div className="lg:col-span-2 space-y-4">
           <div 
-            onDoubleClick={() => onTabChange?.("relatorios")}
+            onClick={() => onTabChange?.("relatorios")}
             className="p-4 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm h-full flex flex-col cursor-pointer select-none"
           >
             <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-4 uppercase tracking-tight">
