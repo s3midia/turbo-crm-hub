@@ -93,7 +93,7 @@ interface RelatoriosTabProps {
 }
 
 export default function RelatoriosTab({ onTabChange }: RelatoriosTabProps) {
-  const { transactions, loading, fetchTransactions } = useFinance();
+  const { transactions, loading, refresh } = useFinance();
   const periodos = useMemo(() => buildPeriodos(), []);
   const [periodoIdx, setPeriodoIdx] = useState(0);
   const [activeReport, setActiveReport] = useState<ReportType>("dre");
@@ -173,7 +173,7 @@ export default function RelatoriosTab({ onTabChange }: RelatoriosTabProps) {
             ))}
           </select>
           <button
-            onClick={fetchTransactions}
+            onClick={refresh}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border/50 bg-card hover:bg-muted text-xs font-bold transition-all"
           >
             <RefreshCw size={12} /> Atualizar
