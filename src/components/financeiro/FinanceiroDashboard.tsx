@@ -16,9 +16,10 @@ import {
 
 interface DashboardData {
   receita_realizada: number;
-  despesas_totais: number;
-  saldo_liquido: number;
+  despesa_realizada: number;
+  saldo_atual: number;
   a_receber: number;
+  a_pagar: number;
   margem_liquida: number;
   valuation_est: number;
   barData: any[];
@@ -68,16 +69,20 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
     const todayStr = now.toISOString().split('T')[0];
 
     // KPIs
-    const receita = txs.filter(t => t.tipo === 'entrada' && t.status === 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
-    const despesas = txs.filter(t => t.tipo === 'saida').reduce((acc, t) => acc + Number(t.valor), 0);
-    const saldo = receita - despesas;
+    // KPIs
+    const receitaPaga = txs.filter(t => t.tipo === 'entrada' && t.status === 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
+    const despesaPaga = txs.filter(t => t.tipo === 'saida' && t.status === 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
+    const saldoAtual = receitaPaga - despesaPaga;
+    
     const aReceber = txs.filter(t => t.tipo === 'entrada' && t.status !== 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
-    const margem = receita > 0 ? Math.max(-999, Math.min(100, (saldo / receita) * 100)) : (saldo < 0 ? -100 : 0);
+    const aPagar = txs.filter(t => t.tipo === 'saida' && t.status !== 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
+    
+    const margem = receitaPaga > 0 ? Math.max(-999, Math.min(100, ((receitaPaga - despesaPaga) / receitaPaga) * 100)) : 0;
     
     // Valuation Estimate
-    let valuation = receita * 3; // Fallback default
+    let valuation = receitaPaga * 3; // Fallback default
     if (extraData.valConfig) {
-      const annualRevenue = receita * (12 / Math.max(1, new Date().getMonth() + 1));
+      const annualRevenue = receitaPaga * (12 / Math.max(1, new Date().getMonth() + 1));
       valuation = annualRevenue * (extraData.valConfig.multiplier || 3);
     }
 
@@ -103,7 +108,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       const monthObj = last6Months.find(m => m.monthIdx === mIdx && m.year === y);
       if (monthObj) {
         if (t.tipo === 'entrada' && t.status === 'pago') monthObj.receita += Number(t.valor);
-        if (t.tipo === 'saida') monthObj.despesa += Number(t.valor);
+        if (t.tipo === 'saida' && t.status === 'pago') monthObj.despesa += Number(t.valor);
       }
     });
     last6Months.forEach(m => m.profit = m.receita - m.despesa);
@@ -128,16 +133,15 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       return txs.filter(t => {
         if (t.status === 'pago') return false;
         const v = new Date(t.vencimento || t.data_lancamento);
-        // Inclui tudo que venceu até hoje (atrasados) e o que vencerá até a data alvo
         return v <= target;
       }).reduce((acc, t) => acc + (t.tipo === 'entrada' ? Number(t.valor) : -Number(t.valor)), 0);
     };
 
     const cashflow = [
-      { label: "Hoje", value: saldo, delta: getDelta(0) },
-      { label: "+7d", value: saldo + getDelta(7), delta: getDelta(7) },
-      { label: "+15d", value: saldo + getDelta(15), delta: getDelta(15) },
-      { label: "+30d", value: saldo + getDelta(30), delta: getDelta(30) },
+      { label: "Hoje", value: saldoAtual + getDelta(0), delta: getDelta(0) },
+      { label: "+7d", value: saldoAtual + getDelta(7), delta: getDelta(7) },
+      { label: "+15d", value: saldoAtual + getDelta(15), delta: getDelta(15) },
+      { label: "+30d", value: saldoAtual + getDelta(30), delta: getDelta(30) },
     ];
 
     // Top Clients
@@ -178,15 +182,16 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
     // Score calc
     const score = Math.min(100, Math.max(0, 
       (margem > 30 ? 40 : (margem > 0 ? margem * 1.3 : 0)) + 
-      (aReceber > despesas ? 30 : 15) + 
+      (aReceber > aPagar ? 30 : 15) + 
       (overDue.length === 0 ? 30 : 0)
     ));
 
     return {
-      receita_realizada: receita,
-      despesas_totais: despesas,
-      saldo_liquido: saldo,
+      receita_realizada: receitaPaga,
+      despesa_realizada: despesaPaga,
+      saldo_atual: saldoAtual,
       a_receber: aReceber,
+      a_pagar: aPagar,
       margem_liquida: margem,
       valuation_est: valuation,
       barData: last6Months,
@@ -195,17 +200,17 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
       profitTrend: last6Months,
       urgentActions: urgent,
       topClients,
-      ebitda: saldo,
+      ebitda: saldoAtual,
       score: Math.round(score)
     };
   }, [txs, extraData]);
 
   const kpis = [
     { label: "Receita Realizada", value: data.receita_realizada, icon: TrendingUp, color: "emerald", trend: "+12%", up: true },
-    { label: "Despesas Totais", value: data.despesas_totais, icon: TrendingDown, color: "rose", trend: "-5%", up: false },
-    { label: "Saldo Líquido", value: data.saldo_liquido, icon: Scale, color: "blue", trend: "+8%", up: true },
-    { label: "A Receber", value: data.a_receber, icon: Clock, color: "amber", trend: data.a_receber > 0 ? "Em aberto" : "Nenhum", up: null },
-    { label: "Margem Líquida", display: `${data.margem_liquida.toFixed(1)}%`, icon: Percent, color: "violet", trend: "+2.4pp", up: true },
+    { label: "Despesas Pagas", value: data.despesa_realizada, icon: TrendingDown, color: "rose", trend: "-5%", up: false },
+    { label: "Saldo em Caixa", value: data.saldo_atual, icon: Scale, color: "blue", trend: "+8%", up: true },
+    { label: "Pendente a Receber", value: data.a_receber, icon: Clock, color: "amber", trend: data.a_receber > 0 ? "Em aberto" : "Nenhum", up: null },
+    { label: "Pendente a Pagar", value: data.a_pagar, icon: AlertCircle, color: "rose", trend: data.a_pagar > 0 ? "Compromissos" : "Nenhum", up: false },
     { label: "Valuation Est.", display: formatBRL(data.valuation_est), icon: Building2, color: "cyan", trend: "Estável", up: true },
   ];
 
@@ -455,8 +460,8 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
             </div>
           </div>
           <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Total Saídas</span>
-            <span className="text-[14px] font-black text-rose-500">{formatBRL(data.despesas_totais)}</span>
+            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Total Saídas (Pagas)</span>
+            <span className="text-[14px] font-black text-rose-500">{formatBRL(data.despesa_realizada)}</span>
           </div>
         </div>
 
@@ -521,7 +526,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
             </div>
             <div className="space-y-2 flex-1">
               {[
-                { label: "Liquidez", val: data.a_receber > data.despesas_totais ? "Alta" : "Média", color: "text-emerald-500" },
+                { label: "Liquidez", val: data.a_receber > data.a_pagar ? "Alta" : "Média", color: "text-emerald-500" },
                 { label: "Eficiência", val: data.margem_liquida > 20 ? "Ótima" : "Regular", color: "text-blue-500" },
                 { label: "Risco", val: data.urgentActions.length === 0 ? "Baixo" : "Médio", color: "text-amber-500" }
               ].map((item, idx) => (
