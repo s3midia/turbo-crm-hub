@@ -161,24 +161,31 @@ export default function ValuationTab() {
   }, []);
 
   const saveConfig = async (newMetodo?: MetodoValuation, newInputs?: ValuationInput) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const m = newMetodo || metodo;
-    const i = newInputs || inputs;
+      const m = newMetodo || metodo;
+      const i = newInputs || inputs;
 
-    await supabase.from('company_valuation_config').upsert({
-      user_id: user.id,
-      metodo: m,
-      faturamento12m: i.faturamento12m,
-      lucro_liquido: i.lucroLiquido,
-      ativos_circulantes: i.ativosCirculantes,
-      passivos: i.passivos,
-      taxa_crescimento: i.taxaCrescimento,
-      setor: i.setor,
-      wacc: i.wacc,
-      updated_at: new Date().toISOString()
-    });
+      const { error } = await supabase.from('company_valuation_config').upsert({
+        user_id: user.id,
+        metodo: m,
+        faturamento12m: i.faturamento12m,
+        lucro_liquido: i.lucroLiquido,
+        ativos_circulantes: i.ativosCirculantes,
+        passivos: i.passivos,
+        taxa_crescimento: i.taxaCrescimento,
+        setor: i.setor,
+        wacc: i.wacc,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+
+      if (error) throw error;
+    } catch (err: any) {
+      console.error('Erro ao salvar configuração de valuation:', err);
+      toast.error('Erro ao salvar configuração.');
+    }
   };
 
   const handleMetodoChange = (m: MetodoValuation) => {
@@ -188,6 +195,12 @@ export default function ValuationTab() {
 
   const updateInput = (key: keyof ValuationInput, val: number) => {
     const newInputs = { ...inputs, [key]: val };
+    setInputs(newInputs);
+    saveConfig(undefined, newInputs);
+  };
+
+  const updateSetor = (setor: string) => {
+    const newInputs = { ...inputs, setor };
     setInputs(newInputs);
     saveConfig(undefined, newInputs);
   };
@@ -265,7 +278,7 @@ export default function ValuationTab() {
           {metodo === "multiplos" && (
             <div className="space-y-1">
               <label className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Setor de Atuação</label>
-              <select value={inputs.setor} onChange={e => setInputs(prev => ({ ...prev, setor: e.target.value }))}
+              <select value={inputs.setor} onChange={e => updateSetor(e.target.value)}
                 className="w-full px-3 py-2.5 bg-muted/30 border border-border/50 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
                 {SETORES.map(s => <option key={s.nome} value={s.nome}>{s.nome} (×{s.multiplo})</option>)}
               </select>
