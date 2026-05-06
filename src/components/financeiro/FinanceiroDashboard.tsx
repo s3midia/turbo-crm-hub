@@ -300,7 +300,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         
         {/* Main Chart: Profit Trend (The Big One) */}
         <div 
-          onDoubleClick={() => onTabChange?.("lancamentos")}
+          onClick={() => onTabChange?.("lancamentos")}
           className="lg:col-span-3 p-5 lg:p-6 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden group cursor-pointer select-none"
         >
           <div className="flex items-center justify-between mb-6 relative z-10">
@@ -409,7 +409,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
         
         {/* Expense Breakdown (Donut Chart) */}
         <div 
-          onDoubleClick={() => onTabChange?.("lancamentos")}
+          onClick={() => onTabChange?.("lancamentos")}
           className="p-4 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col cursor-pointer select-none"
         >
           <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-3 uppercase tracking-tight">
@@ -458,7 +458,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
 
         {/* Projected Cashflow & Line Chart */}
         <div 
-          onDoubleClick={() => onTabChange?.("lancamentos")}
+          onClick={() => onTabChange?.("lancamentos")}
           className="p-4 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col cursor-pointer select-none"
         >
           <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-3 uppercase tracking-tight">
