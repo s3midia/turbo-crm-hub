@@ -329,11 +329,7 @@ export default function EquipeFinanceiroTab() {
     <div className="space-y-5 animate-in fade-in duration-500 pb-10">
 
       {/* ── HERO: Saúde Financeira ── */}
-      <div className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-gradient-to-br from-card via-card/95 to-background shadow-xl">
-        {/* Ambient glow blobs */}
-        <div className="pointer-events-none absolute -top-16 -left-16 w-64 h-64 rounded-full opacity-20 blur-3xl"
-          style={{ background: gaugeColor }} />
-        <div className="pointer-events-none absolute -bottom-20 -right-20 w-72 h-72 rounded-full bg-primary/10 blur-3xl" />
+      <div className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-gradient-to-br from-card via-card/95 to-background shadow-md">
 
         <div className="relative z-10 p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-center">
           {/* Left: title + KPI strip */}
@@ -466,7 +462,7 @@ export default function EquipeFinanceiroTab() {
                 strokeLinecap="round"
                 strokeDasharray={gaugeCircumference}
                 strokeDashoffset={gaugeDashOffset}
-                style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.34,1.56,0.64,1)", filter: `drop-shadow(0 0 6px ${gaugeColor}80)` }}
+                style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.34,1.56,0.64,1)" }}
               />
               {/* tick marks */}
               {[0, 20, 40, 60, 80, 100].map((tick) => {
