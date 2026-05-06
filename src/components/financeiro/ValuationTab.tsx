@@ -79,7 +79,7 @@ export default function ValuationTab() {
     ativosCirculantes: 0,
     passivos: 0,
     taxaCrescimento: 0,
-    setor: "Tecnologia / SaaS",
+    setor: "Agência Digital",
     wacc: 0,
   });
 
@@ -110,6 +110,29 @@ export default function ValuationTab() {
           setor: configData.setor,
           wacc: Number(configData.wacc),
         });
+      } else {
+        // Sem config salvo: pré-popular com dados reais das transações
+        const { data: txData } = await supabase
+          .from('financial_transactions')
+          .select('tipo, valor, status')
+          .eq('user_id', user.id);
+
+        if (txData && txData.length > 0) {
+          const parseVal = (v: any) => {
+            if (typeof v === 'number') return v;
+            return parseFloat(String(v).replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+          };
+          const receitaPaga = txData
+            .filter(t => t.tipo === 'entrada' && t.status === 'pago')
+            .reduce((s, t) => s + parseVal(t.valor), 0);
+          const despesaPaga = txData
+            .filter(t => t.tipo === 'saida' && t.status === 'pago')
+            .reduce((s, t) => s + parseVal(t.valor), 0);
+          // Anualiza com base nos últimos 6 meses de dados (mesmo critério do dashboard)
+          const faturamento12m = receitaPaga * 2;
+          const lucroLiquido = (receitaPaga - despesaPaga) * 2;
+          setInputs(prev => ({ ...prev, faturamento12m, lucroLiquido }));
+        }
       }
 
       // Fetch Assets
