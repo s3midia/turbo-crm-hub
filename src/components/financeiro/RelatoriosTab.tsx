@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FileText, Download, TrendingUp, TrendingDown, BarChart3, PieChart, Edit2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -94,9 +95,33 @@ interface RelatoriosTabProps {
 
 export default function RelatoriosTab({ onTabChange }: RelatoriosTabProps) {
   const { transactions, loading, refresh } = useFinance();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const periodos = useMemo(() => buildPeriodos(), []);
-  const [periodoIdx, setPeriodoIdx] = useState(0);
-  const [activeReport, setActiveReport] = useState<ReportType>("dre");
+  
+  const initialReport = searchParams.get("report") as ReportType || "dre";
+  const initialPeriodo = parseInt(searchParams.get("period") || "0", 10);
+
+  const [periodoIdx, setPeriodoIdx] = useState(
+    (initialPeriodo >= 0 && initialPeriodo < periodos.length) ? initialPeriodo : 0
+  );
+  const [activeReport, setActiveReport] = useState<ReportType>(
+    ["dre", "balancete", "fluxo"].includes(initialReport) ? initialReport : "dre"
+  );
+
+  // Sync report state with URL
+  useEffect(() => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (activeReport !== "dre") newParams.set("report", activeReport);
+      else newParams.delete("report");
+      
+      if (periodoIdx !== 0) newParams.set("period", periodoIdx.toString());
+      else newParams.delete("period");
+      
+      return newParams;
+    }, { replace: true });
+  }, [activeReport, periodoIdx, setSearchParams]);
 
   const txsFiltradas = useMemo(() => filterByPeriodo(transactions, periodos[periodoIdx]), [transactions, periodoIdx, periodos]);
   const r = useMemo(() => computeRelatorio(txsFiltradas), [txsFiltradas]);
