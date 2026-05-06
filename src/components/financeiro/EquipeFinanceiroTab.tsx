@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Users, Check, AlertCircle, Plus, Trash2, Calendar, FileText, Upload, MoreVertical, ExternalLink, Percent, Target, TrendingUp } from "lucide-react";
+import { Users, Check, AlertCircle, Plus, Trash2, Calendar, FileText, Upload, ExternalLink, Target, TrendingUp } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
