@@ -221,6 +221,9 @@ export default function ValuationTab() {
 
   const totalBens = bens.reduce((acc, b) => acc + b.valor, 0);
   const resultado = calcularValuation(inputs, bens, metodo);
+  const maxHistorico = historico.length > 0 
+    ? Math.max(...historico.map(h => Math.max(h.multiplos || 0, h.fcd || 0, h.patrimonial || 0))) 
+    : 1;
 
   const addBem = async () => {
     if (!novoBem.nome || !novoBem.valor) return;
