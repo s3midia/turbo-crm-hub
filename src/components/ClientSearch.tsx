@@ -11,16 +11,15 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDate } from "@/lib/formatters";
+import { Calendar } from "lucide-react";
 
 interface Client {
   id: string;
   company_name: string;
+  created_at: string;
 }
 
 interface ClientSearchProps {
@@ -39,7 +38,7 @@ export function ClientSearch({ value, onChange, placeholder = "Selecionar client
       setLoading(true);
       const { data, error } = await supabase
         .from('leads')
-        .select('id, company_name')
+        .select('id, company_name, created_at')
         .order('company_name');
       
       if (!error && data) {
@@ -89,13 +88,20 @@ export function ClientSearch({ value, onChange, placeholder = "Selecionar client
                   }}
                   className="hover:bg-muted/50 cursor-pointer"
                 >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === client.company_name ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {client.company_name}
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === client.company_name ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <span className="font-medium">{client.company_name}</span>
+                    </div>
+                    <span className="text-[9px] font-medium text-muted-foreground/60 flex items-center gap-1">
+                      <Calendar size={10} /> {formatDate(client.created_at)}
+                    </span>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>
