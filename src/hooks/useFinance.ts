@@ -114,6 +114,8 @@ export const useFinance = (leadId?: string) => {
       const { data: allTransactions } = await supabase.from('financial_transactions').select('*').eq('lead_id', leadId);
       if (allTransactions) await syncOpportunityTotal(leadId, allTransactions);
     }
+    
+    await fetchTransactions();
   };
 
   const deleteTransaction = async (id: string) => {
@@ -124,6 +126,8 @@ export const useFinance = (leadId?: string) => {
       const { data: allTransactions } = await supabase.from('financial_transactions').select('*').eq('lead_id', leadId);
       if (allTransactions) await syncOpportunityTotal(leadId, allTransactions);
     }
+    
+    await fetchTransactions();
   };
 
   return { transactions, loading, saveTransaction, deleteTransaction, refresh: fetchTransactions };
