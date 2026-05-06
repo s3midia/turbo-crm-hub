@@ -213,8 +213,10 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
 
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Vencimento *</label>
-            <input value={form.vencimento} onChange={e => setForm(f => ({ ...f, vencimento: e.target.value }))}
-              type="date" className="w-full px-4 py-3 bg-muted/30 border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+            <input value={form.vencimento} onChange={e => { setForm(f => ({ ...f, vencimento: e.target.value })); setErrors(p => ({ ...p, vencimento: "" })); }}
+              type="date" className={cn("w-full px-4 py-3 bg-muted/30 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all",
+                errors.vencimento ? "border-rose-500" : "border-border/50")} />
+            {errors.vencimento && <p className="text-[10px] text-rose-500 font-medium">{errors.vencimento}</p>}
           </div>
 
           <div className="space-y-1">
