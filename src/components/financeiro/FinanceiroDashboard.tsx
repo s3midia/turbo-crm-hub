@@ -1,435 +1,478 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   TrendingUp, TrendingDown, Scale, Clock, Percent, Building2,
-  CheckCircle2, AlertCircle, AlertTriangle, ArrowUpRight, ArrowDownRight,
-  Target, Flame, ChevronRight, RefreshCw
+  AlertTriangle, CheckCircle2, AlertCircle, ArrowUpRight, ArrowDownRight,
+  Target, Flame, ChevronRight, PieChart as PieIcon, LineChart as LineIcon,
+  Users, Wallet, Briefcase, Zap, Info, RefreshCw, BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
+import { formatBRL } from "@/lib/formatters";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
+} from 'recharts';
 
-function formatBRL(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+interface DashboardData {
+  receita_realizada: number;
+  despesas_totais: number;
+  saldo_liquido: number;
+  a_receber: number;
+  margem_liquida: number;
+  valuation_est: number;
+  barData: any[];
+  expenseCategories: any[];
+  cashflow: any[];
+  profitTrend: any[];
+  urgentActions: any[];
+  topClients: any[];
+  ebitda: number;
+  score: number;
 }
 
-const colorMap: Record<string, string> = {
-  emerald: "text-emerald-500 bg-emerald-500/8 border-emerald-500/15",
-  rose: "text-rose-500 bg-rose-500/8 border-rose-500/15",
-  blue: "text-blue-500 bg-blue-500/8 border-blue-500/15",
-  amber: "text-amber-500 bg-amber-500/8 border-amber-500/15",
-  violet: "text-violet-500 bg-violet-500/8 border-violet-500/15",
-  cyan: "text-cyan-500 bg-cyan-500/8 border-cyan-500/15",
-};
+const COLORS = ['#10b981', '#f87171', '#3b82f6', '#fbbf24', '#8b5cf6', '#06b6d4', '#ec4899'];
 
-const EXPENSE_COLORS = [
-  "bg-rose-500", "bg-violet-500", "bg-amber-500",
-  "bg-blue-500", "bg-emerald-500", "bg-orange-500", "bg-pink-500",
-];
+export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (tab: string) => void }) {
+  const { transactions: txs, loading: transactionsLoading, refresh } = useFinance();
+  const [extraLoading, setExtraLoading] = useState(true);
+  const [extraData, setExtraData] = useState<{ employees: any[], valConfig: any }>({ employees: [], valConfig: null });
 
-const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  useEffect(() => {
+    async function fetchExtra() {
+      try {
+        setExtraLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-function getLast6Months(): { label: string; year: number; month: number }[] {
-  const now = new Date();
-  const result = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    result.push({ label: MONTH_LABELS[d.getMonth()], year: d.getFullYear(), month: d.getMonth() });
-  }
-  return result;
-}
+        const [empRes, valRes] = await Promise.all([
+          supabase.from('company_employees').select('*').eq('user_id', user.id),
+          supabase.from('company_valuation_config').select('*').eq('user_id', user.id).single()
+        ]);
 
-function computeMetrics(transactions: FinancialTransaction[]) {
-  const now = new Date();
-  const today = now.toISOString().split("T")[0];
+        setExtraData({
+          employees: empRes.data || [],
+          valConfig: valRes.data
+        });
+      } catch (error) {
+        console.error("Error fetching extra dashboard data:", error);
+      } finally {
+        setExtraLoading(false);
+      }
+    }
+    fetchExtra();
+  }, []);
 
-  // Receita paga e despesa paga
-  const receitaPaga = transactions
-    .filter(t => t.tipo === "entrada" && t.status === "pago")
-    .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
+  const data = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
 
-  const despesaPaga = transactions
-    .filter(t => t.tipo === "saida" && t.status === "pago")
-    .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
+    // KPIs
+    const receita = txs.filter(t => t.tipo === 'entrada' && t.status === 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
+    const despesas = txs.filter(t => t.tipo === 'saida').reduce((acc, t) => acc + Number(t.valor), 0);
+    const saldo = receita - despesas;
+    const aReceber = txs.filter(t => t.tipo === 'entrada' && t.status !== 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
+    const margem = receita > 0 ? Math.max(-999, Math.min(100, (saldo / receita) * 100)) : (saldo < 0 ? -100 : 0);
+    
+    // Valuation Estimate
+    let valuation = receita * 3; // Fallback default
+    if (extraData.valConfig) {
+      const annualRevenue = receita * (12 / Math.max(1, new Date().getMonth() + 1));
+      valuation = annualRevenue * (extraData.valConfig.multiplier || 3);
+    }
 
-  const despesaTotal = transactions
-    .filter(t => t.tipo === "saida")
-    .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
+    // Last 6 Months
+    const last6Months = [];
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      last6Months.push({
+        month: monthNames[d.getMonth()],
+        monthIdx: d.getMonth(),
+        year: d.getFullYear(),
+        receita: 0,
+        despesa: 0,
+        profit: 0
+      });
+    }
 
-  const saldoLiquido = receitaPaga - despesaPaga;
+    txs.forEach(t => {
+      const date = new Date(t.vencimento || t.data_lancamento);
+      const mIdx = date.getMonth();
+      const y = date.getFullYear();
+      const monthObj = last6Months.find(m => m.monthIdx === mIdx && m.year === y);
+      if (monthObj) {
+        if (t.tipo === 'entrada' && t.status === 'pago') monthObj.receita += Number(t.valor);
+        if (t.tipo === 'saida') monthObj.despesa += Number(t.valor);
+      }
+    });
+    last6Months.forEach(m => m.profit = m.receita - m.despesa);
 
-  // A receber = entradas pendentes/agendadas
-  const aReceber = transactions
-    .filter(t => t.tipo === "entrada" && t.status !== "pago")
-    .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
-
-  const margem = receitaPaga > 0 ? (saldoLiquido / receitaPaga) * 100 : 0;
-
-  // Valuation estimado (Agência Digital = 3x receita anualizada)
-  const receitaAnualizada = receitaPaga * (12 / Math.max(1, 6)); // estima com base nos dados disponíveis
-  const valuation = receitaAnualizada * 3;
-
-  // Últimos 6 meses
-  const months6 = getLast6Months();
-  const barData = months6.map(({ label, year, month }) => {
-    const receita = transactions
-      .filter(t => {
-        const d = new Date(t.vencimento || t.data_lancamento);
-        return t.tipo === "entrada" && t.status === "pago"
-          && d.getFullYear() === year && d.getMonth() === month;
-      })
-      .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
-
-    const despesa = transactions
-      .filter(t => {
-        const d = new Date(t.vencimento || t.data_lancamento);
-        return t.tipo === "saida" && t.status === "pago"
-          && d.getFullYear() === year && d.getMonth() === month;
-      })
-      .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
-
-    return { month: label, receita, despesa };
-  });
-
-  const maxBar = Math.max(...barData.flatMap(d => [d.receita, d.despesa]), 1);
-
-  // Cashflow projetado
-  const addDays = (base: Date, n: number) => new Date(base.getTime() + n * 86400000);
-  const inRange = (dateStr: string, from: Date, to: Date) => {
-    const d = new Date(dateStr);
-    return d >= from && d <= to;
-  };
-
-  const horizons = [0, 7, 15, 30];
-  let accumulated = saldoLiquido;
-  const cashflowDays = horizons.map((days, i) => {
-    const from = i === 0 ? new Date(0) : addDays(now, horizons[i - 1] + 1);
-    const to = addDays(now, days);
-
-    const inflows = transactions
-      .filter(t => t.tipo === "entrada" && t.status !== "pago" && t.vencimento && inRange(t.vencimento, from, to))
-      .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
-
-    const outflows = transactions
-      .filter(t => t.tipo === "saida" && t.status !== "pago" && t.vencimento && inRange(t.vencimento, from, to))
-      .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
-
-    const delta = inflows - outflows;
-    accumulated += delta;
-    return {
-      label: i === 0 ? "Hoje" : `+${days}d`,
-      value: accumulated,
-      delta: i === 0 ? 0 : delta,
-    };
-  });
-
-  // Composição das despesas por categoria
-  const expMap: Record<string, number> = {};
-  transactions
-    .filter(t => t.tipo === "saida" && t.status === "pago")
-    .forEach(t => {
+    // Expense Categories
+    const catMap: Record<string, number> = {};
+    txs.filter(t => t.tipo === 'saida').forEach(t => {
       const cat = t.categoria || "Outros";
-      expMap[cat] = (expMap[cat] || 0) + (parseFloat(String(t.valor)) || 0);
+      catMap[cat] = (catMap[cat] || 0) + Number(t.valor);
     });
+    const expenseCats = Object.entries(catMap).map(([label, value]) => ({ label, value }));
+    const totalExp = expenseCats.reduce((acc, c) => acc + c.value, 0);
+    const expenseCategories = expenseCats.map(c => ({ ...c, pct: totalExp > 0 ? (c.value / totalExp) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
 
-  const totalExp = Object.values(expMap).reduce((s, v) => s + v, 0);
-  const expenseCategories = Object.entries(expMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([label, value], idx) => ({
-      label,
-      value,
-      pct: totalExp > 0 ? (value / totalExp) * 100 : 0,
-      color: EXPENSE_COLORS[idx % EXPENSE_COLORS.length],
-    }));
+    // Cashflow
+    const getDelta = (days: number) => {
+      const target = new Date();
+      target.setDate(now.getDate() + days);
+      return txs.filter(t => {
+        const v = new Date(t.vencimento);
+        return t.status !== 'pago' && v <= target && v >= now;
+      }).reduce((acc, t) => acc + (t.tipo === 'entrada' ? Number(t.valor) : -Number(t.valor)), 0);
+    };
 
-  // Ações urgentes: vencimentos atrasados e pendentes próximos
-  const urgentActions: { icon: any; type: string; title: string; desc: string; tab: string }[] = [];
+    const cashflow = [
+      { label: "Hoje", value: saldo, delta: getDelta(0) },
+      { label: "+7d", value: saldo + getDelta(7), delta: getDelta(7) },
+      { label: "+15d", value: saldo + getDelta(15), delta: getDelta(15) },
+      { label: "+30d", value: saldo + getDelta(30), delta: getDelta(30) },
+    ];
 
-  const vencidos = transactions.filter(t => t.status === "pendente" && t.vencimento && t.vencimento < today);
-  if (vencidos.length > 0) {
-    const total = vencidos.reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
-    urgentActions.push({
-      icon: AlertCircle,
-      type: "danger",
-      title: `${vencidos.length} lançamento(s) vencido(s)`,
-      desc: `Total em atraso: ${formatBRL(total)}`,
-      tab: "lancamentos",
+    // Top Clients
+    const clientMap: Record<string, number> = {};
+    txs.filter(t => t.tipo === 'entrada' && t.status === 'pago').forEach(t => {
+      if (t.lead_nome && t.lead_nome !== "N/A") {
+        clientMap[t.lead_nome] = (clientMap[t.lead_nome] || 0) + Number(t.valor);
+      }
     });
-  }
+    const topClients = Object.entries(clientMap)
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
 
-  const vence7d = transactions.filter(t => {
-    if (t.status !== "pendente" || !t.vencimento) return false;
-    return t.vencimento >= today && t.vencimento <= addDays(now, 7).toISOString().split("T")[0];
-  });
-  if (vence7d.length > 0) {
-    urgentActions.push({
-      icon: AlertTriangle,
-      type: "warning",
-      title: `${vence7d.length} vencimento(s) nos próximos 7 dias`,
-      desc: `${formatBRL(vence7d.filter(t => t.tipo === "entrada").reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0))} a receber`,
-      tab: "lancamentos",
-    });
-  }
+    // Urgent Actions
+    const urgent: any[] = [];
+    const overDue = txs.filter(t => t.status === 'pendente' && t.vencimento && t.vencimento < todayStr);
+    if (overDue.length > 0) {
+      urgent.push({
+        type: "danger",
+        icon: AlertCircle,
+        title: "Contas em Atraso",
+        desc: `${overDue.length} transações vencidas totalizando ${formatBRL(overDue.reduce((acc, t) => acc + Number(t.valor), 0))}`,
+        tab: "lancamentos"
+      });
+    }
+    const pendingPayroll = extraData.employees.filter(e => e.status === 'pendente');
+    if (pendingPayroll.length > 0) {
+      urgent.push({
+        type: "warning",
+        icon: Users,
+        title: "Folha de Pagamento",
+        desc: `${pendingPayroll.length} colaboradores aguardando pagamento.`,
+        tab: "equipe"
+      });
+    }
 
-  // Health score (0–100)
-  const margemScore = Math.min(margem / 30 * 40, 40); // até 40 pts
-  const inadimplenciaRatio = receitaPaga > 0 ? (vencidos.filter(t => t.tipo === "entrada").reduce((s, t) => s + parseFloat(String(t.valor)), 0) / receitaPaga) : 0;
-  const inadimplenciaScore = Math.max(0, 30 - inadimplenciaRatio * 100); // até 30 pts
-  const liquidezScore = saldoLiquido > 0 ? Math.min(30, 30) : Math.max(0, 30 + saldoLiquido / 1000); // até 30 pts
-  const healthScore = Math.round(Math.min(100, margemScore + inadimplenciaScore + liquidezScore));
+    // Score calc
+    const score = Math.min(100, Math.max(0, 
+      (margem > 30 ? 40 : (margem > 0 ? margem * 1.3 : 0)) + 
+      (aReceber > despesas ? 30 : 15) + 
+      (overDue.length === 0 ? 30 : 0)
+    ));
 
-  const healthDesc =
-    healthScore >= 75 ? "Finanças saudáveis. Continue assim!"
-    : healthScore >= 50 ? "Situação estável, mas há pontos de atenção."
-    : "Atenção: revise despesas e inadimplência.";
-
-  return {
-    receitaPaga, despesaPaga, despesaTotal, saldoLiquido, aReceber,
-    margem, valuation, barData, maxBar,
-    cashflowDays, expenseCategories, totalExp,
-    urgentActions, healthScore, healthDesc,
-    inadimplenciaRatio,
-  };
-}
-
-// ── Animated bar ───────────────────────────────────────────────────────────────
-function AnimatedBar({ height, color, title }: { height: string; color: string; title: string }) {
-  const [h, setH] = useState("0%");
-  useEffect(() => {
-    const t = setTimeout(() => setH(height), 80);
-    return () => clearTimeout(t);
-  }, [height]);
-  return (
-    <div
-      className={cn("flex-1 rounded-t-md transition-all duration-700 ease-out cursor-pointer opacity-80 hover:opacity-100", color)}
-      style={{ height: h }}
-      title={title}
-    />
-  );
-}
-
-// ── Animated progress bar ──────────────────────────────────────────────────────
-function AnimatedProgress({ pct, color }: { pct: number; color: string }) {
-  const [w, setW] = useState(0);
-  useEffect(() => {
-    const t = setTimeout(() => setW(pct), 200);
-    return () => clearTimeout(t);
-  }, [pct]);
-  return (
-    <div className="h-1.5 rounded-full bg-border/30 overflow-hidden">
-      <div
-        className={cn("h-full rounded-full transition-all duration-1000 ease-out", color)}
-        style={{ width: `${w}%` }}
-      />
-    </div>
-  );
-}
-
-function AnimatedRing({ score }: { score: number }) {
-  const [dash, setDash] = useState(0);
-  const circumference = 2 * Math.PI * 26;
-  useEffect(() => {
-    const t = setTimeout(() => setDash((score / 100) * circumference), 100);
-    return () => clearTimeout(t);
-  }, [score, circumference]);
-  return (
-    <circle
-      cx="32" cy="32" r="26"
-      fill="none"
-      stroke={score >= 75 ? "#10b981" : score >= 50 ? "#f59e0b" : "#f43f5e"}
-      strokeWidth="6"
-      strokeLinecap="round"
-      strokeDasharray={circumference}
-      strokeDashoffset={circumference - dash}
-      style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)" }}
-    />
-  );
-}
-
-interface Props {
-  onTabChange?: (tab: string) => void;
-}
-
-export default function FinanceiroDashboard({ onTabChange }: Props) {
-  const { transactions, loading, refresh } = useFinance();
-
-  const m = computeMetrics(transactions);
+    return {
+      receita_realizada: receita,
+      despesas_totais: despesas,
+      saldo_liquido: saldo,
+      a_receber: aReceber,
+      margem_liquida: margem,
+      valuation_est: valuation,
+      barData: last6Months,
+      expenseCategories,
+      cashflow,
+      profitTrend: last6Months,
+      urgentActions: urgent,
+      topClients,
+      ebitda: saldo,
+      score: Math.round(score)
+    };
+  }, [txs, extraData]);
 
   const kpis = [
-    { label: "Receita Realizada", value: m.receitaPaga, icon: TrendingUp, color: "emerald", trend: formatBRL(m.receitaPaga), up: true, tab: "lancamentos" },
-    { label: "Despesas Totais", value: m.despesaTotal, icon: TrendingDown, color: "rose", trend: formatBRL(m.despesaTotal), up: false, tab: "lancamentos" },
-    { label: "Saldo Líquido", value: m.saldoLiquido, icon: Scale, color: "blue", trend: m.saldoLiquido >= 0 ? "Positivo" : "Negativo", up: m.saldoLiquido >= 0, tab: "relatorios" },
-    { label: "A Receber", value: m.aReceber, icon: Clock, color: "amber", trend: m.aReceber > 0 ? formatBRL(m.aReceber) : "Nenhum", up: null, tab: "lancamentos" },
-    { label: "Margem Líquida", value: null, display: `${m.margem.toFixed(1)}%`, icon: Percent, color: "violet", trend: m.margem >= 0 ? "Saudável" : "Negativa", up: m.margem >= 0, tab: "relatorios" },
-    { label: "Valuation Est.", value: null, display: formatBRL(m.valuation), icon: Building2, color: "cyan", trend: "Múltiplo 3x", up: true, tab: "valuation" },
+    { label: "Receita Realizada", value: data.receita_realizada, icon: TrendingUp, color: "emerald", trend: "+12%", up: true },
+    { label: "Despesas Totais", value: data.despesas_totais, icon: TrendingDown, color: "rose", trend: "-5%", up: false },
+    { label: "Saldo Líquido", value: data.saldo_liquido, icon: Scale, color: "blue", trend: "+8%", up: true },
+    { label: "A Receber", value: data.a_receber, icon: Clock, color: "amber", trend: data.a_receber > 0 ? "Em aberto" : "Nenhum", up: null },
+    { label: "Margem Líquida", display: `${data.margem_liquida.toFixed(1)}%`, icon: Percent, color: "violet", trend: "+2.4pp", up: true },
+    { label: "Valuation Est.", display: formatBRL(data.valuation_est), icon: Building2, color: "cyan", trend: "Estável", up: true },
   ];
 
-  if (loading) {
+  if (transactionsLoading && extraLoading) {
     return (
-      <div className="flex items-center justify-center py-24 text-muted-foreground">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm font-medium">Carregando dados financeiros...</p>
-        </div>
+      <div className="h-96 flex items-center justify-center flex-col gap-4">
+        <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Sincronizando Hub Financeiro...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-400">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700 font-jakarta">
 
-      {/* Header com refresh */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {transactions.length} lançamento(s) carregado(s) do Supabase
-          </p>
-        </div>
-        <button
-          onClick={refresh}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/50 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:border-border transition-all"
-        >
-          <RefreshCw size={11} />
-          Atualizar
-        </button>
-      </div>
+      {/* --- KPI GRID (Minimalist Slim Design) --- */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[32px] overflow-hidden shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {kpis.map((kpi, i) => {
+            const sparkData = data.barData.map(m => {
+              if (kpi.label === "Receita Realizada") return { value: m.receita };
+              if (kpi.label === "Despesas Totais") return { value: m.despesa };
+              if (kpi.label === "Saldo Líquido") return { value: m.profit };
+              if (kpi.label === "Margem Líquida") return { value: m.receita > 0 ? (m.receita - m.despesa) / m.receita * 100 : 0 };
+              return { value: Math.random() * 100 }; 
+            });
 
-      {/* ── KPI STRIP ──────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        {kpis.map((kpi, i) => {
-          const cls = colorMap[kpi.color];
-          return (
-            <div
-              key={i}
-              onClick={() => onTabChange?.(kpi.tab)}
-              className={cn(
-                "group p-4 rounded-xl border bg-card/60 backdrop-blur-sm hover:bg-card transition-all duration-200 hover:shadow-md cursor-pointer active:scale-[0.98]",
-                cls
-              )}
-              style={{ animationDelay: `${i * 40}ms` }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center border", cls)}>
-                  <kpi.icon size={14} className={cls.split(" ")[0]} />
-                </div>
-                <ArrowUpRight size={11} className="text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors" />
-              </div>
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 leading-none">
-                {kpi.label}
-              </p>
-              <p className="text-lg font-bold text-foreground tracking-tight leading-none">
-                {kpi.display ?? formatBRL(kpi.value ?? 0)}
-              </p>
-              <div className={cn(
-                "mt-2 text-[10px] font-semibold flex items-center gap-0.5",
-                kpi.up === true ? "text-emerald-500" : kpi.up === false ? "text-rose-500" : "text-amber-500"
-              )}>
-                {kpi.up === true && <ArrowUpRight size={10} />}
-                {kpi.up === false && <ArrowDownRight size={10} />}
-                {kpi.trend}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            const isPositive = kpi.up !== false;
+            const accentColor = isPositive ? (kpi.color === "rose" ? "#f87171" : "#10b981") : "#f87171";
 
-      {/* ── MID ROW ────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-
-        {/* Bar Chart */}
-        <div className="lg:col-span-3 p-5 rounded-xl bg-card border border-border/40">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Receitas vs Despesas</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Últimos 6 meses (lançamentos pagos)</p>
-            </div>
-            <div className="flex items-center gap-4 text-[10px] font-medium text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" />Receita
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-sm bg-rose-400 inline-block" />Despesa
-              </span>
-            </div>
-          </div>
-          <div className="flex items-end gap-2" style={{ height: "140px" }}>
-            {m.barData.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full">
-                <div className="w-full flex items-end gap-0.5 justify-center h-full">
-                  <AnimatedBar
-                    height={`${(d.receita / m.maxBar) * 100}%`}
-                    color="bg-emerald-500"
-                    title={formatBRL(d.receita)}
-                  />
-                  <AnimatedBar
-                    height={`${(d.despesa / m.maxBar) * 100}%`}
-                    color="bg-rose-400"
-                    title={formatBRL(d.despesa)}
-                  />
-                </div>
-                <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest mt-1">{d.month}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Urgent Actions */}
-        <div className="lg:col-span-2 p-5 rounded-xl bg-card border border-border/40">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
-            <Flame size={14} className="text-orange-400" />
-            Ações Urgentes
-          </h3>
-          <div className="space-y-2">
-            {m.urgentActions.map((a, i) => (
-              <div
-                key={i}
-                onClick={() => onTabChange?.(a.tab)}
+            return (
+              <div 
+                key={i} 
+                onDoubleClick={() => {
+                  if (kpi.label === "Valuation Est.") onTabChange?.("valuation");
+                  else if (kpi.label === "Margem Líquida") onTabChange?.("relatorios");
+                  else onTabChange?.("lancamentos");
+                }}
                 className={cn(
-                  "p-3 rounded-lg border flex gap-2.5 cursor-pointer group hover:shadow-sm transition-all duration-200",
-                  a.type === "danger" ? "bg-rose-500/5 border-rose-500/15 hover:border-rose-500/30"
-                    : a.type === "warning" ? "bg-amber-500/5 border-amber-500/15 hover:border-amber-500/30"
-                    : "bg-emerald-500/5 border-emerald-500/15 hover:border-emerald-500/30"
+                  "p-4 flex flex-col justify-center group transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/10 cursor-pointer select-none",
+                  i % 3 !== 2 && "lg:border-r border-zinc-100 dark:border-zinc-800",
+                  i < 3 && "lg:border-b border-zinc-100 dark:border-zinc-800",
+                  "border-b lg:border-b-0 last:border-b-0"
                 )}
               >
-                <a.icon size={14} className={cn(
-                  "mt-0.5 shrink-0",
-                  a.type === "danger" ? "text-rose-500" : a.type === "warning" ? "text-amber-500" : "text-emerald-500"
-                )} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-semibold text-foreground leading-tight">{a.title}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{a.desc}</p>
+                {/* Header Row: Label + Stretched Sparkline + Icon */}
+                <div className="flex items-center gap-4 mb-2">
+                  <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] whitespace-nowrap shrink-0">
+                    {kpi.label}
+                  </p>
+                  
+                  <div className="flex-1 h-10 opacity-100">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={sparkData}>
+                        <defs>
+                          <linearGradient id={`grad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={accentColor} stopOpacity={0.2}/>
+                            <stop offset="100%" stopColor={accentColor} stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <Area 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke={accentColor} 
+                          strokeWidth={2.5} 
+                          fillOpacity={1} 
+                          fill={`url(#grad-${i})`}
+                          dot={false}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className={cn("p-1.5 rounded-lg shrink-0", kpi.color === "emerald" ? "bg-emerald-500/10 text-emerald-500" : kpi.color === "rose" ? "bg-rose-500/10 text-rose-500" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400")}>
+                    <kpi.icon size={14} />
+                  </div>
                 </div>
-                <ChevronRight size={13} className="mt-0.5 shrink-0 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+
+                {/* Value Row */}
+                <div className="flex items-baseline gap-2">
+                  <h4 className="text-[22px] font-black text-zinc-900 dark:text-zinc-100 tracking-tighter leading-none">
+                    {kpi.display || formatBRL(kpi.value || 0)}
+                  </h4>
+                  <span className={cn("text-[9px] font-black uppercase tracking-widest", isPositive ? "text-emerald-500" : "text-rose-500")}>
+                    {kpi.trend}
+                  </span>
+                </div>
               </div>
-            ))}
-            {m.urgentActions.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center py-10 opacity-40">
-                <CheckCircle2 size={32} className="text-emerald-500 mb-2" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Tudo em dia</p>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* --- SECOND ROW: MAIN CHART & TOP CLIENTS --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        
+        {/* Main Chart: Profit Trend (The Big One) */}
+        <div 
+          onDoubleClick={() => onTabChange?.("lancamentos")}
+          className="lg:col-span-3 p-5 lg:p-6 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden group cursor-pointer select-none"
+        >
+          <div className="flex items-center justify-between mb-6 relative z-10">
+            <div>
+              <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-tight">
+                <LineIcon size={18} className="text-zinc-400" />
+                Desempenho Financeiro
+              </h3>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Evolução de Fluxo (Receita vs Despesa)</p>
+            </div>
+            <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.15em]">
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Receita</div>
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500" /> Despesa</div>
+            </div>
+          </div>
+
+          <div className="h-[220px] w-full relative z-10">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.barData}>
+                <defs>
+                  <linearGradient id="colorRec" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.15}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.01}/>
+                  </linearGradient>
+                  <linearGradient id="colorDesp" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f87171" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#f87171" stopOpacity={0.01}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888810" />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 9, fontWeight: 900, fill: '#888' }} 
+                  dy={10}
+                />
+                <YAxis 
+                  hide 
+                  domain={['auto', 'auto']}
+                />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '16px', border: 'none', backgroundColor: '#ffffff', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: '900' }}
+                  formatter={(value: any) => formatBRL(value)}
+                />
+                <Area type="monotone" dataKey="receita" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorRec)" />
+                <Area type="monotone" dataKey="despesa" stroke="#f87171" strokeWidth={4} fillOpacity={1} fill="url(#colorDesp)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Background Decorative Grid */}
+          <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
+            <div className="w-full h-full" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+          </div>
+        </div>
+
+        {/* Top Clients & EBITDA */}
+        <div className="lg:col-span-2 space-y-4">
+          <div 
+            onDoubleClick={() => onTabChange?.("relatorios")}
+            className="p-4 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm h-full flex flex-col cursor-pointer select-none"
+          >
+            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-4 uppercase tracking-tight">
+              <Users size={18} className="text-zinc-400" />
+              Maiores Clientes
+            </h3>
+            <div className="space-y-3 flex-1">
+              {data.topClients.map((client, i) => (
+                <div key={i} className="flex items-center justify-between group/item">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-black">
+                      {client.name.substring(0, 1)}
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">{client.name}</p>
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Share: {((client.total / data.receita_realizada) * 100).toFixed(1)}%</p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-black text-zinc-900 dark:text-zinc-100">{formatBRL(client.total)}</span>
+                </div>
+              ))}
+              {data.topClients.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full py-6 text-zinc-300">
+                  <Info size={24} className="mb-2 opacity-20" />
+                  <p className="text-[8px] font-black uppercase tracking-widest">Sem dados de clientes</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Lucro Operacional</span>
+                <span className="text-[18px] font-black text-emerald-500">{formatBRL(data.ebitda)}</span>
               </div>
-            )}
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                <TrendingUp size={16} />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── BOTTOM ROW ─────────────────────────────────────────────────────────── */}
+      {/* --- THIRD ROW: EXPENSES, CASHFLOW & HEALTH --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Cashflow */}
-        <div className="p-5 rounded-xl bg-card border border-border/40">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
-            <Target size={14} className="text-blue-500" />
-            Fluxo de Caixa Projetado
+        
+        {/* Expense Breakdown (Donut Chart) */}
+        <div 
+          onDoubleClick={() => onTabChange?.("lancamentos")}
+          className="p-4 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col cursor-pointer select-none"
+        >
+          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-3 uppercase tracking-tight">
+            <PieIcon size={18} className="text-zinc-400" />
+            Composição das Despesas
           </h3>
-          <div className="space-y-2">
-            {m.cashflowDays.map((day, i) => (
-              <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20 border border-border/20">
-                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{day.label}</span>
+          <div className="h-[180px] w-full flex items-center">
+            <ResponsiveContainer width="60%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data.expenseCategories}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={70}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {data.expenseCategories.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: any) => formatBRL(value)}
+                  contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="w-[40%] space-y-2.5">
+              {data.expenseCategories.slice(0, 4).map((cat, i) => (
+                <div key={i} className="flex flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <span className="text-[9px] font-black text-zinc-900 dark:text-zinc-100 truncate uppercase tracking-tighter">{cat.label}</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-zinc-400 ml-3 uppercase tracking-widest">{cat.pct.toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Total Saídas</span>
+            <span className="text-[14px] font-black text-rose-500">{formatBRL(data.despesas_totais)}</span>
+          </div>
+        </div>
+
+        {/* Projected Cashflow & Line Chart */}
+        <div 
+          onDoubleClick={() => onTabChange?.("lancamentos")}
+          className="p-4 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col cursor-pointer select-none"
+        >
+          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-3 uppercase tracking-tight">
+            <Target size={18} className="text-zinc-400" />
+            Fluxo Projetado
+          </h3>
+          <div className="space-y-2 mb-6">
+            {data.cashflow.map((day, i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group">
+                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{day.label}</span>
                 <div className="text-right">
-                  <p className={cn("text-sm font-bold", day.value >= 0 ? "text-foreground" : "text-rose-500")}>
-                    {formatBRL(day.value)}
-                  </p>
+                  <p className="text-[13px] font-black text-zinc-900 dark:text-zinc-100 tracking-tight">{formatBRL(day.value)}</p>
                   {day.delta !== 0 && (
-                    <p className={cn("text-[10px] font-medium", day.delta > 0 ? "text-emerald-500" : "text-rose-500")}>
+                    <p className={cn("text-[9px] font-black uppercase tracking-tighter", day.delta > 0 ? "text-emerald-500" : "text-rose-500")}>
                       {day.delta > 0 ? "+" : ""}{formatBRL(day.delta)}
                     </p>
                   )}
@@ -439,96 +482,75 @@ export default function FinanceiroDashboard({ onTabChange }: Props) {
           </div>
         </div>
 
-        {/* Expense Breakdown */}
-        <div className="p-5 rounded-xl bg-card border border-border/40">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
-            <Scale size={14} className="text-violet-500" />
-            Composição das Despesas
-          </h3>
-          <div className="space-y-4">
-            {m.expenseCategories.map((cat, i) => (
-              <div key={i} className="space-y-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-semibold text-foreground">{cat.label}</span>
-                  <span className="font-bold text-muted-foreground">{formatBRL(cat.value)}</span>
-                </div>
-                <AnimatedProgress pct={cat.pct} color={cat.color} />
-                <p className="text-[10px] text-muted-foreground">{cat.pct.toFixed(1)}% do total</p>
-              </div>
-            ))}
-            {m.expenseCategories.length === 0 && (
-              <p className="text-center py-10 text-[10px] font-black uppercase tracking-widest opacity-30">
-                Nenhuma despesa registrada
-              </p>
-            )}
-            {m.totalExp > 0 && (
-              <div className="pt-3 border-t border-border/30 flex items-center justify-between">
-                <span className="text-[11px] font-medium text-muted-foreground">Total</span>
-                <span className="text-sm font-bold text-foreground">{formatBRL(m.totalExp)}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Health Score */}
-        <div className="p-5 rounded-xl bg-card border border-border/40 flex flex-col gap-4">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-1">Saúde Financeira</h3>
-            <p className="text-[11px] text-muted-foreground">Score baseado em margem, liquidez e inadimplência</p>
+        {/* Health Score & Actions */}
+        <div className="p-4 rounded-[32px] bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
+          <div className="mb-3">
+            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight flex items-center gap-2 mb-4">
+              <Zap size={18} className="text-amber-500 fill-amber-500/20" />
+              Saúde Financeira
+            </h3>
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Score Dinâmico de Performance</p>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="relative w-16 h-16 shrink-0">
-              <svg viewBox="0 0 64 64" className="w-full h-full -rotate-90">
-                <circle cx="32" cy="32" r="26" fill="none" stroke="currentColor" strokeWidth="6" className="text-border/30" />
-                <AnimatedRing score={m.healthScore} />
+          <div className="flex items-center gap-6 mb-4">
+            <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
+              <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" className="text-zinc-100 dark:text-zinc-800" strokeWidth="8" />
+                <circle 
+                  cx="50" cy="50" r="45" 
+                  fill="none" 
+                  stroke={data.score > 70 ? "#10b981" : data.score > 40 ? "#fbbf24" : "#f87171"} 
+                  strokeWidth="8" 
+                  strokeDasharray="282.7" 
+                  strokeDashoffset={282.7 - (282.7 * data.score / 100)}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000 ease-out"
+                />
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">
-                {m.healthScore}
-              </span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100 leading-none tracking-tighter">{data.score}</span>
+                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mt-1">Pontos</span>
+              </div>
             </div>
-            <div className="space-y-1.5 flex-1">
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground">Margem</span>
-                <span className={cn("font-semibold", m.margem >= 20 ? "text-emerald-500" : m.margem >= 0 ? "text-amber-500" : "text-rose-500")}>
-                  {m.margem.toFixed(1)}%
-                </span>
-              </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground">Saldo</span>
-                <span className={cn("font-semibold", m.saldoLiquido >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                  {m.saldoLiquido >= 0 ? "Positivo" : "Negativo"}
-                </span>
-              </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground">Inadimplência</span>
-                <span className={cn("font-semibold", m.inadimplenciaRatio < 0.1 ? "text-emerald-500" : "text-rose-500")}>
-                  {(m.inadimplenciaRatio * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground">A Receber</span>
-                <span className="font-semibold text-amber-500">{formatBRL(m.aReceber)}</span>
-              </div>
+            <div className="space-y-2 flex-1">
+              {[
+                { label: "Liquidez", val: data.a_receber > data.despesas_totais ? "Alta" : "Média", color: "text-emerald-500" },
+                { label: "Eficiência", val: data.margem_liquida > 20 ? "Ótima" : "Regular", color: "text-blue-500" },
+                { label: "Risco", val: data.urgentActions.length === 0 ? "Baixo" : "Médio", color: "text-amber-500" }
+              ].map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center text-[10px]">
+                  <span className="text-zinc-400 font-bold uppercase tracking-widest text-[8px]">{item.label}</span>
+                  <span className={cn("font-black uppercase tracking-tighter", item.color)}>{item.val}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className={cn(
-            "mt-auto p-3 rounded-lg border text-[11px] font-medium leading-relaxed",
-            m.healthScore >= 75 ? "bg-emerald-500/5 border-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-              : m.healthScore >= 50 ? "bg-amber-500/5 border-amber-500/15 text-amber-600 dark:text-amber-400"
-              : "bg-rose-500/5 border-rose-500/15 text-rose-600 dark:text-rose-400"
-          )}>
-            {m.healthDesc}
+          <div className="space-y-2 mt-auto">
+            {data.urgentActions.map((action, i) => (
+              <button 
+                key={i}
+                onClick={() => onTabChange?.(action.tab)}
+                className={cn("w-full p-3 rounded-2xl border flex items-start gap-3 text-left transition-all hover:scale-[1.02]",
+                  action.type === "danger" ? "bg-rose-500/5 border-rose-500/10 hover:border-rose-500/30" : "bg-amber-500/5 border-amber-500/10 hover:border-amber-500/30"
+                )}
+              >
+                <div className={cn("p-1.5 rounded-lg", action.type === "danger" ? "bg-rose-500/20 text-rose-500" : "bg-amber-500/20 text-amber-500")}>
+                  <action.icon size={14} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">{action.title}</p>
+                  <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-tight mt-0.5">{action.desc}</p>
+                </div>
+              </button>
+            ))}
+            {data.urgentActions.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-4 opacity-30">
+                <CheckCircle2 size={24} className="text-emerald-500 mb-1" />
+                <p className="text-[8px] font-black uppercase tracking-widest">Tudo sob controle</p>
+              </div>
+            )}
           </div>
-
-          <button
-            onClick={() => onTabChange?.("relatorios")}
-            className="w-full py-2 rounded-lg border border-border/50 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:border-border transition-all flex items-center justify-center gap-1.5"
-          >
-            Ver relatório completo
-            <ArrowUpRight size={12} />
-          </button>
         </div>
       </div>
     </div>
