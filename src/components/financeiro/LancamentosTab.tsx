@@ -13,7 +13,7 @@ import { toast } from "sonner";
 const CATEGORIAS_ENTRADA = ["Software", "Web Design", "Consultoria", "Manutenção", "Licença", "Outros"];
 const CATEGORIAS_SAIDA = ["Infraestrutura", "Marketing", "Salários", "Impostos", "Escritório", "Ferramentas", "Outros"];
 
-import { formatBRL, formatDisplayId } from '@/lib/formatters';
+import { formatBRL, formatDisplayId, formatDate } from '@/lib/formatters';
 import { CurrencyInput } from "@/components/ui/currency-input";
 
 const recorrenciaLabel = { unica: "Única", mensal: "Mensal", trimestral: "Trimestral", anual: "Anual" };
@@ -65,7 +65,7 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
     try {
       const { data, error } = await supabase
         .from('leads')
-        .select('id, company_name, phone, email, niche')
+        .select('id, company_name, phone, email, niche, created_at')
         .or(`company_name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`)
         .limit(10);
 
@@ -292,30 +292,35 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
                       }}
                       className="w-full px-4 py-3 text-left text-sm hover:bg-muted transition-colors border-b border-border/50 last:border-0 flex items-center justify-between group"
                     >
-                      <div className="flex flex-col">
-                        <span className="font-bold">{lead.company_name}</span>
-                        <div className="flex items-center gap-3 mt-1">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="font-bold text-foreground group-hover:text-primary transition-colors">{lead.company_name}</span>
+                          <span className="text-[9px] font-black text-muted-foreground/60 flex items-center gap-1 shrink-0">
+                            <Calendar size={10} /> {formatDate(lead.created_at)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
                           {lead.phone && (
                             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Phone size={10} className="text-primary/60" /> {lead.phone}
+                              <Phone size={10} className="text-primary/40" /> {lead.phone}
                             </span>
                           )}
                           {lead.email && (
                             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Mail size={10} className="text-primary/60" /> {lead.email}
+                              <Mail size={10} className="text-primary/40" /> {lead.email}
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-0.5">
                           {lead.niche && (
-                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary tracking-widest">
+                            <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-primary/5 text-primary/70 tracking-widest border border-primary/10">
                               {lead.niche}
                             </span>
                           )}
-                          <span className="text-[9px] text-muted-foreground/60 font-mono">ID: {formatDisplayId(lead.id)}</span>
+                          <span className="text-[8px] text-muted-foreground/40 font-mono">#{lead.id.substring(0, 8)}</span>
                         </div>
                       </div>
-                      <Plus size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <Plus size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
                     </button>
                   ))}
                 </div>
