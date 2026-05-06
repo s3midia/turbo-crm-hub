@@ -135,7 +135,9 @@ export default function ValuationTab() {
           // Anualiza com base nos últimos 6 meses de dados (mesmo critério do dashboard)
           const faturamento12m = receitaPaga * 2;
           const lucroLiquido = (receitaPaga - despesaPaga) * 2;
-          setInputs(prev => ({ ...prev, faturamento12m, lucroLiquido }));
+          // Usa "Múltiplos de Mercado" + "Agência Digital (×3)" para coincidir com o dashboard
+          setMetodo("multiplos");
+          setInputs(prev => ({ ...prev, faturamento12m, lucroLiquido, setor: "Agência Digital" }));
         }
       }
 
