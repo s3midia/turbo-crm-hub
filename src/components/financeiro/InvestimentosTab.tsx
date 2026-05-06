@@ -67,6 +67,23 @@ export default function InvestimentosTab() {
   const totalAtual = investimentos.reduce((s, i) => s + i.saldoAtual, 0);
   const rentabilidade = totalAporte > 0 ? ((totalAtual - totalAporte) / totalAporte) * 100 : 0;
 
+  // Gera evolução dos últimos 6 meses agrupando investimentos por mês de aporte
+  const evolutionData = (() => {
+    const months: { month: string; valor: number }[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleString('pt-BR', { month: 'short' }).toUpperCase();
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const valor = investimentos
+        .filter(inv => inv.dataAporte && inv.dataAporte.startsWith(key))
+        .reduce((s, inv) => s + inv.saldoAtual, 0);
+      months.push({ month: label, valor });
+    }
+    return months;
+  })();
+  const maxEvol = Math.max(...evolutionData.map(d => d.valor), 1);
+
   async function handleAdd() {
     if (!form.nome || !form.aporte) return;
     const { data: { user } } = await supabase.auth.getUser();
