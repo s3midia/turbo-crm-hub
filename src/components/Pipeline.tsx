@@ -1,4 +1,4 @@
-http://127.0.0.1:3000/financeiroimport { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import './Pipeline.css';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
