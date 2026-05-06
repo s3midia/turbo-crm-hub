@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+http://127.0.0.1:3000/financeiroimport { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import './Pipeline.css';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
@@ -363,7 +363,7 @@ export default function Pipeline() {
 
                                     {/* Valor Monetário Verde */}
                                     <div className="bolten-monetary">
-                                          {formatBRL(opportunity.value)}
+                                      {formatBRL(opportunity.value)}
                                     </div>
                                   </div>
                                 </div>
