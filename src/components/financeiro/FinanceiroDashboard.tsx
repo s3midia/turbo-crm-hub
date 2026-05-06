@@ -246,7 +246,7 @@ interface Props {
 }
 
 export default function FinanceiroDashboard({ onTabChange }: Props) {
-  const { transactions, loading, fetchTransactions } = useFinance();
+  const { transactions, loading, refresh } = useFinance();
 
   const m = computeMetrics(transactions);
 
@@ -281,7 +281,7 @@ export default function FinanceiroDashboard({ onTabChange }: Props) {
           </p>
         </div>
         <button
-          onClick={fetchTransactions}
+          onClick={refresh}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/50 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:border-border transition-all"
         >
           <RefreshCw size={11} />
