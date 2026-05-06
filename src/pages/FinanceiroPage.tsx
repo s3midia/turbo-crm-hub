@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   DollarSign, LayoutDashboard, List, GitMerge, FileBarChart2,
   Users, TrendingUp, Building2, FileText, Settings2, Download,
@@ -49,7 +50,23 @@ const TABS: Tab[] = [
 ];
 
 export default function FinanceiroPage() {
-  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get("tab") as TabId;
+  
+  const [activeTab, setActiveTab] = useState<TabId>(
+    (currentTab && TABS.some(t => t.id === currentTab)) ? currentTab : "dashboard"
+  );
+
+  // Sync tab with URL
+  useEffect(() => {
+    if (activeTab) {
+      setSearchParams(prev => {
+        const newParams = new URLSearchParams(prev);
+        newParams.set("tab", activeTab);
+        return newParams;
+      }, { replace: true });
+    }
+  }, [activeTab, setSearchParams]);
 
   // Estado unificado do drawer de perfil — compartilhado entre TODAS as abas
   const [drawerOpen, setDrawerOpen] = useState(false);
