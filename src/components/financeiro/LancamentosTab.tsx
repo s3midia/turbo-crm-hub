@@ -51,11 +51,7 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchLead.length >= 2) {
-        searchLeads(searchLead);
-      } else {
-        setLeadsResults([]);
-      }
+      searchLeads(searchLead);
     }, 400);
     return () => clearTimeout(timer);
   }, [searchLead]);
@@ -63,11 +59,15 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
   async function searchLeads(term: string) {
     setIsSearchingLeads(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('leads')
-        .select('id, company_name, phone, email, niche, created_at')
-        .or(`company_name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`)
-        .limit(10);
+        .select('id, company_name, phone, email, niche, created_at');
+      
+      if (term.trim().length >= 2) {
+        query = query.or(`company_name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(10);
 
       if (!error && data) {
         setLeadsResults(data);
