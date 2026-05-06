@@ -400,7 +400,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
 
   const totals = {
     entradas: transactions.filter(t => t.tipo === "entrada" && t.status === "pago").reduce((s, t) => s + t.valor, 0),
-    saidas: transactions.filter(t => t.tipo === "saida").reduce((s, t) => s + t.valor, 0),
+    saidas: transactions.filter(t => t.tipo === "saida" && t.status === "pago").reduce((s, t) => s + t.valor, 0),
     pendentes: transactions.filter(t => t.tipo === "entrada" && t.status === "pendente").reduce((s, t) => s + t.valor, 0),
   };
 
