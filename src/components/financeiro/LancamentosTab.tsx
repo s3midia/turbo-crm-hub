@@ -111,31 +111,50 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
     }
   }
 
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   async function handleSave() {
-    if (!form.descricao || !form.valor || !form.vencimento) return;
-    
-    const payload: any = {
-      descricao: form.descricao,
-      tipo: form.tipo,
-      valor: form.valor,
-      data_lancamento: form.data_lancamento || new Date().toISOString().split('T')[0],
-      vencimento: form.vencimento,
-      recebimento: form.recebimento || undefined,
-      lead_nome: form.lead_nome || "N/A",
-      lead_id: form.lead_id || undefined,
-      status: form.status,
-      categoria: form.categoria || categorias[0],
-      recorrencia: form.recorrencia,
-      classificacao: form.tipo === "entrada" ? form.classificacao : undefined,
-      document_url: form.document_url || undefined,
-    };
+    const newErrors: Record<string, string> = {};
+    if (!form.descricao.trim()) newErrors.descricao = "Descrição obrigatória";
+    if (!form.valor || Number(form.valor) <= 0) newErrors.valor = "Informe um valor maior que zero";
+    if (!form.vencimento) newErrors.vencimento = "Data de vencimento obrigatória";
 
-    if (transaction?.id) {
-      payload.id = transaction.id;
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
     }
+    setErrors({});
+    setSaving(true);
 
-    await onSave(payload);
-    onClose();
+    try {
+      const payload: any = {
+        descricao: form.descricao,
+        tipo: form.tipo,
+        valor: form.valor,
+        data_lancamento: form.data_lancamento || new Date().toISOString().split('T')[0],
+        vencimento: form.vencimento,
+        recebimento: form.recebimento || undefined,
+        lead_nome: form.lead_nome || "N/A",
+        lead_id: form.lead_id || undefined,
+        status: form.status,
+        categoria: form.categoria || categorias[0],
+        recorrencia: form.recorrencia,
+        classificacao: form.tipo === "entrada" ? form.classificacao : undefined,
+        document_url: form.document_url || undefined,
+      };
+
+      if (transaction?.id) {
+        payload.id = transaction.id;
+      }
+
+      await onSave(payload);
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar transação.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
