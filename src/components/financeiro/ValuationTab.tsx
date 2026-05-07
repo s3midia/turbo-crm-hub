@@ -1,78 +1,16 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Building2, TrendingUp, TrendingDown, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive, Clock, CheckCircle2 } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive, Clock, CheckCircle2, AlertTriangle, FileText, Share2, Target, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { formatBRL } from "@/lib/formatters";
 import { CurrencyInput } from "@/components/ui/currency-input";
 
-type MetodoValuation = "multiplos" | "fcd" | "patrimonial";
-
-interface Bem {
-  id: string;
-  nome: string;
-  valor: number;
-}
-
-interface ValuationInput {
-  faturamento12m: number;
-  lucroLiquido: number;
-  ativosCirculantes: number;
-  passivos: number;
-  taxaCrescimento: number;
-  setor: string;
-  wacc: number;
-}
-
-const SETORES = [
-  { nome: "Tecnologia / SaaS", multiplo: 4.5 },
-  { nome: "Agência Digital", multiplo: 3.0 },
-  { nome: "Consultoria", multiplo: 2.5 },
-  { nome: "Varejo / E-commerce", multiplo: 1.8 },
-  { nome: "Indústria", multiplo: 2.0 },
-];
-
-const parseVal = (v: any) => {
-  if (typeof v === 'number') return v;
-  return parseFloat(String(v).replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-};
-
-function calcularValuation(inputs: ValuationInput, bens: Bem[], metodo: MetodoValuation): { valor: number; min: number; max: number } {
-  const setor = SETORES.find(s => s.nome === inputs.setor) || SETORES[0];
-  const totalBens = bens.reduce((acc, b) => acc + b.valor, 0);
-  const totalAtivos = inputs.ativosCirculantes + totalBens;
-
-  if (metodo === "multiplos") {
-    const base = inputs.faturamento12m * setor.multiplo;
-    return { valor: base, min: base * 0.85, max: base * 1.2 };
-  }
-
-  if (metodo === "fcd") {
-    // Simplified DCF: sum of 5 years projected free cash flow, discounted
-    const fcf = inputs.lucroLiquido;
-    let total = 0;
-    for (let i = 1; i <= 5; i++) {
-      const projetado = fcf * Math.pow(1 + inputs.taxaCrescimento / 100, i);
-      total += projetado / Math.pow(1 + inputs.wacc / 100, i);
-    }
-    // Terminal value (Gordon Growth Model, simplified)
-    const taxaCustoCapital = inputs.wacc / 100;
-    const taxaPerpetuidade = 0.02; // 2% perpetuidade padrão
-    const denominador = taxaCustoCapital - taxaPerpetuidade;
-    
-    // Evita divisão por zero ou valores negativos que distorcem o cálculo
-    const valorTerminal = (fcf * Math.pow(1 + inputs.taxaCrescimento / 100, 5) * 1.02) / (denominador <= 0 ? 0.05 : denominador);
-    const valorTerminalDescontado = valorTerminal / Math.pow(1 + inputs.wacc / 100, 5);
-    const valor = total + valorTerminalDescontado;
-    return { valor, min: valor * 0.8, max: valor * 1.25 };
-  }
-
-  // Patrimonial
-  const pl = totalAtivos - inputs.passivos;
-  return { valor: pl, min: pl * 0.9, max: pl * 1.1 };
-}
+import { MetodoValuation, Bem, ValuationInput, SETORES, parseVal, calcularValuation } from "./valuation-utils";
 
 const METODO_INFO = {
   multiplos: { label: "Múltiplos de Mercado", desc: "Avalia baseado no faturamento multiplicado por um fator do setor.", icon: BarChart3 },
@@ -89,7 +27,8 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     passivos: 0,
     taxaCrescimento: 0,
     setor: "Agência Digital",
-    wacc: 0,
+    wacc: 10,
+    observacoes: "",
   });
 
   const [bens, setBens] = useState<Bem[]>([]);
@@ -126,6 +65,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
           taxaCrescimento: Number(configData.taxa_crescimento),
           setor: configData.setor,
           wacc: Number(configData.wacc),
+          observacoes: configData.observacoes || "",
         });
       }
 
@@ -221,6 +161,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
           faturamento12m: histInputs.faturamento12m,
           lucroLiquido: histInputs.lucroLiquido,
           metodo: saved.metodo,
+          observacoes: saved.observacoes || "",
           isSaved: true
         });
       } else {
@@ -286,8 +227,37 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
         ...prev,
         faturamento12m: h.faturamento12m || 0,
         lucroLiquido: h.lucroLiquido || 0,
+        observacoes: h.observacoes || "",
       }));
     }
+  };
+
+  const smartFill = () => {
+    if (!transactions || transactions.length === 0) {
+      toast.error("Sem dados de transações para sugerir valores.");
+      return;
+    }
+
+    const now = new Date();
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(now.getMonth() - 3);
+
+    const recent = transactions.filter(t => {
+      const d = new Date(t.vencimento || t.data_lancamento);
+      return d >= threeMonthsAgo && t.status === 'pago';
+    });
+
+    const avgRevenue = (recent.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseVal(t.valor), 0) / 3) * 12;
+    const avgProfit = ((recent.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseVal(t.valor), 0) - 
+                       recent.filter(t => t.tipo === 'saida').reduce((s, t) => s + parseVal(t.valor), 0)) / 3) * 12;
+
+    setInputs(prev => ({
+      ...prev,
+      faturamento12m: Math.round(avgRevenue),
+      lucroLiquido: Math.round(avgProfit)
+    }));
+    
+    toast.success("Valores sugeridos com base nos últimos 3 meses!");
   };
 
   const saveConfig = useCallback(async (newMetodo?: MetodoValuation, newInputs?: ValuationInput) => {
@@ -315,6 +285,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
           taxa_crescimento: i.taxaCrescimento,
           setor: i.setor,
           wacc: i.wacc,
+          observacoes: i.observacoes,
           valor_calculado: res.valor,
           created_at: new Date().toISOString()
         }, { onConflict: 'user_id, mes_referencia' });
@@ -342,6 +313,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
           taxa_crescimento: i.taxaCrescimento,
           setor: i.setor,
           wacc: i.wacc,
+          observacoes: i.observacoes,
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
 
@@ -447,34 +419,40 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Month Status Grid (Calendário de Controle) */}
-      <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-[2rem] p-6 shadow-2xl shadow-black/5"
+      >
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
           <div>
-            <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
-              <Clock size={16} className="text-primary" />
-              Controle de Lançamentos Mensais
+            <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-tighter">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Clock size={16} />
+              </div>
+              Fechamento Mensal de Valuation
             </h3>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest mt-1">Status de fechamento do valuation</p>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1 ml-10">Snapshots de saúde financeira histórica</p>
           </div>
-          <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Confirmado</div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500" /> Estimado</div>
+          <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest bg-muted/30 px-4 py-2 rounded-full border border-border/50">
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" /> Confirmado</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" /> Estimado</div>
             <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700" /> Pendente</div>
           </div>
         </div>
         
-        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
+        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-3">
           {historico.map((h, i) => (
             <button
               key={h.date}
               onClick={() => selectMonth(i)}
               className={cn(
-                "flex flex-col items-center justify-center p-2 rounded-xl border transition-all relative group",
+                "flex flex-col items-center justify-center py-3 rounded-2xl border transition-all relative group overflow-hidden",
                 selectedMonthIndex === i 
-                  ? "bg-primary text-primary-foreground border-primary shadow-lg scale-105 z-10" 
+                  ? "bg-primary text-primary-foreground border-primary shadow-xl shadow-primary/20 scale-105 z-10" 
                   : (h.isSaved 
-                      ? "bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/50" 
-                      : "bg-card border-border/50 hover:border-primary/30")
+                      ? "bg-emerald-500/[0.03] border-emerald-500/20 hover:border-emerald-500/50" 
+                      : "bg-card border-border/50 hover:border-primary/30 hover:bg-muted/30")
               )}
             >
               <span className={cn(
@@ -483,310 +461,545 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
               )}>
                 {h.mes.split('/')[1]}
               </span>
-              <span className="text-xs font-black">{h.mes.split('/')[0]}</span>
+              <span className="text-sm font-black">{h.mes.split('/')[0]}</span>
               
+              {/* Animated indicator for current month selection */}
+              {selectedMonthIndex === i && (
+                <motion.div 
+                  layoutId="month-active"
+                  className="absolute inset-0 bg-primary/10 mix-blend-overlay"
+                />
+              )}
+
               {/* Status Dot */}
               <div className={cn(
-                "absolute top-1 right-1 w-1.5 h-1.5 rounded-full",
+                "absolute top-2 right-2 w-1.5 h-1.5 rounded-full",
                 h.isSaved ? "bg-emerald-500" : (h.faturamento12m > 0 ? "bg-amber-500" : "bg-zinc-300 dark:bg-zinc-700")
               )} />
-              
-              {h.isSaved && selectedMonthIndex !== i && (
-                <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm">
-                  <CheckCircle2 size={8} />
-                </div>
-              )}
             </button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Method Selector */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Method Selector - Premium Toggle */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {(Object.entries(METODO_INFO) as [MetodoValuation, typeof METODO_INFO[MetodoValuation]][]).map(([id, info]) => (
-          <button key={id} onClick={() => handleMetodoChange(id)}
-            className={cn("p-5 rounded-2xl border text-left transition-all hover:scale-[1.01]",
-              metodo === id ? "bg-primary/5 border-primary shadow-md shadow-primary/10" : "bg-card border-border/50 hover:border-primary/30"
+          <button 
+            key={id} 
+            onClick={() => handleMetodoChange(id)}
+            className={cn(
+              "group p-6 rounded-[2rem] border text-left transition-all duration-500 relative overflow-hidden",
+              metodo === id 
+                ? "bg-primary/5 border-primary/50 shadow-xl shadow-primary/5" 
+                : "bg-card/50 border-border/50 hover:border-primary/20 hover:bg-muted/30"
+            )}
+          >
+            {metodo === id && (
+              <motion.div 
+                layoutId="metodo-active-bg"
+                className="absolute inset-0 bg-primary/[0.02]"
+              />
+            )}
+            <div className={cn(
+              "p-3 rounded-2xl w-fit mb-4 transition-colors",
+              metodo === id ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
             )}>
-            <info.icon size={20} className={metodo === id ? "text-primary mb-2" : "text-muted-foreground mb-2"} />
-            <p className={cn("text-sm font-black", metodo === id ? "text-primary" : "text-foreground")}>{info.label}</p>
-            <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">{info.desc}</p>
+              <info.icon size={20} />
+            </div>
+            <p className={cn("text-sm font-black tracking-tighter uppercase", metodo === id ? "text-primary" : "text-foreground")}>{info.label}</p>
+            <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed font-medium uppercase tracking-widest">{info.desc}</p>
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Inputs */}
-        <div className="lg:col-span-2 p-6 rounded-3xl border border-border/50 bg-card shadow-sm space-y-4 relative overflow-hidden">
+        {/* Inputs - Premium Panel */}
+        <motion.div 
+          layout
+          className="lg:col-span-2 p-8 rounded-[2.5rem] border border-border/50 bg-card/50 backdrop-blur-xl shadow-2xl shadow-black/5 space-y-6 relative overflow-hidden"
+        >
           {selectedMonthIndex !== null && (
-            <div className="absolute inset-0 bg-primary/5 pointer-events-none border-2 border-primary/20 rounded-3xl z-0" />
+            <div className="absolute inset-0 bg-primary/[0.03] pointer-events-none border-2 border-primary/20 rounded-[2.5rem] z-0" />
           )}
           
-          <div className="flex items-center justify-between mb-4 relative z-10">
+          <div className="flex items-center justify-between mb-2 relative z-10">
             <div>
-              <h3 className="text-sm font-black">
-                {selectedMonthIndex !== null ? `Ajuste Retroativo — ${historico[selectedMonthIndex].mes}` : "Parâmetros de Avaliação"}
+              <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-tighter">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                  <BarChart3 size={16} />
+                </div>
+                {selectedMonthIndex !== null ? `Ajuste Retroativo — ${historico[selectedMonthIndex].mes}` : "Parâmetros de Valor"}
               </h3>
-              {selectedMonthIndex !== null && (
-                <button 
-                  onClick={() => {
-                    if (currentInputsBackup) {
-                      setInputs(currentInputsBackup);
-                      setCurrentInputsBackup(null);
-                    }
-                    setSelectedMonthIndex(null);
-                  }}
-                  className="text-[9px] font-black text-primary uppercase tracking-wider hover:underline"
-                >
-                  ← Voltar para Atual
-                </button>
-              )}
             </div>
             <div className="flex flex-col items-end gap-1">
-              <button 
-                onClick={() => saveConfig()}
-                disabled={isSaving}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
-                  isSaving ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary/10 text-primary hover:bg-primary/20"
+              <AnimatePresence mode="wait">
+                {lastSaved && !isSaving && (
+                  <motion.span 
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="text-[9px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"
+                  >
+                    <CheckCircle2 size={10} /> Sincronizado
+                  </motion.span>
                 )}
-              >
-                {isSaving ? <RefreshCw size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                {selectedMonthIndex !== null ? `Salvar Ajuste ${historico[selectedMonthIndex].mes}` : (isSaving ? "Salvando..." : "Salvar Alterações")}
-              </button>
-              {lastSaved && !isSaving && (
-                <span className="text-[9px] text-muted-foreground font-medium italic">
-                  Salvo às {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              )}
+              </AnimatePresence>
             </div>
           </div>
 
-          {[
-            { key: "faturamento12m", label: "Faturamento Últimos 12m (R$)", show: true },
-            { key: "lucroLiquido", label: "Lucro Líquido Anual (R$)", show: metodo === "fcd" || metodo === "patrimonial" },
-            { key: "ativosCirculantes", label: "Ativos Circulantes (Dinheiro/Estoque) (R$)", show: metodo === "patrimonial" },
-            { key: "passivos", label: "Total de Passivos (R$)", show: metodo === "patrimonial" },
-            { key: "taxaCrescimento", label: "Taxa de Crescimento Anual (%)", show: metodo === "fcd" },
-            { key: "wacc", label: "WACC — Custo de Capital (%)", show: metodo === "fcd" },
-          ].filter(f => f.show).map(field => (
-            <div key={field.key} className="space-y-1">
-              <label className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">{field.label}</label>
-              <CurrencyInput
-                value={inputs[field.key as keyof ValuationInput] as number}
-                onChange={val => updateInput(field.key as keyof ValuationInput, val)}
-                className="w-full px-3 py-2.5 bg-muted/30 border border-border/50 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all h-[42px]"
-              />
-            </div>
-          ))}
-
-          {metodo === "multiplos" && (
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Setor de Atuação</label>
-              <select value={inputs.setor} onChange={e => updateSetor(e.target.value)}
-                className="w-full px-3 py-2.5 bg-muted/30 border border-border/50 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
-                {SETORES.map(s => <option key={s.nome} value={s.nome}>{s.nome} (×{s.multiplo})</option>)}
-              </select>
-            </div>
-          )}
-        </div>
-
-        {/* Result Card */}
-        <div className="lg:col-span-3 space-y-5">
-          {/* Main Valuation Card */}
-          <div className="p-8 rounded-3xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-2xl shadow-primary/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-12 -mt-12" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-8 -mb-8" />
-            <div className="relative z-10">
-              <p className="text-xs font-black uppercase tracking-widest opacity-70 mb-1">
-                Estimativa — {METODO_INFO[metodo].label}
-              </p>
-              <p className="text-5xl font-black tracking-tight mb-2">{formatBRL(resultado.valor)}</p>
-              <div className="flex items-center gap-4 mt-4">
-                <div className="p-3 rounded-xl bg-white/10 text-center">
-                  <p className="text-[10px] font-black opacity-70 uppercase">Mínimo</p>
-                  <p className="text-sm font-black">{formatBRL(resultado.min)}</p>
-                </div>
-                <div className="flex-1 h-0.5 bg-white/20" />
-                <div className="p-3 rounded-xl bg-white/20 text-center border border-white/20">
-                  <p className="text-[10px] font-black opacity-70 uppercase">Estimado</p>
-                  <p className="text-sm font-black">{formatBRL(resultado.valor)}</p>
-                </div>
-                <div className="flex-1 h-0.5 bg-white/20" />
-                <div className="p-3 rounded-xl bg-white/10 text-center">
-                  <p className="text-[10px] font-black opacity-70 uppercase">Máximo</p>
-                  <p className="text-sm font-black">{formatBRL(resultado.max)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Historical Evolution */}
-          <div className="p-6 rounded-3xl border border-border/50 bg-card shadow-sm">
-            <h3 className="text-sm font-bold mb-5 flex items-center gap-2">
-              <TrendingUp size={16} className="text-primary" />
-              Evolução do Valuation (Histórico)
-            </h3>
-            <div className="flex items-end gap-2 h-28">
-              {historico.map((h, i) => {
-                const vals = { multiplos: h.multiplos, fcd: h.fcd, patrimonial: h.patrimonial };
-                const current = vals[metodo as keyof typeof vals];
-                return (
-                  <div key={i} className="flex-1 group flex flex-col items-center gap-1">
-                    <div className="w-full relative">
-                      <div className={cn(
-                        "w-full rounded-t-lg transition-all cursor-pointer relative group",
-                        selectedMonthIndex === i ? "bg-primary ring-2 ring-primary ring-offset-2 ring-offset-card" : 
-                        (h.isSaved ? "bg-primary/80 hover:bg-primary" : "bg-primary/30 hover:bg-primary/50")
-                      )}
-                        onClick={() => selectMonth(i)}
-                        style={{ height: `${maxHistorico > 0 ? (current / maxHistorico) * 80 : 0}px` }}>
-                        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-popover text-[9px] font-bold px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                          {formatBRL(current)} {h.isSaved && "📌"}
-                        </div>
+          <AnimatePresence mode="wait">
+            <motion.div 
+              key={selectedMonthIndex === null ? 'current' : 'historical'}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-5"
+            >
+              {[
+                { key: "faturamento12m", label: "Faturamento L12M (Receita Bruta)", show: true, type: "currency", icon: TrendingUp },
+                { key: "lucroLiquido", label: "Lucro Líquido (EBITDA Ajustado)", show: metodo === "fcd" || metodo === "patrimonial", type: "currency", icon: Target },
+                { key: "ativosCirculantes", label: "Ativos Circulantes (Disponibilidades)", show: metodo === "patrimonial", type: "currency", icon: Package },
+                { key: "passivos", label: "Passivos Totais (Dívidas/Obrigações)", show: metodo === "patrimonial", type: "currency", icon: AlertTriangle },
+                { key: "taxaCrescimento", label: "Expectativa de Crescimento Anual (%)", show: metodo === "fcd", type: "slider", min: 0, max: 100 },
+                { key: "wacc", label: "Taxa de Desconto (WACC %)", show: metodo === "fcd", type: "slider", min: 5, max: 30 },
+              ].filter(f => f.show).map(field => (
+                <div key={field.key} className="space-y-2 group">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 group-hover:text-primary transition-colors">
+                      <field.icon size={10} />
+                      {field.label}
+                    </label>
+                    {field.key === "faturamento12m" && (
+                      <button onClick={smartFill} className="text-[9px] font-black text-primary hover:underline uppercase tracking-tighter flex items-center gap-1">
+                        <Sparkles size={10} /> Sugestão IA
+                      </button>
+                    )}
+                  </div>
+                  
+                  {field.type === "currency" ? (
+                    <CurrencyInput
+                      value={inputs[field.key as keyof ValuationInput] as number}
+                      onChange={val => updateInput(field.key as keyof ValuationInput, val)}
+                      className="w-full px-4 py-3 bg-muted/20 border border-border/50 rounded-2xl text-sm font-black focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all h-[48px] shadow-inner"
+                    />
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-muted/20 border border-border/50 space-y-3">
+                      <div className="flex items-center gap-4">
+                        <input 
+                          type="range" 
+                          min={field.min} 
+                          max={field.max} 
+                          value={inputs[field.key as keyof ValuationInput] as number}
+                          onChange={e => updateInput(field.key as keyof ValuationInput, Number(e.target.value))}
+                          className="flex-1 h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                        />
+                        <span className="text-sm font-black w-10 text-primary">{inputs[field.key as keyof ValuationInput]}%</span>
                       </div>
                     </div>
-                    <p className={cn("text-[9px] font-bold", selectedMonthIndex === i ? "text-primary" : "text-muted-foreground")}>{h.mes}</p>
-                  </div>
-                );
-              })}
-              {historico.length === 0 && (
-                <div className="w-full flex items-center justify-center h-full text-muted-foreground text-[10px] uppercase font-black tracking-widest opacity-40">
-                  Nenhum histórico disponível
+                  )}
+                </div>
+              ))}
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Justificativa da Avaliação</label>
+                <textarea 
+                  value={inputs.observacoes}
+                  onChange={e => setInputs(prev => ({ ...prev, observacoes: e.target.value }))}
+                  placeholder="Descreva o contexto estratégico desta avaliação..."
+                  className="w-full px-4 py-3 bg-muted/20 border border-border/50 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-primary/10 outline-none min-h-[80px] resize-none transition-all"
+                />
+              </div>
+
+              {metodo === "multiplos" && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Benchmark de Setor</label>
+                  <select 
+                    value={inputs.setor} 
+                    onChange={e => updateSetor(e.target.value)}
+                    className="w-full px-4 py-3 bg-muted/20 border border-border/50 rounded-2xl text-sm font-black focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all appearance-none cursor-pointer"
+                  >
+                    {SETORES.map(s => <option key={s.nome} value={s.nome}>{s.nome} (Múltiplo ×{s.multiplo})</option>)}
+                  </select>
                 </div>
               )}
-            </div>
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
-              <span className="text-xs text-muted-foreground">Variação 6 meses</span>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Data Integrity Checklist - Premium Style */}
+          <div className="p-5 rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/50 border border-border/30 space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-muted-foreground">
+              <CheckCircle2 size={12} className="text-primary" />
+              Verificador de Consistência
+            </h4>
+            <div className="space-y-2">
               {(() => {
-                const startVal = historico.length > 0 ? historico[0][metodo] : 0;
-                const endVal = historico.length > 0 ? historico[historico.length - 1][metodo] : 0;
-                const variation = startVal > 0 ? ((endVal - startVal) / startVal) * 100 : 0;
-                const isPositive = variation >= 0;
-                
-                return (
-                  <span className={cn("font-black flex items-center gap-1", 
-                    historico.length > 1 ? (isPositive ? "text-emerald-500" : "text-rose-500") : "text-muted-foreground")}>
-                    {isPositive ? <ArrowUpRight size={14} /> : <TrendingDown size={14} className="text-rose-500" />}
-                    {variation !== 0 ? `${isPositive ? '+' : ''}${variation.toFixed(1)}%` : "0%"}
-                  </span>
-                );
+                const integrityErrors = validarIntegridade(inputs, bens, metodo);
+                if (integrityErrors.length === 0) {
+                  return (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase tracking-tight"
+                    >
+                      <div className="p-1.5 rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                        <CheckCircle2 size={12} />
+                      </div>
+                      Valuation pronto para exportação profissional
+                    </motion.div>
+                  );
+                }
+                return integrityErrors.map((err, idx) => (
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-700 text-[10px] font-black uppercase tracking-tight"
+                  >
+                    <div className="p-1.5 rounded-full bg-amber-500 text-white">
+                      <AlertTriangle size={12} />
+                    </div>
+                    {err}
+                  </motion.div>
+                ));
               })()}
             </div>
           </div>
-        </div>
+
+          {selectedMonthIndex !== null && (
+            <button 
+              onClick={() => {
+                if (currentInputsBackup) {
+                  setInputs(currentInputsBackup);
+                  setCurrentInputsBackup(null);
+                }
+                setSelectedMonthIndex(null);
+              }}
+              className="w-full py-3 text-[10px] font-black text-primary uppercase tracking-widest hover:bg-primary/5 rounded-2xl transition-all border border-primary/20"
+            >
+              Finalizar Ajuste e Voltar ao Atual
+            </button>
+          )}
+        </motion.div>
+
+          {/* Main Valuation Card - Bento Style Premium */}
+          <motion.div 
+            layout
+            className="p-8 rounded-[2.5rem] bg-zinc-900 text-white shadow-2xl relative overflow-hidden border border-white/5"
+          >
+            {/* Animated Background Orbs */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-[80px] -mr-32 -mt-32 animate-pulse" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-[60px] -ml-20 -mb-20" />
+            
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                  <Target size={12} className="text-primary" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/70">
+                    {METODO_INFO[metodo].label}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Confiança</span>
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <div key={s} className={cn("w-2 h-1 rounded-full", s <= 4 ? "bg-primary" : "bg-white/10")} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-white/50 uppercase tracking-widest">Valor Estimado do Negócio</p>
+                <motion.p 
+                  key={resultado.valor}
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-6xl font-black tracking-tighter leading-none"
+                >
+                  {formatBRL(resultado.valor)}
+                </motion.p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mt-10">
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm group hover:bg-white/10 transition-all">
+                  <p className="text-[10px] font-black text-white/40 uppercase mb-1">Mínimo (Pessimista)</p>
+                  <p className="text-base font-black text-white/90">{formatBRL(resultado.min)}</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-primary/20 border border-primary/30 backdrop-blur-sm shadow-inner">
+                  <p className="text-[10px] font-black text-primary uppercase mb-1">Médio (Realista)</p>
+                  <p className="text-base font-black text-white">{formatBRL(resultado.valor)}</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm group hover:bg-white/10 transition-all">
+                  <p className="text-[10px] font-black text-white/40 uppercase mb-1">Máximo (Otimista)</p>
+                  <p className="text-base font-black text-white/90">{formatBRL(resultado.max)}</p>
+                </div>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => window.print()}
+              className="absolute bottom-6 right-6 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-white/60 hover:text-white print:hidden group"
+            >
+              <FileText size={20} className="group-hover:scale-110 transition-transform" />
+            </button>
+          </motion.div>
+
+          {/* Historical Evolution - Pro Chart with Recharts */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="p-8 rounded-[2.5rem] border border-border/50 bg-card/50 backdrop-blur-xl shadow-sm"
+          >
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-tighter">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                  <TrendingUp size={16} />
+                </div>
+                Trajetória de Valorização
+              </h3>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Valuation</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-[200px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={historico} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                  <XAxis 
+                    dataKey="mes" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }}
+                    dy={10}
+                  />
+                  <YAxis hide domain={[0, 'dataMax + 100000']} />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-popover/90 backdrop-blur-md border border-border p-3 rounded-xl shadow-xl">
+                            <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">{payload[0].payload.mes}</p>
+                            <p className="text-sm font-black text-primary">{formatBRL(payload[0].value as number)}</p>
+                            {payload[0].payload.isSaved && (
+                              <div className="mt-1 flex items-center gap-1 text-[8px] font-black text-emerald-500 uppercase">
+                                <CheckCircle2 size={10} /> Snapshot Confirmado
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey={metodo} 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={4}
+                    fillOpacity={1} 
+                    fill="url(#colorVal)" 
+                    animationDuration={1500}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="flex items-center justify-between mt-6 pt-6 border-t border-border/30">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Performance (6m)</span>
+                {(() => {
+                  const startVal = historico.length > 0 ? historico[0][metodo] : 0;
+                  const endVal = historico.length > 0 ? historico[historico.length - 1][metodo] : 0;
+                  const variation = startVal > 0 ? ((endVal - startVal) / startVal) * 100 : 0;
+                  const isPositive = variation >= 0;
+                  
+                  return (
+                    <div className={cn("flex items-center gap-1.5 font-black text-xl tracking-tighter", 
+                      isPositive ? "text-emerald-500" : "text-rose-500")}>
+                      {isPositive ? <ArrowUpRight size={20} /> : <TrendingDown size={20} />}
+                      {variation !== 0 ? `${isPositive ? '+' : ''}${variation.toFixed(1)}%` : "0%"}
+                    </div>
+                  );
+                })()}
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Status de Tendência</span>
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                    <Zap size={14} />
+                  </div>
+                  <span className="text-xs font-black uppercase tracking-tight">Crescimento Sustentado</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
       </div>
 
-      {/* Bens da Empresa Section */}
+      {/* Bens da Empresa Section - Premium Bento Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-2 p-6 rounded-3xl border border-border/50 bg-card shadow-sm space-y-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="lg:col-span-2 p-8 rounded-[2.5rem] border border-border/50 bg-card/50 backdrop-blur-xl shadow-sm space-y-6"
+        >
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-black flex items-center gap-2">
-              <Package size={16} className="text-primary" />
-              Bens da Empresa (Ativos Imobilizados)
+            <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-tighter">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Package size={16} />
+              </div>
+              Ativos Imobilizados
             </h3>
-            <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-black bg-primary text-primary-foreground px-3 py-1 rounded-full shadow-lg shadow-primary/20">
               {formatBRL(totalBens)}
             </span>
           </div>
 
-          <div className="space-y-3">
-            <div className="grid grid-cols-5 gap-2">
-              <div className="col-span-3 space-y-1">
-                <label className="text-[9px] font-black text-muted-foreground uppercase">Descrição do Bem</label>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Descrição do Ativo</label>
                 <input
                   type="text"
-                  placeholder="Ex: Veículo..."
+                  placeholder="Ex: Servidores, Veículos..."
                   value={novoBem.nome}
                   onChange={e => setNovoBem({ ...novoBem, nome: e.target.value })}
                   onKeyDown={handleKeyDown}
-                  className="w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                  className="w-full px-4 py-3 bg-muted/20 border border-border/50 rounded-2xl text-xs font-black focus:ring-4 focus:ring-primary/10 outline-none transition-all"
                 />
               </div>
-              <div className="col-span-2 space-y-1">
-                <label className="text-[9px] font-black text-muted-foreground uppercase">Valor (R$)</label>
-                <div className="flex gap-2">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Valor de Mercado (R$)</label>
+                <div className="flex gap-3">
                   <CurrencyInput
                     placeholder="0,00"
                     value={novoBem.valor}
                     onChange={val => setNovoBem({ ...novoBem, valor: val })}
                     onKeyDown={handleKeyDown}
-                    className="w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none h-[34px]"
+                    className="w-full px-4 py-3 bg-muted/20 border border-border/50 rounded-2xl text-xs font-black focus:ring-4 focus:ring-primary/10 outline-none h-[42px] transition-all"
                   />
                   <button
                     onClick={addBem}
                     disabled={isAddingBem}
-                    className="p-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                    className="px-4 bg-primary text-primary-foreground rounded-2xl hover:opacity-90 transition-all shadow-xl shadow-primary/20 disabled:opacity-50 group"
                   >
-                    {isAddingBem ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}
+                    {isAddingBem ? <RefreshCw size={18} className="animate-spin" /> : <Plus size={18} className="group-hover:rotate-90 transition-transform" />}
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar text-left">
-              {bens.map(bem => (
-                <div key={bem.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/20 border border-border/30 group hover:border-primary/30 transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-card border border-border/50">
-                      <HardDrive size={14} className="text-muted-foreground" />
+            <div className="space-y-3 max-h-[320px] overflow-y-auto pr-2 custom-scrollbar">
+              <AnimatePresence initial={false}>
+                {bens.map(bem => (
+                  <motion.div 
+                    key={bem.id} 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="flex items-center justify-between p-4 rounded-2xl bg-muted/10 border border-border/30 group hover:border-primary/30 hover:bg-muted/20 transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-card border border-border/50 shadow-sm group-hover:scale-110 transition-transform">
+                        <HardDrive size={16} className="text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-tight">{bem.nome}</p>
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">Ativo Operacional</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold">{bem.nome}</p>
-                      <p className="text-[10px] text-muted-foreground font-medium">Ativo Fixo</p>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-black tracking-tighter">{formatBRL(bem.valor)}</span>
+                      <button
+                        onClick={() => removeBem(bem.id)}
+                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-black">{formatBRL(bem.valor)}</span>
-                    <button
-                      onClick={() => removeBem(bem.id)}
-                      className="p-1.5 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
               {bens.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package size={24} className="mx-auto mb-2 opacity-20" />
-                  <p className="text-[10px] font-bold uppercase tracking-widest">Nenhum bem cadastrado</p>
+                <div className="text-center py-12 bg-muted/5 rounded-[2rem] border border-dashed border-border/50">
+                  <Package size={32} className="mx-auto mb-3 opacity-20 text-primary" />
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Patrimônio não listado</p>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="lg:col-span-3 p-6 rounded-3xl border border-border/50 bg-card shadow-sm flex flex-col justify-center">
-          <div className="flex items-start gap-4 p-5 rounded-2xl bg-primary/5 border border-primary/10">
-            <div className="p-3 rounded-full bg-primary/10">
-              <Sparkles size={24} className="text-primary" />
+        <div className="lg:col-span-3 flex flex-col gap-6">
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="p-8 rounded-[2.5rem] bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center gap-6"
+          >
+            <div className="p-5 rounded-3xl bg-primary text-primary-foreground shadow-2xl shadow-primary/30">
+              <Sparkles size={32} />
             </div>
-            <div className="space-y-1 text-left">
-              <h4 className="text-sm font-black text-primary">Impacto no Patrimônio</h4>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Os bens da empresa (imobilizado) são fundamentais para o cálculo do <strong>Valor Patrimonial</strong>. 
-                Atualmente, seus bens somam <span className="font-black text-foreground">{formatBRL(totalBens)}</span>, 
-                o que representa <span className="font-black text-foreground">
+            <div className="space-y-2 text-left flex-1">
+              <h4 className="text-base font-black text-primary uppercase tracking-tighter italic">Potencial de Saída (Exit)</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                Os ativos imobilizados somam <span className="font-black text-foreground">{formatBRL(totalBens)}</span>. 
+                Em uma negociação de M&A, isso representa <span className="font-black text-primary text-sm px-1.5 py-0.5 bg-primary/10 rounded-md">
                   {inputs.ativosCirculantes + totalBens > 0 
                     ? ((totalBens / (inputs.ativosCirculantes + totalBens)) * 100).toFixed(1) 
                     : 0}%
-                </span> do seu ativo total estimado.
+                </span> do seu ativo total, aumentando a segurança do investidor.
               </p>
-              <div className="pt-2 flex gap-4">
-                <div className="text-center">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase">Total Ativos</p>
-                  <p className="text-sm font-black">{formatBRL(inputs.ativosCirculantes + totalBens)}</p>
-                </div>
-                <div className="w-px h-8 bg-border/50" />
-                <div className="text-center">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase">Capital Próprio</p>
-                  <p className="text-sm font-black text-emerald-500">{formatBRL(inputs.ativosCirculantes + totalBens - inputs.passivos)}</p>
-                </div>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-8 rounded-[2.5rem] bg-zinc-900 text-white border border-white/5 space-y-6 flex-1 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <h4 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-white/50">
+                <CheckCircle2 size={14} className="text-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                Score de Auditabilidade
+              </h4>
+              <div className="text-[10px] font-black text-emerald-500 uppercase px-2 py-1 bg-emerald-500/10 rounded-lg">
+                Nível Profissional
               </div>
             </div>
-          </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { label: "Conciliação", status: transactions.length > 0 ? "success" : "warning", text: transactions.length > 0 ? "Consistente" : "Pendente" },
+                { label: "Patrimônio", status: bens.length > 0 ? "success" : "warning", text: bens.length > 0 ? "Registrado" : "Vazio" },
+                { label: "Mercado", status: inputs.setor ? "success" : "danger", text: inputs.setor || "Revisar" },
+                { label: "Capitais", status: inputs.wacc > 0 ? "success" : "danger", text: inputs.wacc > 0 ? "Ajustado" : "Erro" },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
+                  <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">{item.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={cn("text-[10px] font-black uppercase tracking-tighter", item.status === "success" ? "text-emerald-400" : "text-amber-400")}>{item.text}</span>
+                    {item.status === "success" ? <CheckCircle2 size={12} className="text-emerald-400" /> : <AlertTriangle size={12} className="text-amber-400" />}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <button className="w-full py-4 bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2">
+              <FileText size={16} />
+              Exportar Dossier de Valuation
+            </button>
+          </motion.div>
         </div>
+      </div>
       </div>
     </div>
   );

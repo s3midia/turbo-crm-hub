@@ -27,3 +27,4 @@ CREATE POLICY "Users can delete own valuation_history" ON public.company_valuati
 
 -- Enable Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE public.company_valuation_history;
+ALTER TABLE public.company_valuation_history ADD COLUMN IF NOT EXISTS observacoes TEXT;
