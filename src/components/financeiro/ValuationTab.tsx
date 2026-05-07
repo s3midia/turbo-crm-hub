@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Building2, TrendingUp, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
 
 import { formatBRL } from "@/lib/formatters";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -33,7 +34,10 @@ const SETORES = [
   { nome: "Indústria", multiplo: 2.0 },
 ];
 
-const historico: any[] = [];
+const parseVal = (v: any) => {
+  if (typeof v === 'number') return v;
+  return parseFloat(String(v).replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+};
 
 function calcularValuation(inputs: ValuationInput, bens: Bem[], metodo: MetodoValuation): { valor: number; min: number; max: number } {
   const setor = SETORES.find(s => s.nome === inputs.setor) || SETORES[0];
@@ -93,6 +97,9 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingBem, setIsAddingBem] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [historico, setHistorico] = useState<any[]>([]);
+
+  const { transactions } = useFinance();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -123,20 +130,11 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
       // Se faturamento12m ainda está zerado (config inexistente),
       // pré-popular a partir dos dados reais das transações para coincidir com o dashboard
       if (!configData) {
-        const { data: txData } = await supabase
-          .from('financial_transactions')
-          .select('tipo, valor, status')
-          .eq('user_id', user.id);
-
-        if (txData && txData.length > 0) {
-          const parseVal = (v: any) => {
-            if (typeof v === 'number') return v;
-            return parseFloat(String(v).replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-          };
-          const receitaPaga = txData
+        if (transactions && transactions.length > 0) {
+          const receitaPaga = transactions
             .filter(t => t.tipo === 'entrada' && t.status === 'pago')
             .reduce((s, t) => s + parseVal(t.valor), 0);
-          const despesaPaga = txData
+          const despesaPaga = transactions
             .filter(t => t.tipo === 'saida' && t.status === 'pago')
             .reduce((s, t) => s + parseVal(t.valor), 0);
           // Anualiza com base nos últimos 6 meses de dados (mesmo critério do dashboard)
@@ -165,7 +163,51 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     };
 
     fetchData();
-  }, []);
+  }, [transactions]);
+
+  // Logic to calculate history
+  useEffect(() => {
+    if (!transactions || transactions.length === 0) return;
+
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const now = new Date();
+    const newHistorico = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); // Last day of month
+      const startDate = new Date(targetDate);
+      startDate.setFullYear(targetDate.getFullYear() - 1);
+
+      const relevantTxs = transactions.filter(t => {
+        const d = new Date(t.vencimento || t.data_lancamento);
+        return d >= startDate && d <= targetDate && t.status === 'pago';
+      });
+
+      const faturamento12m = relevantTxs.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseVal(t.valor), 0);
+      const lucroLiquido = relevantTxs.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseVal(t.valor), 0) - 
+                          relevantTxs.filter(t => t.tipo === 'saida').reduce((s, t) => s + parseVal(t.valor), 0);
+
+      // Create temporary inputs for this historical point
+      const histInputs: ValuationInput = {
+        ...inputs,
+        faturamento12m,
+        lucroLiquido
+      };
+
+      const resMultiplos = calcularValuation(histInputs, bens, "multiplos");
+      const resFCD = calcularValuation(histInputs, bens, "fcd");
+      const resPatrimonial = calcularValuation(histInputs, bens, "patrimonial");
+
+      newHistorico.push({
+        mes: monthNames[targetDate.getMonth()],
+        multiplos: resMultiplos.valor,
+        fcd: resFCD.valor,
+        patrimonial: resPatrimonial.valor
+      });
+    }
+
+    setHistorico(newHistorico);
+  }, [transactions, inputs, bens]);
 
   const saveConfig = useCallback(async (newMetodo?: MetodoValuation, newInputs?: ValuationInput) => {
     try {
@@ -419,10 +461,20 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
             </div>
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
               <span className="text-xs text-muted-foreground">Variação 6 meses</span>
-              <span className={cn("font-black flex items-center gap-1", historico.length > 0 ? "text-emerald-500" : "text-muted-foreground")}>
-                <ArrowUpRight size={14} />
-                {historico.length > 0 ? `+${(((historico[historico.length-1][metodo] - historico[0][metodo]) / historico[0][metodo]) * 100).toFixed(1)}%` : "0%"}
-              </span>
+              {(() => {
+                const startVal = historico.length > 0 ? historico[0][metodo] : 0;
+                const endVal = historico.length > 0 ? historico[historico.length - 1][metodo] : 0;
+                const variation = startVal > 0 ? ((endVal - startVal) / startVal) * 100 : 0;
+                const isPositive = variation >= 0;
+                
+                return (
+                  <span className={cn("font-black flex items-center gap-1", 
+                    historico.length > 1 ? (isPositive ? "text-emerald-500" : "text-rose-500") : "text-muted-foreground")}>
+                    {isPositive ? <ArrowUpRight size={14} /> : <TrendingDown size={14} className="text-rose-500" />}
+                    {variation !== 0 ? `${isPositive ? '+' : ''}${variation.toFixed(1)}%` : "0%"}
+                  </span>
+                );
+              })()}
             </div>
           </div>
         </div>
