@@ -61,13 +61,16 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
     try {
       let query = supabase
         .from('leads')
-        .select('id, company_name, phone, email, niche, created_at');
+        .select('id, company_name, phone, email, niche, created_at, status, is_client');
       
-      if (term.trim().length >= 2) {
+      // Filtra apenas por clientes (ganhou ou inativo) ou marcados como is_client
+      query = query.or('status.eq.ganhou,status.eq.inativo,is_client.eq.true');
+
+      if (term.trim().length >= 1) {
         query = query.or(`company_name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`);
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false }).limit(10);
+      const { data, error } = await query.order('company_name', { ascending: true }).limit(20);
 
       if (!error && data) {
         setLeadsResults(data);
@@ -292,9 +295,17 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
                       }}
                       className="w-full px-4 py-3 text-left text-sm hover:bg-muted transition-colors border-b border-border/50 last:border-0 flex items-center justify-between group"
                     >
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1 w-full">
                         <div className="flex items-center justify-between gap-4">
-                          <span className="font-bold text-foreground group-hover:text-primary transition-colors">{lead.company_name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground group-hover:text-primary transition-colors">{lead.company_name}</span>
+                            <span className={cn(
+                              "text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-widest border",
+                              lead.status === 'ganhou' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                            )}>
+                              {lead.status === 'ganhou' ? 'Ativo' : 'Inativo'}
+                            </span>
+                          </div>
                           <span className="text-[9px] font-black text-muted-foreground/60 flex items-center gap-1 shrink-0">
                             <Calendar size={10} /> {formatDate(lead.created_at)}
                           </span>
