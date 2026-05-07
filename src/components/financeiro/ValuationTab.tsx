@@ -69,8 +69,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
         });
       }
 
-      // Se faturamento12m ainda está zerado (config inexistente),
-      // pré-popular a partir dos dados reais das transações para coincidir com o dashboard
       if (!configData) {
         if (transactions && transactions.length > 0) {
           const receitaPaga = transactions
@@ -79,16 +77,13 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
           const despesaPaga = transactions
             .filter(t => t.tipo === 'saida' && t.status === 'pago')
             .reduce((s, t) => s + parseVal(t.valor), 0);
-          // Anualiza com base nos últimos 6 meses de dados (mesmo critério do dashboard)
           const faturamento12m = receitaPaga * 2;
           const lucroLiquido = (receitaPaga - despesaPaga) * 2;
-          // Usa "Múltiplos de Mercado" + "Agência Digital (×3)" para coincidir com o dashboard
           setMetodo("multiplos");
           setInputs(prev => ({ ...prev, faturamento12m, lucroLiquido, setor: "Agência Digital" }));
         }
       }
 
-      // Fetch Assets
       const { data: assetsData } = await supabase
         .from('company_assets')
         .select('*')
@@ -102,7 +97,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
         })));
       }
 
-      // Fetch Saved History Snapshots
       const { data: histData } = await supabase
         .from('company_valuation_history')
         .select('*')
@@ -119,7 +113,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     fetchData();
   }, [transactions]);
 
-  // Logic to calculate history
   useEffect(() => {
     if (!transactions || transactions.length === 0) return;
 
@@ -127,19 +120,16 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     const now = new Date();
     const newHistorico = [];
 
-    // Gerar últimos 12 meses (em vez de 6) para dar mais controle ao gestor
     for (let i = 11; i >= 0; i--) {
-      const targetDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); // Last day of month
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
       const m = targetDate.getMonth();
       const y = targetDate.getFullYear();
       const refDate = new Date(y, m, 1).toISOString().split('T')[0];
       const label = `${monthNames[m]}/${String(y).slice(-2)}`;
       
-      // Check if we have a saved snapshot for this month
       const saved = savedHistorico.find(h => h.mes_referencia === refDate);
 
       if (saved) {
-        // Use saved data
         const histInputs: ValuationInput = {
           faturamento12m: Number(saved.faturamento12m),
           lucroLiquido: Number(saved.lucro_liquido),
@@ -165,7 +155,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
           isSaved: true
         });
       } else {
-        // Fallback to dynamic calculation
         const startDate = new Date(targetDate);
         startDate.setFullYear(targetDate.getFullYear() - 1);
 
@@ -178,7 +167,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
         const lucroLiquido = relevantTxs.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseVal(t.valor), 0) - 
                             relevantTxs.filter(t => t.tipo === 'saida').reduce((s, t) => s + parseVal(t.valor), 0);
 
-        // Create temporary inputs for this historical point
         const histInputs: ValuationInput = {
           ...inputs,
           faturamento12m,
@@ -203,11 +191,10 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     }
 
     setHistorico(newHistorico);
-  }, [transactions, inputs, bens]);
+  }, [transactions, inputs, bens, savedHistorico]);
 
   const [currentInputsBackup, setCurrentInputsBackup] = useState<ValuationInput | null>(null);
 
-  // Handle month selection
   const selectMonth = (index: number) => {
     if (selectedMonthIndex === index) {
       if (currentInputsBackup) {
@@ -216,7 +203,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
       }
       setSelectedMonthIndex(null);
     } else {
-      // Backup current inputs if we're not already in historical mode
       if (selectedMonthIndex === null) {
         setCurrentInputsBackup(inputs);
       }
@@ -227,8 +213,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
         ...prev,
         faturamento12m: h.faturamento12m || 0,
         lucroLiquido: h.lucroLiquido || 0,
-        // Don't overwrite the entire config if it's not saved yet, 
-        // just update the values from the snapshot
         observacoes: h.observacoes || "",
       }));
     }
@@ -272,7 +256,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
       const i = newInputs || inputs;
 
       if (selectedMonthIndex !== null) {
-        // Save Historical Snapshot
         const histPoint = historico[selectedMonthIndex];
         const res = calcularValuation(i, bens, m);
 
@@ -294,18 +277,13 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
 
         if (error) throw error;
         
-        // Refresh saved history state
         const { data: histData } = await supabase
           .from('company_valuation_history')
           .select('*')
           .eq('user_id', user.id)
           .order('mes_referencia', { ascending: false });
         if (histData) setSavedHistorico(histData);
-        
-        // Only show toast if it's a manual save (or after some significant change)
-        // toast.success(`Ajuste de ${histPoint.mes} salvo com sucesso!`);
       } else {
-        // Save Current Config
         const { error } = await supabase.from('company_valuation_config').upsert({
           user_id: user.id,
           metodo: m,
@@ -349,7 +327,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
 
       if (error) throw error;
 
-      // Refresh saved history state
       const { data: histData } = await supabase
         .from('company_valuation_history')
         .select('*')
@@ -358,7 +335,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
       if (histData) setSavedHistorico(histData);
 
       toast.success(`Ajuste de ${histPoint.mes} removido.`);
-      setSelectedMonthIndex(null); // Return to current view
+      setSelectedMonthIndex(null);
     } catch (err: any) {
       console.error('Erro ao remover snapshot:', err);
       toast.error('Erro ao remover ajuste.');
@@ -367,19 +344,15 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     }
   };
 
-  // Auto-save logic with debounce
   useEffect(() => {
     if (loading) return;
     
     const timer = setTimeout(() => {
-      // Don't auto-save historical months if they are empty (faturamento12m === 0)
-      // to avoid "confirming" zeroed months just by clicking them.
       if (selectedMonthIndex !== null && inputs.faturamento12m === 0) {
         return;
       }
-      
       saveConfig();
-    }, 1500); // Save 1.5s after last input change
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [inputs, loading, saveConfig, selectedMonthIndex]);
@@ -401,9 +374,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
 
   const totalBens = bens.reduce((acc, b) => acc + b.valor, 0);
   const resultado = calcularValuation(inputs, bens, metodo);
-  const maxHistorico = historico.length > 0 
-    ? Math.max(...historico.map(h => Math.max(h.multiplos || 0, h.fcd || 0, h.patrimonial || 0))) 
-    : 1;
 
   const addBem = async () => {
     if (!novoBem.nome.trim()) {
@@ -462,7 +432,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Month Status Grid (Calendário de Controle) */}
+      {/* Month Status Grid */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -507,7 +477,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
               </span>
               <span className="text-sm font-black">{h.mes.split('/')[0]}</span>
               
-              {/* Animated indicator for current month selection */}
               {selectedMonthIndex === i && (
                 <motion.div 
                   layoutId="month-active"
@@ -515,7 +484,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
                 />
               )}
 
-              {/* Status Dot */}
               <div className={cn(
                 "absolute top-2 right-2 w-1.5 h-1.5 rounded-full",
                 h.isSaved ? "bg-emerald-500" : (h.faturamento12m > 0 ? "bg-amber-500" : "bg-zinc-300 dark:bg-zinc-700")
@@ -525,7 +493,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
         </div>
       </motion.div>
 
-      {/* Method Selector - Premium Toggle */}
+      {/* Method Selector */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {(Object.entries(METODO_INFO) as [MetodoValuation, typeof METODO_INFO[MetodoValuation]][]).map(([id, info]) => (
           <button 
@@ -557,7 +525,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Inputs - Premium Panel */}
+        {/* Inputs */}
         <motion.div 
           layout
           className="lg:col-span-2 p-8 rounded-[2.5rem] border border-border/50 bg-card/50 backdrop-blur-xl shadow-2xl shadow-black/5 space-y-6 relative overflow-hidden"
@@ -587,17 +555,18 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
               )}
               <div className="flex flex-col items-end gap-1">
                 <AnimatePresence mode="wait">
-                {lastSaved && !isSaving && (
-                  <motion.span 
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="text-[9px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"
-                  >
-                    <CheckCircle2 size={10} /> Sincronizado
-                  </motion.span>
-                )}
-              </AnimatePresence>
+                  {lastSaved && !isSaving && (
+                    <motion.span 
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="text-[9px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"
+                    >
+                      <CheckCircle2 size={10} /> Sincronizado
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
 
@@ -679,7 +648,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
             </motion.div>
           </AnimatePresence>
 
-          {/* Data Integrity Checklist - Premium Style */}
+          {/* Data Integrity Checklist */}
           <div className="p-5 rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/50 border border-border/30 space-y-4">
             <h4 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-muted-foreground">
               <CheckCircle2 size={12} className="text-primary" />
@@ -734,14 +703,13 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
             </button>
           )}
         </motion.div>
+
         {/* Result Column */}
         <div className="lg:col-span-3 space-y-6">
-          {/* Main Valuation Card - Bento Style Premium */}
           <motion.div 
             layout
             className="p-8 rounded-[2.5rem] bg-zinc-900 text-white shadow-2xl relative overflow-hidden border border-white/5"
           >
-            {/* Animated Background Orbs */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-[80px] -mr-32 -mt-32 animate-pulse" />
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-[60px] -ml-20 -mb-20" />
             
@@ -799,7 +767,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
             </button>
           </motion.div>
 
-          {/* Historical Evolution - Pro Chart with Recharts */}
+          {/* Historical Evolution */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -901,7 +869,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
         </div>
       </div>
 
-      {/* Bens da Empresa Section - Premium Bento Layout */}
+      {/* Bens da Empresa Section */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
