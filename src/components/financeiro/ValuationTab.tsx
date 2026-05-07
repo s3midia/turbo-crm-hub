@@ -76,7 +76,7 @@ const METODO_INFO = {
   patrimonial: { label: "Valor Patrimonial", desc: "Soma dos ativos líquidos da empresa (Ativos - Passivos).", icon: Building2 },
 };
 
-export default function ValuationTab() {
+export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: string) => void }) {
   const [metodo, setMetodo] = useState<MetodoValuation>("multiplos");
   const [inputs, setInputs] = useState<ValuationInput>({
     faturamento12m: 0,
@@ -166,17 +166,6 @@ export default function ValuationTab() {
     fetchData();
   }, []);
 
-  // Auto-save logic with debounce
-  useEffect(() => {
-    if (loading) return;
-    
-    const timer = setTimeout(() => {
-      saveConfig();
-    }, 1500); // Save 1.5s after last input change
-
-    return () => clearTimeout(timer);
-  }, [inputs, loading, saveConfig]);
-
   const saveConfig = useCallback(async (newMetodo?: MetodoValuation, newInputs?: ValuationInput) => {
     try {
       setIsSaving(true);
@@ -207,7 +196,18 @@ export default function ValuationTab() {
     } finally {
       setIsSaving(false);
     }
-  }, [metodo, inputs]);
+  }, [metodo, inputs, supabase.auth, toast]);
+
+  // Auto-save logic with debounce
+  useEffect(() => {
+    if (loading) return;
+    
+    const timer = setTimeout(() => {
+      saveConfig();
+    }, 1500); // Save 1.5s after last input change
+
+    return () => clearTimeout(timer);
+  }, [inputs, loading, saveConfig]);
 
   const handleMetodoChange = (m: MetodoValuation) => {
     setMetodo(m);
