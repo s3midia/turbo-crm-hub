@@ -91,6 +91,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
   const [bens, setBens] = useState<Bem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAddingBem, setIsAddingBem] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -231,28 +232,57 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     : 1;
 
   const addBem = async () => {
-    if (!novoBem.nome || !novoBem.valor) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!novoBem.nome.trim()) {
+      toast.error("Informe a descrição do bem.");
+      return;
+    }
+    if (novoBem.valor <= 0) {
+      toast.error("O valor do bem deve ser maior que zero.");
+      return;
+    }
 
-    const { data, error } = await supabase.from('company_assets').insert([{
-      user_id: user.id,
-      nome: novoBem.nome,
-      valor: novoBem.valor
-    }]).select();
+    try {
+      setIsAddingBem(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado.");
 
-    if (data) {
-      setBens([...bens, { id: data[0].id, nome: data[0].nome, valor: Number(data[0].valor) }]);
-      setNovoBem({ nome: "", valor: 0 });
-      toast.success("Bem adicionado com sucesso!");
+      const { data, error } = await supabase.from('company_assets').insert([{
+        user_id: user.id,
+        nome: novoBem.nome,
+        valor: novoBem.valor
+      }]).select();
+
+      if (error) throw error;
+
+      if (data && data[0]) {
+        setBens([...bens, { id: data[0].id, nome: data[0].nome, valor: Number(data[0].valor) }]);
+        setNovoBem({ nome: "", valor: 0 });
+        toast.success("Bem adicionado com sucesso!");
+      }
+    } catch (err: any) {
+      console.error('Erro ao adicionar bem:', err);
+      toast.error('Erro ao salvar o bem: ' + (err.message || 'Tente novamente'));
+    } finally {
+      setIsAddingBem(false);
     }
   };
 
   const removeBem = async (id: string) => {
-    const { error } = await supabase.from('company_assets').delete().eq('id', id);
-    if (!error) {
+    try {
+      const { error } = await supabase.from('company_assets').delete().eq('id', id);
+      if (error) throw error;
+      
       setBens(bens.filter(b => b.id !== id));
       toast.success("Bem removido!");
+    } catch (err: any) {
+      console.error('Erro ao remover bem:', err);
+      toast.error('Erro ao remover: ' + (err.message || 'Tente novamente'));
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      addBem();
     }
   };
 
@@ -420,6 +450,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
                   placeholder="Ex: Veículo..."
                   value={novoBem.nome}
                   onChange={e => setNovoBem({ ...novoBem, nome: e.target.value })}
+                  onKeyDown={handleKeyDown}
                   className="w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
                 />
               </div>
@@ -430,13 +461,15 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
                     placeholder="0,00"
                     value={novoBem.valor}
                     onChange={val => setNovoBem({ ...novoBem, valor: val })}
+                    onKeyDown={handleKeyDown}
                     className="w-full px-3 py-2 bg-muted/30 border border-border/50 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none h-[34px]"
                   />
                   <button
                     onClick={addBem}
-                    className="p-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                    disabled={isAddingBem}
+                    className="p-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
                   >
-                    <Plus size={16} />
+                    {isAddingBem ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}
                   </button>
                 </div>
               </div>
