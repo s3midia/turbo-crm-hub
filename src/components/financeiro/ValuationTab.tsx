@@ -227,6 +227,8 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
         ...prev,
         faturamento12m: h.faturamento12m || 0,
         lucroLiquido: h.lucroLiquido || 0,
+        // Don't overwrite the entire config if it's not saved yet, 
+        // just update the values from the snapshot
         observacoes: h.observacoes || "",
       }));
     }
@@ -300,7 +302,8 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
           .order('mes_referencia', { ascending: false });
         if (histData) setSavedHistorico(histData);
         
-        toast.success(`Ajuste de ${histPoint.mes} salvo com sucesso!`);
+        // Only show toast if it's a manual save (or after some significant change)
+        // toast.success(`Ajuste de ${histPoint.mes} salvo com sucesso!`);
       } else {
         // Save Current Config
         const { error } = await supabase.from('company_valuation_config').upsert({
@@ -329,11 +332,52 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     }
   }, [metodo, inputs, selectedMonthIndex, historico, bens]);
 
+  const deleteSnapshot = async () => {
+    if (selectedMonthIndex === null) return;
+    
+    try {
+      setIsSaving(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const histPoint = historico[selectedMonthIndex];
+      const { error } = await supabase
+        .from('company_valuation_history')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('mes_referencia', histPoint.date);
+
+      if (error) throw error;
+
+      // Refresh saved history state
+      const { data: histData } = await supabase
+        .from('company_valuation_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('mes_referencia', { ascending: false });
+      if (histData) setSavedHistorico(histData);
+
+      toast.success(`Ajuste de ${histPoint.mes} removido.`);
+      setSelectedMonthIndex(null); // Return to current view
+    } catch (err: any) {
+      console.error('Erro ao remover snapshot:', err);
+      toast.error('Erro ao remover ajuste.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Auto-save logic with debounce
   useEffect(() => {
     if (loading) return;
     
     const timer = setTimeout(() => {
+      // Don't auto-save historical months if they are empty (faturamento12m === 0)
+      // to avoid "confirming" zeroed months just by clicking them.
+      if (selectedMonthIndex !== null && inputs.faturamento12m === 0) {
+        return;
+      }
+      
       saveConfig();
     }, 1500); // Save 1.5s after last input change
 
@@ -531,8 +575,18 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
                 {selectedMonthIndex !== null ? `Ajuste Retroativo — ${historico[selectedMonthIndex].mes}` : "Parâmetros de Valor"}
               </h3>
             </div>
-            <div className="flex flex-col items-end gap-1">
-              <AnimatePresence mode="wait">
+            <div className="flex items-center gap-2">
+              {selectedMonthIndex !== null && historico[selectedMonthIndex].isSaved && (
+                <button 
+                  onClick={deleteSnapshot}
+                  className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all group"
+                  title="Limpar Ajuste e voltar ao Automático"
+                >
+                  <Trash2 size={14} className="group-hover:scale-110 transition-transform" />
+                </button>
+              )}
+              <div className="flex flex-col items-end gap-1">
+                <AnimatePresence mode="wait">
                 {lastSaved && !isSaving && (
                   <motion.span 
                     initial={{ opacity: 0, x: 10 }}
