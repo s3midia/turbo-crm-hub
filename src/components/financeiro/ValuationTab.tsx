@@ -98,6 +98,8 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
   const [isAddingBem, setIsAddingBem] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [historico, setHistorico] = useState<any[]>([]);
+  const [savedHistorico, setSavedHistorico] = useState<any[]>([]);
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState<number | null>(null);
 
   const { transactions } = useFinance();
 
@@ -159,6 +161,18 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
           valor: Number(a.valor)
         })));
       }
+
+      // Fetch Saved History Snapshots
+      const { data: histData } = await supabase
+        .from('company_valuation_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('mes_referencia', { ascending: false });
+
+      if (histData) {
+        setSavedHistorico(histData);
+      }
+      
       setLoading(false);
     };
 
@@ -175,39 +189,102 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
 
     for (let i = 5; i >= 0; i--) {
       const targetDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); // Last day of month
-      const startDate = new Date(targetDate);
-      startDate.setFullYear(targetDate.getFullYear() - 1);
+      const refDate = new Date(now.getFullYear(), now.getMonth() - i, 1).toISOString().split('T')[0]; // First day of month (ISO)
+      
+      // Check if we have a saved snapshot for this month
+      const saved = savedHistorico.find(h => h.mes_referencia === refDate);
 
-      const relevantTxs = transactions.filter(t => {
-        const d = new Date(t.vencimento || t.data_lancamento);
-        return d >= startDate && d <= targetDate && t.status === 'pago';
-      });
+      if (saved) {
+        // Use saved data
+        const histInputs: ValuationInput = {
+          faturamento12m: Number(saved.faturamento12m),
+          lucroLiquido: Number(saved.lucro_liquido),
+          ativosCirculantes: Number(saved.ativos_circulantes),
+          passivos: Number(saved.passivos),
+          taxaCrescimento: Number(saved.taxa_crescimento),
+          setor: saved.setor,
+          wacc: Number(saved.wacc),
+        };
 
-      const faturamento12m = relevantTxs.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseVal(t.valor), 0);
-      const lucroLiquido = relevantTxs.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseVal(t.valor), 0) - 
-                          relevantTxs.filter(t => t.tipo === 'saida').reduce((s, t) => s + parseVal(t.valor), 0);
+        const res = calcularValuation(histInputs, bens, saved.metodo as MetodoValuation);
 
-      // Create temporary inputs for this historical point
-      const histInputs: ValuationInput = {
-        ...inputs,
-        faturamento12m,
-        lucroLiquido
-      };
+        newHistorico.push({
+          mes: monthNames[targetDate.getMonth()],
+          date: refDate,
+          multiplos: saved.metodo === "multiplos" ? res.valor : calcularValuation(histInputs, bens, "multiplos").valor,
+          fcd: saved.metodo === "fcd" ? res.valor : calcularValuation(histInputs, bens, "fcd").valor,
+          patrimonial: saved.metodo === "patrimonial" ? res.valor : calcularValuation(histInputs, bens, "patrimonial").valor,
+          faturamento12m: histInputs.faturamento12m,
+          lucroLiquido: histInputs.lucroLiquido,
+          metodo: saved.metodo,
+          isSaved: true
+        });
+      } else {
+        // Fallback to dynamic calculation
+        const startDate = new Date(targetDate);
+        startDate.setFullYear(targetDate.getFullYear() - 1);
 
-      const resMultiplos = calcularValuation(histInputs, bens, "multiplos");
-      const resFCD = calcularValuation(histInputs, bens, "fcd");
-      const resPatrimonial = calcularValuation(histInputs, bens, "patrimonial");
+        const relevantTxs = transactions.filter(t => {
+          const d = new Date(t.vencimento || t.data_lancamento);
+          return d >= startDate && d <= targetDate && t.status === 'pago';
+        });
 
-      newHistorico.push({
-        mes: monthNames[targetDate.getMonth()],
-        multiplos: resMultiplos.valor,
-        fcd: resFCD.valor,
-        patrimonial: resPatrimonial.valor
-      });
+        const faturamento12m = relevantTxs.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseVal(t.valor), 0);
+        const lucroLiquido = relevantTxs.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseVal(t.valor), 0) - 
+                            relevantTxs.filter(t => t.tipo === 'saida').reduce((s, t) => s + parseVal(t.valor), 0);
+
+        // Create temporary inputs for this historical point
+        const histInputs: ValuationInput = {
+          ...inputs,
+          faturamento12m,
+          lucroLiquido
+        };
+
+        const resMultiplos = calcularValuation(histInputs, bens, "multiplos");
+        const resFCD = calcularValuation(histInputs, bens, "fcd");
+        const resPatrimonial = calcularValuation(histInputs, bens, "patrimonial");
+
+        newHistorico.push({
+          mes: monthNames[targetDate.getMonth()],
+          date: refDate,
+          multiplos: resMultiplos.valor,
+          fcd: resFCD.valor,
+          patrimonial: resPatrimonial.valor,
+          faturamento12m,
+          lucroLiquido,
+          isSaved: false
+        });
+      }
     }
 
     setHistorico(newHistorico);
   }, [transactions, inputs, bens]);
+
+  const [currentInputsBackup, setCurrentInputsBackup] = useState<ValuationInput | null>(null);
+
+  // Handle month selection
+  const selectMonth = (index: number) => {
+    if (selectedMonthIndex === index) {
+      if (currentInputsBackup) {
+        setInputs(currentInputsBackup);
+        setCurrentInputsBackup(null);
+      }
+      setSelectedMonthIndex(null);
+    } else {
+      // Backup current inputs if we're not already in historical mode
+      if (selectedMonthIndex === null) {
+        setCurrentInputsBackup(inputs);
+      }
+
+      setSelectedMonthIndex(index);
+      const h = historico[index];
+      setInputs(prev => ({
+        ...prev,
+        faturamento12m: h.faturamento12m || 0,
+        lucroLiquido: h.lucroLiquido || 0,
+      }));
+    }
+  };
 
   const saveConfig = useCallback(async (newMetodo?: MetodoValuation, newInputs?: ValuationInput) => {
     try {
@@ -218,20 +295,55 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
       const m = newMetodo || metodo;
       const i = newInputs || inputs;
 
-      const { error } = await supabase.from('company_valuation_config').upsert({
-        user_id: user.id,
-        metodo: m,
-        faturamento12m: i.faturamento12m,
-        lucro_liquido: i.lucroLiquido,
-        ativos_circulantes: i.ativosCirculantes,
-        passivos: i.passivos,
-        taxa_crescimento: i.taxaCrescimento,
-        setor: i.setor,
-        wacc: i.wacc,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
+      if (selectedMonthIndex !== null) {
+        // Save Historical Snapshot
+        const histPoint = historico[selectedMonthIndex];
+        const res = calcularValuation(i, bens, m);
 
-      if (error) throw error;
+        const { error } = await supabase.from('company_valuation_history').upsert({
+          user_id: user.id,
+          mes_referencia: histPoint.date,
+          metodo: m,
+          faturamento12m: i.faturamento12m,
+          lucro_liquido: i.lucroLiquido,
+          ativos_circulantes: i.ativosCirculantes,
+          passivos: i.passivos,
+          taxa_crescimento: i.taxaCrescimento,
+          setor: i.setor,
+          wacc: i.wacc,
+          valor_calculado: res.valor,
+          created_at: new Date().toISOString()
+        }, { onConflict: 'user_id, mes_referencia' });
+
+        if (error) throw error;
+        
+        // Refresh saved history state
+        const { data: histData } = await supabase
+          .from('company_valuation_history')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('mes_referencia', { ascending: false });
+        if (histData) setSavedHistorico(histData);
+        
+        toast.success(`Ajuste de ${histPoint.mes} salvo com sucesso!`);
+      } else {
+        // Save Current Config
+        const { error } = await supabase.from('company_valuation_config').upsert({
+          user_id: user.id,
+          metodo: m,
+          faturamento12m: i.faturamento12m,
+          lucro_liquido: i.lucroLiquido,
+          ativos_circulantes: i.ativosCirculantes,
+          passivos: i.passivos,
+          taxa_crescimento: i.taxaCrescimento,
+          setor: i.setor,
+          wacc: i.wacc,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+        if (error) throw error;
+      }
+
       setLastSaved(new Date());
     } catch (err: any) {
       console.error('Erro ao salvar configuração de valuation:', err);
@@ -346,20 +458,42 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Inputs */}
-        <div className="lg:col-span-2 p-6 rounded-3xl border border-border/50 bg-card shadow-sm space-y-4 relative">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-black">Parâmetros de Avaliação</h3>
+        <div className="lg:col-span-2 p-6 rounded-3xl border border-border/50 bg-card shadow-sm space-y-4 relative overflow-hidden">
+          {selectedMonthIndex !== null && (
+            <div className="absolute inset-0 bg-primary/5 pointer-events-none border-2 border-primary/20 rounded-3xl z-0" />
+          )}
+          
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <div>
+              <h3 className="text-sm font-black">
+                {selectedMonthIndex !== null ? `Ajuste Retroativo — ${historico[selectedMonthIndex].mes}` : "Parâmetros de Avaliação"}
+              </h3>
+              {selectedMonthIndex !== null && (
+                <button 
+                  onClick={() => {
+                    if (currentInputsBackup) {
+                      setInputs(currentInputsBackup);
+                      setCurrentInputsBackup(null);
+                    }
+                    setSelectedMonthIndex(null);
+                  }}
+                  className="text-[9px] font-black text-primary uppercase tracking-wider hover:underline"
+                >
+                  ← Voltar para Atual
+                </button>
+              )}
+            </div>
             <div className="flex flex-col items-end gap-1">
               <button 
                 onClick={() => saveConfig()}
                 disabled={isSaving}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
-                  isSaving ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary hover:bg-primary/20"
+                  isSaving ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary/10 text-primary hover:bg-primary/20"
                 )}
               >
                 {isSaving ? <RefreshCw size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                {isSaving ? "Salvando..." : "Salvar Alterações"}
+                {selectedMonthIndex !== null ? `Salvar Ajuste ${historico[selectedMonthIndex].mes}` : (isSaving ? "Salvando..." : "Salvar Alterações")}
               </button>
               {lastSaved && !isSaving && (
                 <span className="text-[9px] text-muted-foreground font-medium italic">
@@ -441,15 +575,19 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
                 return (
                   <div key={i} className="flex-1 group flex flex-col items-center gap-1">
                     <div className="w-full relative">
-                      <div className="w-full bg-primary/70 hover:bg-primary rounded-t-lg transition-all cursor-pointer relative group"
-                        onClick={() => toast.info(`Relatório de ${h.mes} em desenvolvimento`)}
+                      <div className={cn(
+                        "w-full rounded-t-lg transition-all cursor-pointer relative group",
+                        selectedMonthIndex === i ? "bg-primary ring-2 ring-primary ring-offset-2 ring-offset-card" : 
+                        (h.isSaved ? "bg-primary/80 hover:bg-primary" : "bg-primary/30 hover:bg-primary/50")
+                      )}
+                        onClick={() => selectMonth(i)}
                         style={{ height: `${maxHistorico > 0 ? (current / maxHistorico) * 80 : 0}px` }}>
-                        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-popover text-[9px] font-bold px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                          {formatBRL(current)}
+                        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-popover text-[9px] font-bold px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                          {formatBRL(current)} {h.isSaved && "📌"}
                         </div>
                       </div>
                     </div>
-                    <p className="text-[9px] font-bold text-muted-foreground">{h.mes}</p>
+                    <p className={cn("text-[9px] font-bold", selectedMonthIndex === i ? "text-primary" : "text-muted-foreground")}>{h.mes}</p>
                   </div>
                 );
               })}
