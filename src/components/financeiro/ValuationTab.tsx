@@ -10,7 +10,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { formatBRL } from "@/lib/formatters";
 import { CurrencyInput } from "@/components/ui/currency-input";
 
-import { MetodoValuation, Bem, ValuationInput, SETORES, parseVal, calcularValuation } from "./valuation-utils";
+import { MetodoValuation, Bem, ValuationInput, SETORES, parseVal, calcularValuation, validarIntegridade } from "./valuation-utils";
 
 const METODO_INFO = {
   multiplos: { label: "Múltiplos de Mercado", desc: "Avalia baseado no faturamento multiplicado por um fator do setor.", icon: BarChart3 },
