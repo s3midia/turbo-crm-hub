@@ -59,18 +59,11 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
   async function searchLeads(term: string) {
     setIsSearchingLeads(true);
     try {
-      let query = supabase
+      // Busca idêntica à da página de Clientes para garantir consistência
+      const { data, error } = await supabase
         .from('leads')
-        .select('id, company_name, phone, email, niche, created_at, status');
-      
-      // Filtra apenas por clientes (ganhou ou inativo)
-      query = query.or('status.eq.ganhou,status.eq.inativo');
-
-      if (term.trim().length >= 1) {
-        query = query.or(`company_name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`);
-      }
-      
-      const { data, error } = await query.order('company_name', { ascending: true }).limit(20);
+        .select('*')
+        .order('company_name', { ascending: true });
 
       if (error) {
         console.error("Supabase error:", error);
@@ -78,7 +71,24 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
       }
 
       if (data) {
-        setLeadsResults(data);
+        // Aplica exatamente o mesmo filtro da página de clientes
+        let filtered = data.filter(lead => 
+          lead.status === 'ganhou' || 
+          lead.status === 'inativo' || 
+          lead.is_client === true
+        );
+
+        // Se houver um termo de busca, filtra localmente
+        if (term.trim().length >= 1) {
+          const t = term.toLowerCase();
+          filtered = filtered.filter(l => 
+            (l.company_name || "").toLowerCase().includes(t) ||
+            (l.phone || "").toLowerCase().includes(t) ||
+            (l.email || "").toLowerCase().includes(t)
+          );
+        }
+        
+        setLeadsResults(filtered.slice(0, 20));
         setShowLeadResults(true);
       }
     } catch (e) {
