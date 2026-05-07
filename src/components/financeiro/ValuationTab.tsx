@@ -680,7 +680,8 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
             </button>
           )}
         </motion.div>
-
+        {/* Result Column */}
+        <div className="lg:col-span-3 space-y-6">
           {/* Main Valuation Card - Bento Style Premium */}
           <motion.div 
             layout
@@ -843,6 +844,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
               </div>
             </div>
           </motion.div>
+        </div>
       </div>
 
       {/* Bens da Empresa Section - Premium Bento Layout */}
@@ -999,7 +1001,6 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
             </button>
           </motion.div>
         </div>
-      </div>
       </div>
     </div>
   );
