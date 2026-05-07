@@ -327,7 +327,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     } finally {
       setIsSaving(false);
     }
-  }, [metodo, inputs, supabase.auth, toast]);
+  }, [metodo, inputs, selectedMonthIndex, historico, bens]);
 
   // Auto-save logic with debounce
   useEffect(() => {
@@ -338,7 +338,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     }, 1500); // Save 1.5s after last input change
 
     return () => clearTimeout(timer);
-  }, [inputs, loading, saveConfig]);
+  }, [inputs, loading, saveConfig, selectedMonthIndex]);
 
   const handleMetodoChange = (m: MetodoValuation) => {
     setMetodo(m);
@@ -560,13 +560,13 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
                 { key: "lucroLiquido", label: "Lucro Líquido (EBITDA Ajustado)", show: metodo === "fcd" || metodo === "patrimonial", type: "currency", icon: Target },
                 { key: "ativosCirculantes", label: "Ativos Circulantes (Disponibilidades)", show: metodo === "patrimonial", type: "currency", icon: Package },
                 { key: "passivos", label: "Passivos Totais (Dívidas/Obrigações)", show: metodo === "patrimonial", type: "currency", icon: AlertTriangle },
-                { key: "taxaCrescimento", label: "Expectativa de Crescimento Anual (%)", show: metodo === "fcd", type: "slider", min: 0, max: 100 },
-                { key: "wacc", label: "Taxa de Desconto (WACC %)", show: metodo === "fcd", type: "slider", min: 5, max: 30 },
+                { key: "taxaCrescimento", label: "Expectativa de Crescimento Anual (%)", show: metodo === "fcd", type: "slider", min: 0, max: 100, icon: TrendingUp },
+                { key: "wacc", label: "Taxa de Desconto (WACC %)", show: metodo === "fcd", type: "slider", min: 5, max: 30, icon: Target },
               ].filter(f => f.show).map(field => (
                 <div key={field.key} className="space-y-2 group">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 group-hover:text-primary transition-colors">
-                      <field.icon size={10} />
+                      {field.icon && <field.icon size={10} />}
                       {field.label}
                     </label>
                     {field.key === "faturamento12m" && (

@@ -16,6 +16,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { 
+  calculateClientesKPIs, 
+  filterClientes, 
+  mapLeadsToClientes 
+} from "@/components/clientes/clientes-utils";
+
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<ClientePerfilData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,22 +47,7 @@ export default function ClientesPage() {
 
       if (error) throw error;
 
-      const clientesFiltrados = data
-        .filter(lead => lead.status === 'ganhou' || lead.status === 'inativo' || lead.is_client === true)
-        .map(lead => ({
-          id: lead.id,
-          cliente: lead.company_name,
-          email: lead.email,
-          telefone: lead.phone,
-          empresa: lead.company_name,
-          status: lead.status === 'ganhou' ? 'ativo' : lead.status, 
-          valor: lead.value || lead.total_value || 0,
-          dataInicio: new Date(lead.created_at).toLocaleDateString("pt-BR"),
-          contract_start_date: lead.contract_start_date || lead.contractStartDate || "",
-          contract_end_date: lead.contract_end_date || lead.contractEndDate || ""
-        }));
-
-      setClientes(clientesFiltrados);
+      setClientes(mapLeadsToClientes(data));
     } catch (err) {
       console.error(err);
       toast.error("Erro ao carregar clientes.");
@@ -119,18 +110,13 @@ export default function ClientesPage() {
     }
   };
 
-  const filteredClientes = clientes.filter(c => {
-    const matchesSearch = (c.cliente || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (c.email || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filter === "todos" ? true : 
-                          filter === "ativos" ? c.status === "ativo" : 
-                          c.status !== "ativo";
-    return matchesSearch && matchesStatus;
-  });
+  const filteredClientes = useMemo(() => {
+    return filterClientes(clientes, searchTerm, filter);
+  }, [clientes, searchTerm, filter]);
 
-  const totalAtivos = clientes.filter(c => c.status === "ativo").length;
-  const totalInativos = clientes.filter(c => c.status !== "ativo").length;
-  const mrr = clientes.reduce((acc, c) => c.status === "ativo" ? acc + (Number(c.valor) || 0) : acc, 0);
+  const { totalAtivos, totalInativos, mrr } = useMemo(() => {
+    return calculateClientesKPIs(clientes);
+  }, [clientes]);
 
   return (
     <div className="flex flex-col h-full bg-background relative animate-in fade-in duration-300">

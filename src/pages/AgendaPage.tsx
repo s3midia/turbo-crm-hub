@@ -76,25 +76,14 @@ const GoogleButtonLogic = ({ googleConnected, setGoogleConnected, onEventsFetche
   );
 };
 
-// --- Tipos de Eventos ---
-type FilterMode = "all" | "meetings" | "finance";
-type EventType = "meeting" | "task" | "finance_in" | "finance_out" | "finance_overdue";
-
-interface AgendaEvent {
-  id: string;
-  day: number;
-  title: string;
-  type: EventType;
-  time?: string;
-  value?: number;
-  client?: string;
-  status?: string;
-  location?: string;
-  description?: string;
-}
-
-const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-const DAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+import { 
+  EventType, 
+  AgendaEvent, 
+  FilterMode, 
+  filterAgendaEvents, 
+  calculateAgendaTotals, 
+  convertGoogleEvents 
+} from "@/components/agenda/agenda-utils";
 
 export default function AgendaPage() {
   const now = new Date();
@@ -162,19 +151,7 @@ export default function AgendaPage() {
   };
 
   const handleGoogleEventsFetched = (googleItems: any[]) => {
-    const converted: AgendaEvent[] = googleItems.map(item => {
-       const startStr = item.start.dateTime || item.start.date;
-       const dateObj = new Date(startStr);
-       return {
-         id: item.id,
-         day: dateObj.getDate(),
-         title: item.summary || "Evento Google",
-         type: "meeting",
-         time: item.start.dateTime ? dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Dia Inteiro",
-         location: item.location,
-         description: item.description,
-       };
-    });
+    const converted = convertGoogleEvents(googleItems);
     // Add to existing events avoiding duplicates by ID
     setEvents(prev => {
       const existingIds = new Set(prev.map(e => e.id));
@@ -217,17 +194,13 @@ export default function AgendaPage() {
   };
 
   const filteredEvents = useMemo(() => {
-    if (filter === "all") return events;
-    if (filter === "meetings") return events.filter(e => e.type === "meeting" || e.type === "task");
-    if (filter === "finance") return events.filter(e => e.type.startsWith("finance"));
-    return events;
+    return filterAgendaEvents(events, filter);
   }, [filter, events]);
 
   const cells = Array.from({ length: firstDay + daysInMonth }, (_, i) => i < firstDay ? null : i - firstDay + 1);
 
-  // Totais Rápidos do Mês (só de exemplo visual)
-  const totalReceitas = events.filter(e => e.type === "finance_in").reduce((acc, curr) => acc + (curr.value || 0), 0);
-  const totalAtrasado = events.filter(e => e.type === "finance_overdue").reduce((acc, curr) => acc + (curr.value || 0), 0);
+  // Totais Rápidos do Mês
+  const { totalReceitas, totalAtrasado } = useMemo(() => calculateAgendaTotals(events), [events]);
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden animate-in fade-in duration-500">
