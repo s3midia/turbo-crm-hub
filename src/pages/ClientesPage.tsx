@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ClientePerfilDrawer, ClientePerfilData } from "@/components/financeiro/ClientePerfilDrawer";
 import { deleteOpportunity, updateOpportunityStage } from "@/hooks/useOpportunities";
 import { supabase } from "@/integrations/supabase/client";
