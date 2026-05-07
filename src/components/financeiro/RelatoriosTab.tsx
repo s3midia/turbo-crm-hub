@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { FileText, Download, TrendingUp, TrendingDown, BarChart3, PieChart, Edit2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { formatBRL } from "@/lib/formatters";
+import { formatBRL, parseBRL } from "@/lib/formatters";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
 
 function pct(v: number, t: number) { return t === 0 ? "0%" : `${((v / t) * 100).toFixed(1)}%`; }
@@ -43,20 +43,20 @@ function computeRelatorio(txs: FinancialTransaction[]) {
   const pagas = txs.filter(t => t.status === "pago");
 
   const receitaBruta = pagas.filter(t => t.tipo === "entrada")
-    .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
+    .reduce((s, t) => s + parseBRL(t.valor), 0);
 
   const deducoes = pagas.filter(t => t.tipo === "saida" && DEDUCOES_CATS.includes(t.categoria))
-    .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
+    .reduce((s, t) => s + parseBRL(t.valor), 0);
 
   const receitaLiquida = receitaBruta - deducoes;
 
   const custosServicos = pagas.filter(t => t.tipo === "saida" && CUSTOS_CATS.includes(t.categoria))
-    .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
+    .reduce((s, t) => s + parseBRL(t.valor), 0);
 
   const lucroBruto = receitaLiquida - custosServicos;
 
   const despesasOp = pagas.filter(t => t.tipo === "saida" && !DEDUCOES_CATS.includes(t.categoria) && !CUSTOS_CATS.includes(t.categoria))
-    .reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
+    .reduce((s, t) => s + parseBRL(t.valor), 0);
 
   const lucroOperacional = lucroBruto - despesasOp;
   const lucroLiquido = lucroOperacional; // impostos sobre lucro não modelados
@@ -67,14 +67,14 @@ function computeRelatorio(txs: FinancialTransaction[]) {
   const roi = totalDespesas > 0 ? ((receitaBruta - totalDespesas) / totalDespesas) * 100 : 0;
 
   // Fluxo de Caixa agrupado
-  const recebimentos = pagas.filter(t => t.tipo === "entrada").reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
-  const pagamentos = pagas.filter(t => t.tipo === "saida" && !DEDUCOES_CATS.includes(t.categoria)).reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
-  const impostosOp = pagas.filter(t => t.tipo === "saida" && DEDUCOES_CATS.includes(t.categoria)).reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
+  const recebimentos = pagas.filter(t => t.tipo === "entrada").reduce((s, t) => s + parseBRL(t.valor), 0);
+  const pagamentos = pagas.filter(t => t.tipo === "saida" && !DEDUCOES_CATS.includes(t.categoria)).reduce((s, t) => s + parseBRL(t.valor), 0);
+  const impostosOp = pagas.filter(t => t.tipo === "saida" && DEDUCOES_CATS.includes(t.categoria)).reduce((s, t) => s + parseBRL(t.valor), 0);
   const totalOperacional = recebimentos - pagamentos - impostosOp;
 
   // Balancete: usa transações a receber e a pagar como ativos/passivos simples
-  const aReceber = txs.filter(t => t.tipo === "entrada" && t.status !== "pago").reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
-  const aPagar = txs.filter(t => t.tipo === "saida" && t.status !== "pago").reduce((s, t) => s + (parseFloat(String(t.valor)) || 0), 0);
+  const aReceber = txs.filter(t => t.tipo === "entrada" && t.status !== "pago").reduce((s, t) => s + parseBRL(t.valor), 0);
+  const aPagar = txs.filter(t => t.tipo === "saida" && t.status !== "pago").reduce((s, t) => s + parseBRL(t.valor), 0);
   const caixaAtual = recebimentos - pagamentos - impostosOp;
 
   return {

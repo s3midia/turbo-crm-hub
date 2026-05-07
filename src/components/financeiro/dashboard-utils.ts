@@ -1,5 +1,5 @@
 import { FinancialTransaction } from "@/hooks/useFinance";
-import { formatBRL } from "@/lib/formatters";
+import { formatBRL, parseBRL } from "@/lib/formatters";
 import { AlertCircle, Users } from "lucide-react";
 
 export interface DashboardKPIs {
@@ -26,12 +26,12 @@ export function calculateDashboardData(
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
 
-  const receitaPaga = txs.filter(t => t.tipo === 'entrada' && t.status === 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
-  const despesaPaga = txs.filter(t => t.tipo === 'saida' && t.status === 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
+  const receitaPaga = txs.filter(t => t.tipo === 'entrada' && t.status === 'pago').reduce((acc, t) => acc + parseBRL(t.valor), 0);
+  const despesaPaga = txs.filter(t => t.tipo === 'saida' && t.status === 'pago').reduce((acc, t) => acc + parseBRL(t.valor), 0);
   const saldoAtual = receitaPaga - despesaPaga;
   
-  const aReceber = txs.filter(t => t.tipo === 'entrada' && t.status !== 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
-  const aPagar = txs.filter(t => t.tipo === 'saida' && t.status !== 'pago').reduce((acc, t) => acc + Number(t.valor), 0);
+  const aReceber = txs.filter(t => t.tipo === 'entrada' && t.status !== 'pago').reduce((acc, t) => acc + parseBRL(t.valor), 0);
+  const aPagar = txs.filter(t => t.tipo === 'saida' && t.status !== 'pago').reduce((acc, t) => acc + parseBRL(t.valor), 0);
   
   const margem = receitaPaga > 0 ? Math.max(-999, Math.min(100, ((receitaPaga - despesaPaga) / receitaPaga) * 100)) : 0;
   
@@ -63,8 +63,8 @@ export function calculateDashboardData(
     const y = date.getFullYear();
     const monthObj = last6Months.find(m => m.monthIdx === mIdx && m.year === y);
     if (monthObj) {
-      if (t.tipo === 'entrada' && t.status === 'pago') monthObj.receita += Number(t.valor);
-      if (t.tipo === 'saida' && t.status === 'pago') monthObj.despesa += Number(t.valor);
+      if (t.tipo === 'entrada' && t.status === 'pago') monthObj.receita += parseBRL(t.valor);
+      if (t.tipo === 'saida' && t.status === 'pago') monthObj.despesa += parseBRL(t.valor);
     }
   });
   last6Months.forEach(m => m.profit = m.receita - m.despesa);
@@ -73,7 +73,7 @@ export function calculateDashboardData(
   const catMap: Record<string, number> = {};
   txs.filter(t => t.tipo === 'saida').forEach(t => {
     const cat = t.categoria || "Outros";
-    catMap[cat] = (catMap[cat] || 0) + Number(t.valor);
+    catMap[cat] = (catMap[cat] || 0) + parseBRL(t.valor);
   });
   const expenseCats = Object.entries(catMap).map(([label, value]) => ({ label, value }));
   const totalExp = expenseCats.reduce((acc, c) => acc + c.value, 0);
@@ -90,7 +90,7 @@ export function calculateDashboardData(
       if (t.status === 'pago') return false;
       const v = new Date(t.vencimento || t.data_lancamento);
       return v <= target;
-    }).reduce((acc, t) => acc + (t.tipo === 'entrada' ? Number(t.valor) : -Number(t.valor)), 0);
+    }).reduce((acc, t) => acc + (t.tipo === 'entrada' ? parseBRL(t.valor) : -parseBRL(t.valor)), 0);
   };
 
   const cashflow = [
@@ -104,7 +104,7 @@ export function calculateDashboardData(
   const clientMap: Record<string, number> = {};
   txs.filter(t => t.tipo === 'entrada' && t.status === 'pago').forEach(t => {
     if (t.lead_nome && t.lead_nome !== "N/A") {
-      clientMap[t.lead_nome] = (clientMap[t.lead_nome] || 0) + Number(t.valor);
+      clientMap[t.lead_nome] = (clientMap[t.lead_nome] || 0) + parseBRL(t.valor);
     }
   });
   const topClients = Object.entries(clientMap)
@@ -120,7 +120,7 @@ export function calculateDashboardData(
       type: "danger",
       icon: AlertCircle,
       title: "Contas em Atraso",
-      desc: `${overDue.length} transações vencidas totalizando ${formatBRL(overDue.reduce((acc, t) => acc + Number(t.valor), 0))}`,
+      desc: `${overDue.length} transações vencidas totalizando ${formatBRL(overDue.reduce((acc, t) => acc + parseBRL(t.valor), 0))}`,
       tab: "lancamentos"
     });
   }

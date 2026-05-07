@@ -13,7 +13,7 @@ import { toast } from "sonner";
 const CATEGORIAS_ENTRADA = ["Software", "Web Design", "Consultoria", "Manutenção", "Licença", "Outros"];
 const CATEGORIAS_SAIDA = ["Infraestrutura", "Marketing", "Salários", "Impostos", "Escritório", "Ferramentas", "Outros"];
 
-import { formatBRL, formatDisplayId, formatDate } from '@/lib/formatters';
+import { formatBRL, formatDisplayId, formatDate, parseBRL } from '@/lib/formatters';
 import { CurrencyInput } from "@/components/ui/currency-input";
 
 const recorrenciaLabel = { unica: "Única", mensal: "Mensal", trimestral: "Trimestral", anual: "Anual" };
@@ -466,9 +466,9 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   });
 
   const totals = {
-    entradas: transactions.filter(t => t.tipo === "entrada" && t.status === "pago").reduce((s, t) => s + t.valor, 0),
-    saidas: transactions.filter(t => t.tipo === "saida").reduce((s, t) => s + t.valor, 0),
-    pendentes: transactions.filter(t => t.tipo === "entrada" && t.status === "pendente").reduce((s, t) => s + t.valor, 0),
+    entradas: transactions.filter(t => t.tipo === "entrada" && t.status === "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
+    saidas: transactions.filter(t => t.tipo === "saida").reduce((s, t) => s + parseBRL(t.valor), 0),
+    pendentes: transactions.filter(t => t.tipo === "entrada" && t.status === "pendente").reduce((s, t) => s + parseBRL(t.valor), 0),
   };
 
   async function handleUpsertTransaction(t: Partial<FinancialTransaction>) {
