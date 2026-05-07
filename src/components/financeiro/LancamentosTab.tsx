@@ -61,10 +61,10 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
     try {
       let query = supabase
         .from('leads')
-        .select('id, company_name, phone, email, niche, created_at, status, is_client');
+        .select('id, company_name, phone, email, niche, created_at, status');
       
-      // Filtra apenas por clientes (ganhou ou inativo) ou marcados como is_client
-      query = query.or('status.eq.ganhou,status.eq.inativo,is_client.eq.true');
+      // Filtra apenas por clientes (ganhou ou inativo)
+      query = query.or('status.eq.ganhou,status.eq.inativo');
 
       if (term.trim().length >= 1) {
         query = query.or(`company_name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`);
@@ -72,7 +72,12 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
       
       const { data, error } = await query.order('company_name', { ascending: true }).limit(20);
 
-      if (!error && data) {
+      if (error) {
+        console.error("Supabase error:", error);
+        return;
+      }
+
+      if (data) {
         setLeadsResults(data);
         setShowLeadResults(true);
       }
@@ -283,58 +288,68 @@ export function TransacaoModal({ transaction, onClose, onSave, preFilledLeadId, 
                 )}
               </div>
 
-              {showLeadResults && leadsResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
-                  {leadsResults.map(lead => (
-                    <button
-                      key={lead.id}
-                      onClick={() => {
-                        setForm(f => ({ ...f, lead_nome: lead.company_name, lead_id: lead.id }));
-                        setSearchLead("");
-                        setShowLeadResults(false);
-                      }}
-                      className="w-full px-4 py-3 text-left text-sm hover:bg-muted transition-colors border-b border-border/50 last:border-0 flex items-center justify-between group"
-                    >
-                      <div className="flex flex-col gap-1 w-full">
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-foreground group-hover:text-primary transition-colors">{lead.company_name}</span>
-                            <span className={cn(
-                              "text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-widest border",
-                              lead.status === 'ganhou' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-rose-500/10 text-rose-600 border-rose-500/20"
-                            )}>
-                              {lead.status === 'ganhou' ? 'Ativo' : 'Inativo'}
-                            </span>
+              {showLeadResults && (
+                <>
+                  <div className="fixed inset-0 z-[45]" onClick={() => setShowLeadResults(false)} />
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                    {leadsResults.length > 0 ? (
+                      leadsResults.map(lead => (
+                        <button
+                          key={lead.id}
+                          onClick={() => {
+                            setForm(f => ({ ...f, lead_nome: lead.company_name, lead_id: lead.id }));
+                            setSearchLead("");
+                            setShowLeadResults(false);
+                          }}
+                          className="w-full px-4 py-3 text-left text-sm hover:bg-muted transition-colors border-b border-border/50 last:border-0 flex items-center justify-between group"
+                        >
+                          <div className="flex flex-col gap-1 w-full">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-foreground group-hover:text-primary transition-colors">{lead.company_name}</span>
+                                <span className={cn(
+                                  "text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-widest border",
+                                  lead.status === 'ganhou' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                                )}>
+                                  {lead.status === 'ganhou' ? 'Ativo' : 'Inativo'}
+                                </span>
+                              </div>
+                              <span className="text-[9px] font-black text-muted-foreground/60 flex items-center gap-1 shrink-0">
+                                <Calendar size={10} /> {formatDate(lead.created_at)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {lead.phone && (
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <Phone size={10} className="text-primary/40" /> {lead.phone}
+                                </span>
+                              )}
+                              {lead.email && (
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <Mail size={10} className="text-primary/40" /> {lead.email}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {lead.niche && (
+                                <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-primary/5 text-primary/70 tracking-widest border border-primary/10">
+                                  {lead.niche}
+                                </span>
+                              )}
+                              <span className="text-[8px] text-muted-foreground/40 font-mono">#{lead.id.substring(0, 8)}</span>
+                            </div>
                           </div>
-                          <span className="text-[9px] font-black text-muted-foreground/60 flex items-center gap-1 shrink-0">
-                            <Calendar size={10} /> {formatDate(lead.created_at)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {lead.phone && (
-                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Phone size={10} className="text-primary/40" /> {lead.phone}
-                            </span>
-                          )}
-                          {lead.email && (
-                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Mail size={10} className="text-primary/40" /> {lead.email}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {lead.niche && (
-                            <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-primary/5 text-primary/70 tracking-widest border border-primary/10">
-                              {lead.niche}
-                            </span>
-                          )}
-                          <span className="text-[8px] text-muted-foreground/40 font-mono">#{lead.id.substring(0, 8)}</span>
-                        </div>
+                          <Plus size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
+                        </button>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center flex flex-col items-center gap-2">
+                        <Users size={24} className="text-muted-foreground/30" />
+                        <p className="text-xs font-bold text-muted-foreground">Nenhum cliente encontrado</p>
                       </div>
-                      <Plus size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
-                    </button>
-                  ))}
-                </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </div>
