@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Building2, TrendingUp, TrendingDown, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, BarChart3, RefreshCw, ChevronDown, ArrowUpRight, Sparkles, Info, Trash2, Plus, Package, HardDrive, Clock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -187,9 +187,13 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
     const now = new Date();
     const newHistorico = [];
 
-    for (let i = 5; i >= 0; i--) {
+    // Gerar últimos 12 meses (em vez de 6) para dar mais controle ao gestor
+    for (let i = 11; i >= 0; i--) {
       const targetDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); // Last day of month
-      const refDate = new Date(now.getFullYear(), now.getMonth() - i, 1).toISOString().split('T')[0]; // First day of month (ISO)
+      const m = targetDate.getMonth();
+      const y = targetDate.getFullYear();
+      const refDate = new Date(y, m, 1).toISOString().split('T')[0];
+      const label = `${monthNames[m]}/${String(y).slice(-2)}`;
       
       // Check if we have a saved snapshot for this month
       const saved = savedHistorico.find(h => h.mes_referencia === refDate);
@@ -209,7 +213,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
         const res = calcularValuation(histInputs, bens, saved.metodo as MetodoValuation);
 
         newHistorico.push({
-          mes: monthNames[targetDate.getMonth()],
+          mes: label,
           date: refDate,
           multiplos: saved.metodo === "multiplos" ? res.valor : calcularValuation(histInputs, bens, "multiplos").valor,
           fcd: saved.metodo === "fcd" ? res.valor : calcularValuation(histInputs, bens, "fcd").valor,
@@ -245,7 +249,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
         const resPatrimonial = calcularValuation(histInputs, bens, "patrimonial");
 
         newHistorico.push({
-          mes: monthNames[targetDate.getMonth()],
+          mes: label,
           date: refDate,
           multiplos: resMultiplos.valor,
           fcd: resFCD.valor,
@@ -442,6 +446,61 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Month Status Grid (Calendário de Controle) */}
+      <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-black flex items-center gap-2 uppercase tracking-tight">
+              <Clock size={16} className="text-primary" />
+              Controle de Lançamentos Mensais
+            </h3>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest mt-1">Status de fechamento do valuation</p>
+          </div>
+          <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest">
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Confirmado</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500" /> Estimado</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700" /> Pendente</div>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
+          {historico.map((h, i) => (
+            <button
+              key={h.date}
+              onClick={() => selectMonth(i)}
+              className={cn(
+                "flex flex-col items-center justify-center p-2 rounded-xl border transition-all relative group",
+                selectedMonthIndex === i 
+                  ? "bg-primary text-primary-foreground border-primary shadow-lg scale-105 z-10" 
+                  : (h.isSaved 
+                      ? "bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/50" 
+                      : "bg-card border-border/50 hover:border-primary/30")
+              )}
+            >
+              <span className={cn(
+                "text-[9px] font-black uppercase tracking-tighter mb-1",
+                selectedMonthIndex === i ? "text-primary-foreground/70" : "text-muted-foreground"
+              )}>
+                {h.mes.split('/')[1]}
+              </span>
+              <span className="text-xs font-black">{h.mes.split('/')[0]}</span>
+              
+              {/* Status Dot */}
+              <div className={cn(
+                "absolute top-1 right-1 w-1.5 h-1.5 rounded-full",
+                h.isSaved ? "bg-emerald-500" : (h.faturamento12m > 0 ? "bg-amber-500" : "bg-zinc-300 dark:bg-zinc-700")
+              )} />
+              
+              {h.isSaved && selectedMonthIndex !== i && (
+                <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm">
+                  <CheckCircle2 size={8} />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Method Selector */}
       <div className="grid grid-cols-3 gap-4">
         {(Object.entries(METODO_INFO) as [MetodoValuation, typeof METODO_INFO[MetodoValuation]][]).map(([id, info]) => (
