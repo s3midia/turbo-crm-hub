@@ -55,6 +55,7 @@ interface Contrato {
   totalPago?: number;
   dataInicio?: string;
   id_seq?: number;
+  localizacao: string;
 }
 
 const CONTRATOS: Contrato[] = [];
@@ -230,6 +231,9 @@ export default function CobrancasFiscalTab({
           ultimoEnvio: "N/A",
           status: lead.status === "ganhou" ? "pago" : "pendente",
           kanbanStage: lead.status || "novo",
+          localizacao: lead.status === "ganhou" ? "Cliente > Ativo" : 
+                       lead.status === "inativo" ? "Cliente > Inativo" :
+                       `Kanban > ${PIPELINE_STAGES.find(s => s.key === lead.status)?.label || "Novo"}`,
           totalPago: lead.status === "ganhou" ? (lead.value || lead.total_value || 0) : 0,
           dataInicio: new Date(lead.created_at).toLocaleDateString("pt-BR")
         }));
@@ -459,7 +463,7 @@ export default function CobrancasFiscalTab({
                   </button>
                 </th>
                 <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Cliente</th>
-                <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black hidden md:table-cell">Empresa</th>
+                <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black hidden md:table-cell">Onde está o lead</th>
                 <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Plano / MRR</th>
                 <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Status</th>
                 <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black hidden lg:table-cell">Vencimento</th>
@@ -484,7 +488,13 @@ export default function CobrancasFiscalTab({
                       </button>
                     </td>
                     <td className="px-3 py-3 hidden md:table-cell">
-                      <span className="text-[12px] text-muted-foreground font-medium">{c.empresa || "—"}</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          c.localizacao.includes("Cliente") ? "bg-emerald-500" : "bg-amber-500"
+                        )} />
+                        <span className="text-[11px] text-muted-foreground font-bold">{c.localizacao}</span>
+                      </div>
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex flex-col">
