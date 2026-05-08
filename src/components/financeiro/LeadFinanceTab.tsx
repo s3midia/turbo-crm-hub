@@ -48,13 +48,13 @@ export const LeadFinanceTab = ({
       .filter(t => t.tipo === 'entrada' && t.status === 'pago')
       .reduce((acc, t) => acc + toNumber(t.valor), 0),
     pending: transactions
-      .filter(t => t.tipo === 'entrada' && t.status === 'pendente')
+      .filter(t => t.tipo === 'entrada' && t.status !== 'pago')
       .reduce((acc, t) => acc + toNumber(t.valor), 0),
     mrr: transactions
       .filter(t => t.tipo === 'entrada' && t.classificacao === 'recorrente')
       .reduce((acc, t) => acc + toNumber(t.valor), 0),
     overdue: transactions
-      .filter(t => t.status === 'pendente' && new Date(t.vencimento) < new Date())
+      .filter(t => t.status !== 'pago' && new Date(t.vencimento) < new Date())
       .reduce((acc, t) => acc + toNumber(t.valor), 0),
   };
 

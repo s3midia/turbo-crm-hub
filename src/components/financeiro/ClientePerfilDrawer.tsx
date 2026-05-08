@@ -114,9 +114,9 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
 
   const totals = {
     paid: transactions.filter(t => t.tipo === "entrada" && t.status === "pago").reduce((a, t) => a + toNumber(t.valor), 0),
-    pending: transactions.filter(t => t.tipo === "entrada" && t.status === "pendente").reduce((a, t) => a + toNumber(t.valor), 0),
-    saidas: transactions.filter(t => t.tipo === "saida").reduce((a, t) => a + toNumber(t.valor), 0),
-    overdue: transactions.filter(t => t.status === "pendente" && new Date(t.vencimento) < new Date()).reduce((a, t) => a + toNumber(t.valor), 0),
+    pending: transactions.filter(t => t.tipo === "entrada" && t.status !== "pago").reduce((a, t) => a + toNumber(t.valor), 0),
+    saidas: transactions.filter(t => t.tipo === "saida" && t.status === "pago").reduce((a, t) => a + toNumber(t.valor), 0),
+    overdue: transactions.filter(t => t.status !== "pago" && new Date(t.vencimento) < new Date()).reduce((a, t) => a + toNumber(t.valor), 0),
   };
 
   const net = totals.paid - totals.saidas;

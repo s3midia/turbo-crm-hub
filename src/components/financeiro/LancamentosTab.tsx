@@ -467,8 +467,9 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
 
   const totals = {
     entradas: transactions.filter(t => t.tipo === "entrada" && t.status === "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
-    saidas: transactions.filter(t => t.tipo === "saida").reduce((s, t) => s + parseBRL(t.valor), 0),
-    pendentes: transactions.filter(t => t.tipo === "entrada" && t.status === "pendente").reduce((s, t) => s + parseBRL(t.valor), 0),
+    saidas: transactions.filter(t => t.tipo === "saida" && t.status === "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
+    a_receber: transactions.filter(t => t.tipo === "entrada" && t.status !== "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
+    a_pagar: transactions.filter(t => t.tipo === "saida" && t.status !== "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
   };
 
   async function handleUpsertTransaction(t: Partial<FinancialTransaction>) {
@@ -526,15 +527,16 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
       )}
 
       {/* Summary Row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Entradas Pagas", value: totals.entradas, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-          { label: "Saídas Totais", value: totals.saidas, color: "text-rose-500", bg: "bg-rose-500/10" },
-          { label: "Pendente a Receber", value: totals.pendentes, color: "text-amber-500", bg: "bg-amber-500/10" },
+          { label: "Receitas Pagas", value: totals.entradas, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+          { label: "Despesas Pagas", value: totals.saidas, color: "text-rose-500", bg: "bg-rose-500/10" },
+          { label: "Pendente a Receber", value: totals.a_receber, color: "text-amber-500", bg: "bg-amber-500/10" },
+          { label: "Pendente a Pagar", value: totals.a_pagar, color: "text-rose-500/60", bg: "bg-rose-500/5" },
         ].map((s, i) => (
-          <div key={i} className={cn("p-2 lg:p-2.5 rounded-xl border border-border/40", s.bg)}>
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-wider">{s.label}</p>
-            <p className={cn("text-lg font-black mt-0.5", s.color)}>{formatBRL(s.value)}</p>
+          <div key={i} className={cn("p-3 rounded-2xl border border-border/40", s.bg)}>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{s.label}</p>
+            <p className={cn("text-xl font-black mt-1", s.color)}>{formatBRL(s.value)}</p>
           </div>
         ))}
       </div>

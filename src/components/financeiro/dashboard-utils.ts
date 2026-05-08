@@ -69,9 +69,9 @@ export function calculateDashboardData(
   });
   last6Months.forEach(m => m.profit = m.receita - m.despesa);
 
-  // Expense Categories
+  // Expense Categories - Only PAID to match "Realized Performance"
   const catMap: Record<string, number> = {};
-  txs.filter(t => t.tipo === 'saida').forEach(t => {
+  txs.filter(t => t.tipo === 'saida' && t.status === 'pago').forEach(t => {
     const cat = t.categoria || "Outros";
     catMap[cat] = (catMap[cat] || 0) + parseBRL(t.valor);
   });
