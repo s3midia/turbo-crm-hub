@@ -32,6 +32,7 @@ export interface Opportunity {
     site_url?: string;
     contract_start_date?: string;
     contract_end_date?: string;
+    cpf_cnpj?: string;
     created_at?: string;
     updated_at?: string;
 }
@@ -64,6 +65,7 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         site_url: opportunity.site_url,
         contract_start_date: opportunity.contract_start_date,
         contract_end_date: opportunity.contract_end_date,
+        cpf_cnpj: opportunity.cpf_cnpj,
         updated_at: new Date().toISOString(),
     };
 
@@ -81,6 +83,7 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         tasks: opportunity.tasks || [],
         contract_start_date: opportunity.contract_start_date,
         contract_end_date: opportunity.contract_end_date,
+        cpf_cnpj: opportunity.cpf_cnpj,
         updated_at: new Date().toISOString(),
     };
 
@@ -146,6 +149,7 @@ export const getOpportunityById = async (id: string) => {
                 tasks: opp.tasks || [],
                 contract_start_date: opp.contract_start_date,
                 contract_end_date: opp.contract_end_date,
+                cpf_cnpj: opp.cpf_cnpj,
                 created_at: opp.created_at,
                 updated_at: opp.updated_at,
             } as Opportunity;
@@ -168,6 +172,7 @@ export const getOpportunityById = async (id: string) => {
         tasks: [],
         contract_start_date: lead.contract_start_date,
         contract_end_date: lead.contract_end_date,
+        cpf_cnpj: lead.cpf_cnpj,
         created_at: lead.created_at,
         updated_at: lead.updated_at,
     } as Opportunity;
@@ -228,7 +233,8 @@ export const getOpportunities = async (): Promise<Opportunity[]> => {
         products: [],
         tasks: [],
         contract_start_date: lead.contract_start_date,
-        contract_end_date: lead.contract_end_date
+        contract_end_date: lead.contract_end_date,
+        cpf_cnpj: lead.cpf_cnpj
     }));
 };
 

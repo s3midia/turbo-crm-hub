@@ -46,6 +46,7 @@ export interface ClientePerfilData {
   clientId?: string;
   contract_start_date?: string;
   contract_end_date?: string;
+  cpf_cnpj?: string;
 }
 
 interface Props {
@@ -95,7 +96,7 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
         email: cliente.email || "",
         telefone: cliente.telefone || cliente.phone || "",
         empresa: cliente.empresa || cliente.company_name || "",
-        cpfCnpj: "", // Add if available in cliente
+        cpfCnpj: cliente.cpf_cnpj || "",
         contractStartDate: cliente.contract_start_date || "",
         contractEndDate: cliente.contract_end_date || ""
       });
@@ -219,6 +220,7 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
         total_value: cliente.valor || 0,
         contract_start_date: editForm.contractStartDate || null,
         contract_end_date: editForm.contractEndDate || null,
+        cpf_cnpj: editForm.cpfCnpj || null,
       } as any);
       toast.success("Perfil atualizado com sucesso!");
       setIsEditing(false);
