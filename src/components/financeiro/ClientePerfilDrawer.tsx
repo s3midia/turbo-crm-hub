@@ -11,7 +11,7 @@ import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
 import { useNavigate } from "react-router-dom";
 import { TransacaoModal } from "./LancamentosTab";
 import { LeadDocumentsTab } from "./LeadDocumentsTab";
-import { maskCPFCNPJ, formatBRL, formatDisplayId } from "@/lib/formatters";
+import { maskCPFCNPJ, formatBRL, formatDisplayId, formatSequentialId } from "@/lib/formatters";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,7 @@ export interface ClientePerfilData {
   contract_start_date?: string;
   contract_end_date?: string;
   cpf_cnpj?: string;
+  id_seq?: number;
 }
 
 interface Props {
@@ -278,10 +279,10 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
                   {(cliente.empresa || cliente.company_name) && (
                     <span className="flex items-center gap-1"><Building2 size={11} />{cliente.empresa || cliente.company_name}</span>
                   )}
-                  {(cliente.clientId || cliente.id) && (
+                  {(cliente.id_seq || cliente.id) && (
                     <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded flex items-center gap-1">
                       <span className="text-muted-foreground/60">ID:</span>
-                      {formatDisplayId(cliente.clientId || cliente.id)}
+                      {cliente.id_seq ? formatSequentialId(cliente.id_seq) : formatDisplayId(cliente.id)}
                     </span>
                   )}
                   <button onClick={() => setIsEditing(true)} className="flex items-center gap-0.5 text-primary hover:underline">
@@ -380,9 +381,9 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Informações do Cliente</p>
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase text-muted-foreground">ID do Cliente</label>
-                    <div className="h-9 px-3 flex items-center text-xs bg-muted/40 rounded-md font-mono text-muted-foreground border border-border/20">
-                      {cliente.id}
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Número ID</label>
+                    <div className="h-9 px-3 flex items-center text-xs bg-muted/40 rounded-md font-mono text-primary font-bold border border-border/20">
+                      {formatSequentialId(cliente.id_seq)}
                     </div>
                   </div>
                   <div className="space-y-1.5">

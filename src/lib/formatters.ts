@@ -87,6 +87,16 @@ export const formatDisplayId = (id: string | null | undefined): string => {
 };
 
 /**
+ * Formats a number as a sequential ID (e.g., 1 -> 0001).
+ */
+export const formatSequentialId = (id: number | string | null | undefined): string => {
+  if (id === null || id === undefined) return "0000";
+  const num = typeof id === 'string' ? parseInt(id, 10) : id;
+  if (isNaN(num)) return "0000";
+  return String(num).padStart(4, '0');
+};
+
+/**
  * Masks a string as CPF or CNPJ.
  */
 export const maskCPFCNPJ = (value: string): string => {
