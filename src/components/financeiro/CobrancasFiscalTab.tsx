@@ -61,13 +61,19 @@ interface Contrato {
 const CONTRATOS: Contrato[] = [];
 
 const PIPELINE_STAGES = [
-  { key: "novo", label: "Novo", color: "bg-slate-400" },
-  { key: "qualificacao", label: "Qualif.", color: "bg-purple-500" },
-  { key: "site_pronto", label: "Site", color: "bg-cyan-500" },
-  { key: "atendimento", label: "Contato", color: "bg-amber-500" },
-  { key: "reuniao", label: "Reunião", color: "bg-sky-500" },
-  { key: "fechamento", label: "Fechamento", color: "bg-orange-500" },
-  { key: "ganhou", label: "Contratado", color: "bg-emerald-500" },
+  { key: "vendas_b2b", label: "Vendas B2B" },
+  { key: "novo", label: "Novo" },
+  { key: "kanban_ready", label: "Qualificados" },
+  { key: "gerando_site", label: "Gerando Site" },
+  { key: "site_pronto", label: "Site Pronto" },
+  { key: "atendimento", label: "Em Atendimento" },
+  { key: "qualificacao", label: "Qualificação" },
+  { key: "agendado", label: "Agendado" },
+  { key: "reuniao", label: "Reunião" },
+  { key: "apresentacao", label: "Apresentação" },
+  { key: "fechamento", label: "Fechamento" },
+  { key: "ganhou", label: "Contratado" },
+  { key: "perdeu", label: "Perdeu" },
 ];
 
 const integracoes = [
