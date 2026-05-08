@@ -54,6 +54,7 @@ interface Contrato {
   kanbanStage?: string;
   totalPago?: number;
   dataInicio?: string;
+  id_seq?: number;
 }
 
 const CONTRATOS: Contrato[] = [];
@@ -213,6 +214,7 @@ export default function CobrancasFiscalTab({
       if (leadsData && leadsData.length > 0) {
         const mappedContratos: Contrato[] = leadsData.map((lead: any) => ({
           id: lead.id,
+          id_seq: lead.id_seq,
           clientId: `CL-${lead.id.substring(0, 4).toUpperCase()}`,
           cliente: lead.company_name || "Cliente Sem Nome",
           email: lead.email || "contato@empresa.com",
@@ -220,7 +222,7 @@ export default function CobrancasFiscalTab({
           empresa: lead.company_name || "N/A",
           cpfCnpj: lead.documento || lead.cpf_cnpj || "",
           plano: lead.plano || "N/A",
-          valor: lead.valor || 0,
+          valor: lead.value || lead.total_value || 0,
           diaVencimento: 10,
           recorrencia: "mensal",
           ativo: lead.status !== "perdeu",
@@ -228,7 +230,7 @@ export default function CobrancasFiscalTab({
           ultimoEnvio: "N/A",
           status: lead.status === "ganhou" ? "pago" : "pendente",
           kanbanStage: lead.status || "novo",
-          totalPago: lead.status === "ganhou" ? (lead.valor || 0) : 0,
+          totalPago: lead.status === "ganhou" ? (lead.value || lead.total_value || 0) : 0,
           dataInicio: new Date(lead.created_at).toLocaleDateString("pt-BR")
         }));
 

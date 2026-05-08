@@ -285,14 +285,14 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
                       {cliente.id_seq ? formatSequentialId(cliente.id_seq) : formatDisplayId(cliente.id)}
                     </span>
                   )}
-                  <div className="flex items-center gap-2 ml-2 border-l border-border/40 pl-2">
-                    <button onClick={() => setIsEditing(true)} className="flex items-center gap-0.5 text-primary hover:underline">
-                      <Edit2 size={10} /> editar
+                  <div className="flex items-center gap-1.5 ml-2 border-l border-border/40 pl-2">
+                    <button onClick={() => setIsEditing(true)} className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-all text-[10px] font-bold">
+                      <Edit2 size={10} /> Editar
                     </button>
-                    <button onClick={() => navigate("/pipeline")} className="flex items-center gap-0.5 text-muted-foreground hover:text-foreground hover:underline transition-all">
+                    <button onClick={() => navigate("/pipeline")} className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground transition-all text-[10px] font-bold">
                       <GitMerge size={10} /> Kanban
                     </button>
-                    <button onClick={() => navigate("/clientes")} className="flex items-center gap-0.5 text-muted-foreground hover:text-foreground hover:underline transition-all">
+                    <button onClick={() => navigate("/clientes")} className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground transition-all text-[10px] font-bold">
                       <List size={10} /> Lista
                     </button>
                   </div>
@@ -391,7 +391,7 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold uppercase text-muted-foreground">Número ID</label>
                     <div className="h-9 px-3 flex items-center text-xs bg-muted/40 rounded-md font-mono text-primary font-bold border border-border/20">
-                      {formatSequentialId(cliente.id_seq)}
+                      {cliente.id_seq ? formatSequentialId(cliente.id_seq) : formatDisplayId(cliente.id)}
                     </div>
                   </div>
                   <div className="space-y-1.5">
@@ -433,26 +433,38 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
                 </div>
 
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-8 mb-4">Vigência de Contrato</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Início do Contrato</label>
-                    <Input 
-                      type="date"
-                      value={editForm.contractStartDate} 
-                      onChange={e => setEditForm(f => ({ ...f, contractStartDate: e.target.value }))}
-                      className="h-9 text-xs bg-muted/20"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Início do Contrato</label>
+                      <Input 
+                        type="date"
+                        value={editForm.contractStartDate} 
+                        onChange={e => setEditForm(f => ({ ...f, contractStartDate: e.target.value }))}
+                        className="h-9 text-xs bg-muted/20"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Término do Contrato</label>
+                      <Input 
+                        type="date"
+                        value={editForm.contractEndDate} 
+                        onChange={e => setEditForm(f => ({ ...f, contractEndDate: e.target.value }))}
+                        className="h-9 text-xs bg-muted/20"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Término do Contrato</label>
-                    <Input 
-                      type="date"
-                      value={editForm.contractEndDate} 
-                      onChange={e => setEditForm(f => ({ ...f, contractEndDate: e.target.value }))}
-                      className="h-9 text-xs bg-muted/20"
-                    />
+
+                  <div className="space-y-1.5 mt-4">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Origem do Cadastro</label>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] font-bold py-1 px-3 bg-muted/30">
+                        {cliente.status === 'ganhou' || cliente.status === 'ativo' ? 'Módulo Vendas / Clientes' : 'Pipeline / Kanban'}
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground font-medium italic">
+                        Identificado automaticamente via status atual
+                      </span>
+                    </div>
                   </div>
-                </div>
 
                 <div className="mt-8 p-4 rounded-xl bg-primary/5 border border-primary/10">
                   <p className="text-[11px] text-primary/80 font-medium">
