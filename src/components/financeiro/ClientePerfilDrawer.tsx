@@ -4,7 +4,7 @@ import {
   ArrowUpCircle, ArrowDownCircle, AlertTriangle, Check,
   Zap, ChevronRight, RefreshCw, Edit3, Receipt, History,
   Paperclip, MessageSquare, Send, Plus, Trash2, FileText,
-  Edit2, FolderOpen, FileCheck
+  Edit2, FolderOpen, FileCheck, GitMerge, List
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
@@ -275,7 +275,7 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
                   <button onClick={() => setIsEditing(false)} className="text-[10px] text-muted-foreground hover:underline">Cancelar</button>
                 </div>
               ) : (
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                   {(cliente.empresa || cliente.company_name) && (
                     <span className="flex items-center gap-1"><Building2 size={11} />{cliente.empresa || cliente.company_name}</span>
                   )}
@@ -285,9 +285,17 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
                       {cliente.id_seq ? formatSequentialId(cliente.id_seq) : formatDisplayId(cliente.id)}
                     </span>
                   )}
-                  <button onClick={() => setIsEditing(true)} className="flex items-center gap-0.5 text-primary hover:underline">
-                    <Edit2 size={10} /> editar
-                  </button>
+                  <div className="flex items-center gap-2 ml-2 border-l border-border/40 pl-2">
+                    <button onClick={() => setIsEditing(true)} className="flex items-center gap-0.5 text-primary hover:underline">
+                      <Edit2 size={10} /> editar
+                    </button>
+                    <button onClick={() => navigate("/pipeline")} className="flex items-center gap-0.5 text-muted-foreground hover:text-foreground hover:underline transition-all">
+                      <GitMerge size={10} /> Kanban
+                    </button>
+                    <button onClick={() => navigate("/clientes")} className="flex items-center gap-0.5 text-muted-foreground hover:text-foreground hover:underline transition-all">
+                      <List size={10} /> Lista
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -494,10 +502,15 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
                       >
                         {/* tipo dot */}
                         <div className={cn(
-                          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                          t.tipo === "entrada" ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                          "w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 border",
+                          t.tipo === "entrada" 
+                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" 
+                            : "bg-rose-500/10 text-rose-600 border-rose-500/20"
                         )}>
-                          {t.tipo === "entrada" ? <ArrowUpCircle size={15} /> : <ArrowDownCircle size={15} />}
+                          {t.tipo === "entrada" ? <ArrowUpCircle size={14} /> : <ArrowDownCircle size={14} />}
+                          <span className="text-[7px] font-black mt-0.5 uppercase tracking-tighter">
+                            {t.tipo === "entrada" ? "Entrada" : "Saída"}
+                          </span>
                         </div>
 
                         {/* info */}

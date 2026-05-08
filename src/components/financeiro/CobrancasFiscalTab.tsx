@@ -36,7 +36,7 @@ interface TimelineEvent {
 }
 
 interface Contrato {
-  id: number;
+  id: string;
   clientId: string;
   cliente: string;
   email?: string;
@@ -134,7 +134,7 @@ export default function CobrancasFiscalTab({
   const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "atrasado">("todos");
 
   // Batch selection
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const handleOpenProfile = (client: any) => {
     onProfileChange?.(true, client);
@@ -193,7 +193,7 @@ export default function CobrancasFiscalTab({
     if (allSelected) setSelectedIds(new Set());
     else setSelectedIds(new Set(filteredContratos.map(c => c.id)));
   };
-  const toggleOne = (id: number) => {
+  const toggleOne = (id: string) => {
     const next = new Set(selectedIds);
     next.has(id) ? next.delete(id) : next.add(id);
     setSelectedIds(next);
@@ -211,9 +211,9 @@ export default function CobrancasFiscalTab({
       if (leadsError) throw leadsError;
 
       if (leadsData && leadsData.length > 0) {
-        const mappedContratos: Contrato[] = leadsData.map((lead: any, index: number) => ({
-          id: index + 10,
-          clientId: `CL-${lead.id.substring(0, 3).toUpperCase()}`,
+        const mappedContratos: Contrato[] = leadsData.map((lead: any) => ({
+          id: lead.id,
+          clientId: `CL-${lead.id.substring(0, 4).toUpperCase()}`,
           cliente: lead.company_name || "Cliente Sem Nome",
           email: lead.email || "contato@empresa.com",
           telefone: lead.phone || "(11) 99999-9999",
@@ -228,7 +228,7 @@ export default function CobrancasFiscalTab({
           ultimoEnvio: "N/A",
           status: lead.status === "ganhou" ? "pago" : "pendente",
           kanbanStage: lead.status || "novo",
-          totalPago: lead.status === "ganhou" ? 12500 : 0,
+          totalPago: lead.status === "ganhou" ? (lead.valor || 0) : 0,
           dataInicio: new Date(lead.created_at).toLocaleDateString("pt-BR")
         }));
 

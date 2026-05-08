@@ -74,24 +74,24 @@ export const formatDateTime = (date: string | null | undefined): string => {
  * Shortens long UUIDs or IDs for display purposes.
  * Example: "f78c9d..." -> "#F78C"
  */
-export const formatDisplayId = (id: string | null | undefined): string => {
-  if (!id) return "N/A";
+export const formatDisplayId = (id: any): string => {
+  if (id === null || id === undefined) return "N/A";
+  const strId = String(id);
+  if (!strId) return "N/A";
   
-  // If it's already a short ID or doesn't look like a UUID, just return it with #
-  if (id.length <= 6) {
-    return id.startsWith("#") ? id : `#${id}`;
+  if (strId.length <= 6) {
+    return strId.startsWith("#") ? strId : `#${strId}`;
   }
 
-  // For long IDs (UUIDs), take the first 4 characters
-  return `#${id.substring(0, 4).toUpperCase()}`;
+  return `#${strId.substring(0, 4).toUpperCase()}`;
 };
 
 /**
  * Formats a number as a sequential ID (e.g., 1 -> 0001).
  */
-export const formatSequentialId = (id: number | string | null | undefined): string => {
+export const formatSequentialId = (id: any): string => {
   if (id === null || id === undefined) return "0000";
-  const num = typeof id === 'string' ? parseInt(id, 10) : id;
+  const num = typeof id === 'number' ? id : parseInt(String(id), 10);
   if (isNaN(num)) return "0000";
   return String(num).padStart(4, '0');
 };
