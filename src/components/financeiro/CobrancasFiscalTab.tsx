@@ -1,23 +1,18 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { 
   FileText, Receipt, RefreshCw, CheckCircle2, AlertCircle, 
-  ExternalLink, Zap, Loader2, Mail, Download, Paperclip, 
-  History, User, MoreVertical, Send, Check, X, Building2, Calendar, Phone, DollarSign,
-  MessageSquare, Edit2, FilePlus, ChevronRight, MessageCircle
+  Zap, Loader2, Mail, Download, Paperclip, 
+  History, Send, Check, Building2, Calendar, DollarSign,
+  FilePlus, ChevronRight, Search, Filter, AlertTriangle,
+  TrendingUp, Users, Clock, CheckSquare, Square, Minus
 } from "lucide-react";
 import { AsaasService } from "@/services/asaasService";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -132,43 +127,25 @@ export default function CobrancasFiscalTab({
   onProfileChange 
 }: CobrancasFiscalTabProps) {
   const [contratos, setContratos] = useState<Contrato[]>([]);
-  const [intStates, setIntStates] = useState<IntState[]>(
-    integracoes.map(() => ({ ...defaultIntState(), connected: false, connectedProvider: "", apiKey: "" }))
-  );
-  
-  const selectedClient = externalSelectedClient;
-  const showTimeline = externalShowProfile;
-  
+  const [selectedClient, setSelectedClientLocal] = useState<any>(externalSelectedClient);
+
+  // Filter & Search State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "atrasado">("todos");
+
+  // Batch selection
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
   const handleOpenProfile = (client: any) => {
-    // Delegate to the unified drawer in FinanceiroPage
     onProfileChange?.(true, client);
   };
 
   const handleCloseProfile = () => {
     onProfileChange?.(false, selectedClient);
   };
+
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const navigate = useNavigate();
-
-  // Profile Tabs State
-  const [activeProfileTab, setActiveProfileTab] = useState<"historico" | "whatsapp" | "documentos">("historico");
-
-
-  // Editing State
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedClient, setEditedClient] = useState<any>(null);
-
-  useEffect(() => {
-    if (selectedClient) {
-      setEditedClient(selectedClient);
-    }
-  }, [selectedClient]);
-
-  const handleSaveProfile = () => {
-    handleOpenProfile(editedClient);
-    setIsEditing(false);
-    toast.success("Perfil atualizado com sucesso!");
-  };
 
   // Email and Boleto States
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -183,9 +160,44 @@ export default function CobrancasFiscalTab({
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const [timelineEvents, setTimelineEvents] = useState<Record<string, TimelineEvent[]>>({});
-
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+
+  // Filtered & searched contratos
+  const filteredContratos = useMemo(() => {
+    return contratos.filter(c => {
+      const matchesSearch = !searchQuery ||
+        c.cliente.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.empresa || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.clientId.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter = filterStatus === "todos" || c.status === filterStatus;
+      return matchesSearch && matchesFilter;
+    });
+  }, [contratos, searchQuery, filterStatus]);
+
+  // KPI metrics
+  const kpis = useMemo(() => {
+    const totalPendente = contratos.filter(c => c.status === "pendente").reduce((s, c) => s + c.valor, 0);
+    const totalAtrasado = contratos.filter(c => c.status === "atrasado").reduce((s, c) => s + c.valor, 0);
+    const totalPago = contratos.filter(c => c.status === "pago").reduce((s, c) => s + c.valor, 0);
+    const inadimplencia = contratos.length > 0
+      ? Math.round((contratos.filter(c => c.status === "atrasado").length / contratos.length) * 100)
+      : 0;
+    return { totalPendente, totalAtrasado, totalPago, inadimplencia, total: contratos.length };
+  }, [contratos]);
+
+  // Batch helpers
+  const allSelected = filteredContratos.length > 0 && filteredContratos.every(c => selectedIds.has(c.id));
+  const someSelected = filteredContratos.some(c => selectedIds.has(c.id));
+  const toggleAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredContratos.map(c => c.id)));
+  };
+  const toggleOne = (id: number) => {
+    const next = new Set(selectedIds);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelectedIds(next);
+  };
 
   const fetchRealData = async () => {
     setIsSyncing(true);
@@ -312,631 +324,216 @@ export default function CobrancasFiscalTab({
     setLoadingAction(null);
   };
 
+  // Status badge config
+  const statusConfig = {
+    pago: { label: "Pago", icon: CheckCircle2, className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+    pendente: { label: "Pendente", icon: Clock, className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
+    atrasado: { label: "Atrasado", icon: AlertTriangle, className: "bg-red-500/10 text-red-600 border-red-500/20 animate-pulse" },
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Profile is now handled by the unified ClientePerfilDrawer in FinanceiroPage */}
-      <Dialog open={false} onOpenChange={handleCloseProfile}>
-        <DialogContent className="max-w-[95vw] w-[1200px] p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl bg-card">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Perfil do Cliente: {selectedClient?.cliente || "Cliente"}</DialogTitle>
-            <DialogDescription>Detalhes, histórico e ações para o cliente selecionado.</DialogDescription>
-          </DialogHeader>
-            {selectedClient && (
-              <div className="max-h-[90vh] overflow-y-auto custom-scrollbar">
-          {/* Profile Header Banner */}
-          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-8 border-b border-border/40 relative">
-            <div className="absolute top-6 right-8 flex gap-2">
-              <button 
-                onClick={handleCloseProfile}
-                className="bg-background/80 hover:bg-background border border-border/50 px-4 py-2 rounded-2xl transition-all shadow-sm group flex items-center gap-2"
-                title="Fechar Perfil (Esc)"
-              >
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground">FECHAR</span>
-                <X className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-              </button>
-            </div>
+    <div className="space-y-5 animate-in fade-in duration-500">
 
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-              <div className="w-20 h-20 rounded-[2rem] bg-primary flex items-center justify-center border-4 border-background shadow-xl">
-                <User className="text-white w-10 h-10" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-3xl font-black text-foreground tracking-tight">{selectedClient?.cliente || "Sem Nome"}</h2>
-                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
-                    CLIENTE ATIVO
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground">
-                  {isEditing ? (
-                    <div className="flex flex-col gap-2 w-full max-w-md mt-2">
-                      <Input 
-                        value={editedClient?.empresa} 
-                        onChange={(e) => setEditedClient({...editedClient, empresa: e.target.value})}
-                        className="bg-background border-primary/20 h-8 text-xs font-bold"
-                        placeholder="Nome da Empresa"
-                      />
-                      <div className="flex gap-2">
-                        <Input 
-                          value={editedClient?.email} 
-                          onChange={(e) => setEditedClient({...editedClient, email: e.target.value})}
-                          className="bg-background border-primary/20 h-8 text-xs font-bold"
-                          placeholder="E-mail"
-                        />
-                        <Input 
-                          value={editedClient?.telefone} 
-                          onChange={(e) => setEditedClient({...editedClient, telefone: e.target.value})}
-                          className="bg-background border-primary/20 h-8 text-xs font-bold"
-                          placeholder="Telefone"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Input 
-                          value={editedClient?.plano} 
-                          onChange={(e) => setEditedClient({...editedClient, plano: e.target.value})}
-                          className="bg-background border-primary/20 h-8 text-xs font-bold"
-                          placeholder="Plano"
-                        />
-                        <CurrencyInput 
-                          value={editedClient?.valor || 0} 
-                          onChange={(val) => setEditedClient({...editedClient, valor: val})}
-                          className="bg-background border-primary/20 h-8 text-xs font-bold"
-                          placeholder="Valor"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Input 
-                          value={editedClient?.cpfCnpj} 
-                          onChange={(e) => setEditedClient({...editedClient, cpfCnpj: e.target.value})}
-                          className="bg-background border-primary/20 h-8 text-xs font-bold w-full"
-                          placeholder="CPF / CNPJ (Opcional)"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" className="h-7 text-[10px] font-black" onClick={handleSaveProfile}>SALVAR</Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-[10px] font-black" onClick={() => setIsEditing(false)}>CANCELAR</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="flex items-center gap-1.5"><Building2 size={14} className="text-primary/60" /> {selectedClient?.empresa || "N/A"}</span>
-                      {selectedClient?.cpfCnpj && (
-                        <span className="flex items-center gap-1.5"><FileText size={14} className="text-primary/60" /> {selectedClient.cpfCnpj}</span>
-                      )}
-                      <span className="flex items-center gap-1.5"><Calendar size={14} className="text-primary/60" /> Início: {selectedClient?.dataInicio || "N/A"}</span>
-                      <span className="bg-muted px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">ID: {formatDisplayId(selectedClient?.clientId || selectedClient?.id)}</span>
-                      <button 
-                        onClick={() => setIsEditing(true)}
-                        className="flex items-center gap-1 text-primary hover:underline ml-2"
-                      >
-                        <Edit2 size={12} /> Editar
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+      {/* ── KPI Cards ──────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: "Total de Clientes", value: String(kpis.total), sub: "contratos ativos", icon: Users, color: "text-indigo-500", bg: "bg-indigo-500/8 border-indigo-500/15" },
+          { label: "A Receber (Mês)", value: formatBRL(kpis.totalPendente), sub: "pendente de pagamento", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/8 border-amber-500/15" },
+          { label: "Inadimplência", value: `${kpis.inadimplencia}%`, sub: `${contratos.filter(c => c.status === "atrasado").length} em atraso`, icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/8 border-red-500/15" },
+          { label: "Receita Recebida", value: formatBRL(kpis.totalPago), sub: "pagamentos confirmados", icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/8 border-emerald-500/15" },
+        ].map((k, i) => (
+          <div key={i} className={cn("rounded-2xl p-4 border", k.bg)}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{k.label}</p>
+              <k.icon size={14} className={k.color} />
             </div>
+            <p className={cn("text-xl font-black", k.color)}>{k.value}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{k.sub}</p>
           </div>
+        ))}
+      </div>
 
-          {/* Profile Navigation Tabs */}
-          <div className="flex px-8 border-b border-border/40 bg-muted/5">
-            {[
-              { id: "historico", label: "Histórico Unificado", icon: History },
-              { id: "whatsapp", label: "WhatsApp Chat", icon: MessageSquare, badge: "LIVE" },
-              { id: "documentos", label: "Documentos", icon: Paperclip },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveProfileTab(tab.id as any)}
-                className={cn(
-                  "flex items-center gap-2 px-6 py-4 text-[11px] font-black uppercase tracking-widest transition-all relative",
-                  activeProfileTab === tab.id
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
-                )}
-              >
-                <tab.icon size={14} />
-                {tab.label}
-                {tab.badge && (
-                  <span className="ml-1 text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-full animate-pulse">
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-            {/* Left Column: Content based on Active Tab */}
-            <div className="lg:col-span-7 border-r border-border/40 bg-muted/5">
-              <div className="p-8">
-                {activeProfileTab === "historico" && (
-                  <div className="space-y-8">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                        <History size={16} className="text-primary" /> Timeline de Atividades
-                      </h3>
-                    </div>
-
-                    <div className="relative pl-8 space-y-8 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary/50 before:via-border before:to-border/20">
-                      {(timelineEvents[selectedClient.clientId] || []).map((event) => (
-                        <div key={event.id} className="relative group/item">
-                          <div className={cn(
-                            "absolute -left-[25px] top-1 w-5 h-5 rounded-full border-4 border-card z-10 transition-transform group-hover/item:scale-125 shadow-sm",
-                            event.type === "payment" ? "bg-emerald-500" : 
-                            event.type === "email" ? "bg-blue-500" :
-                            event.type === "contract" ? "bg-purple-500" : "bg-slate-500"
-                          )} />
-                          <div className="space-y-2 bg-background/50 p-4 rounded-2xl border border-border/30 group-hover/item:border-primary/20 transition-all">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <p className="text-[14px] font-black text-foreground">{event.title}</p>
-                                {event.type === "email" && (
-                                  <button 
-                                    onClick={() => setActiveProfileTab("whatsapp")}
-                                    className="p-1 rounded-full bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all"
-                                    title="Ver conversa relacionada"
-                                  >
-                                    <MessageCircle size={10} />
-                                  </button>
-                                )}
-                              </div>
-                              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{event.date}</span>
-                            </div>
-                            <p className="text-[12px] text-muted-foreground leading-relaxed font-medium">{event.description}</p>
-                            {event.status && (
-                              <div className="flex items-center gap-1.5 mt-2">
-                                 <CheckCircle2 size={12} className="text-emerald-500" />
-                                 <span className="text-[9px] font-black text-emerald-600 uppercase">Processado com sucesso</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                      
-                      {/* Simulated CRM Integration Events */}
-                      <div className="relative group/item opacity-60">
-                         <div className="absolute -left-[25px] top-1 w-5 h-5 rounded-full border-4 border-card z-10 bg-indigo-500" />
-                         <div className="space-y-2 bg-background/50 p-4 rounded-2xl border border-border/30">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <p className="text-[14px] font-black text-foreground">Kanban: Movido para Fechamento</p>
-                                <button 
-                                  onClick={() => setActiveProfileTab("whatsapp")}
-                                  className="p-1 rounded-full bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all"
-                                >
-                                  <MessageCircle size={10} />
-                                </button>
-                              </div>
-                              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">10/04/2026</span>
-                            </div>
-                            <p className="text-[12px] text-muted-foreground leading-relaxed font-medium">Lead qualificado pela Malu e movido para etapa final do funil.</p>
-                          </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeProfileTab === "whatsapp" && (
-                  <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h3 className="text-lg font-black text-foreground">Chat em Tempo Real</h3>
-                        <p className="text-xs text-muted-foreground">Sincronizado via WhatsApp Business API</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] font-black text-emerald-600 uppercase">Rafa S3 Online</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-background/80 rounded-3xl border border-emerald-500/20 overflow-hidden shadow-sm flex flex-col h-[500px]">
-                      <div className="flex-1 p-6 space-y-4 overflow-y-auto custom-scrollbar bg-[url('https://w0.peakpx.com/wallpaper/580/678/HD-wallpaper-whatsapp-dark-pattern-background-grey-monochrome.jpg')] bg-repeat bg-center opacity-90">
-                        <div className="flex flex-col items-start max-w-[85%]">
-                          <div className="bg-card p-3.5 rounded-2xl rounded-tl-none text-[13px] font-medium text-foreground shadow-sm border border-border/40">
-                            Olá {selectedClient?.cliente || "Cliente"}, tudo bem? Aqui é o Rafa da Torre S3. Vi que o contrato foi assinado!
-                          </div>
-                          <span className="text-[9px] text-muted-foreground mt-1 ml-1 font-bold">10:45</span>
-                        </div>
-                        <div className="flex flex-col items-end w-full">
-                          <div className="bg-emerald-600 text-white p-3.5 rounded-2xl rounded-tr-none text-[13px] font-medium max-w-[85%] shadow-md">
-                            Olá Rafa! Sim, acabamos de assinar. Muito animados com o novo site!
-                          </div>
-                          <span className="text-[9px] text-muted-foreground mt-1 mr-1 font-bold">10:48 · Lida</span>
-                        </div>
-                        <div className="flex flex-col items-start max-w-[85%]">
-                          <div className="bg-card p-3.5 rounded-2xl rounded-tl-none text-[13px] font-medium text-foreground shadow-sm border border-border/40">
-                            Show! Já estamos iniciando o setup aqui. Vou te enviar o primeiro boleto por e-mail agora.
-                          </div>
-                          <span className="text-[9px] text-muted-foreground mt-1 ml-1 font-bold">10:50</span>
-                        </div>
-                        <div className="flex justify-center my-4">
-                          <span className="bg-background/80 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-black text-muted-foreground border border-border/40 uppercase tracking-widest">
-                            Hoje
-                          </span>
-                        </div>
-                        <div className="flex flex-col items-end w-full">
-                          <div className="bg-emerald-600 text-white p-3.5 rounded-2xl rounded-tr-none text-[13px] font-medium max-w-[85%] shadow-md">
-                            Perfeito! Algum prazo estimado para a primeira versão do design?
-                          </div>
-                          <span className="text-[9px] text-muted-foreground mt-1 mr-1 font-bold">11:12 · Lida</span>
-                        </div>
-                      </div>
-                      <div className="p-4 bg-muted/30 border-t border-border/40 flex gap-3">
-                        <Input className="h-11 text-sm bg-background border-border/40 rounded-2xl px-5 focus-visible:ring-primary/20" placeholder="Digite sua mensagem..." />
-                        <Button className="h-11 w-11 p-0 bg-emerald-500 hover:bg-emerald-600 rounded-2xl shadow-lg shadow-emerald-500/20">
-                          <Send size={18} className="text-white" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeProfileTab === "documentos" && (
-                  <div className="animate-in fade-in slide-in-from-left-4 duration-300">
-                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground mb-6 flex items-center gap-2">
-                      <Paperclip size={16} className="text-primary" /> Repositório de Arquivos
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {[
-                        { name: "Contrato_Servicos_Assinado.pdf", size: "2.4 MB", type: "PDF", date: "10/04/2026" },
-                        { name: "Proposta_Comercial_V2.pdf", size: "1.8 MB", type: "PDF", date: "05/04/2026" },
-                        { name: "Briefing_Identidade_Visual.docx", size: "850 KB", type: "DOCX", date: "02/04/2026" }
-                      ].map((doc, i) => (
-                        <div key={i} className="p-4 rounded-2xl border border-border/40 bg-background hover:border-primary/20 transition-all group cursor-pointer">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                              <FileText size={20} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[12px] font-bold text-foreground truncate">{doc.name}</p>
-                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-                                <span>{doc.size}</span>
-                                <span>•</span>
-                                <span>{doc.date}</span>
-                              </div>
-                            </div>
-                            <Download size={14} className="text-muted-foreground group-hover:text-primary" />
-                          </div>
-                        </div>
-                      ))}
-                      <button className="p-4 rounded-2xl border-2 border-dashed border-border/60 hover:border-primary/40 transition-all flex flex-col items-center justify-center gap-2 bg-muted/5 group">
-                        <FilePlus size={24} className="text-muted-foreground group-hover:text-primary" />
-                        <span className="text-[11px] font-black uppercase text-muted-foreground group-hover:text-primary">Upload de Arquivo</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column: Cards & Insights */}
-            <div className="lg:col-span-5 p-8 space-y-6">
-              {/* Kanban Integration Card: Robust Pipeline Progress */}
-              <div className="bg-gradient-to-br from-indigo-500/10 to-blue-500/5 rounded-3xl p-6 border border-indigo-500/20">
-                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center justify-between">
-                  <div className="flex items-center gap-2"><Zap size={14} /> Progresso no Pipeline</div>
-                  <Badge className="bg-indigo-500 text-white border-none font-black text-[9px] px-3">
-                    REAL-TIME SYNC
-                  </Badge>
-                </h4>
-                
-                <div className="space-y-6">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-xl font-black text-foreground capitalize">{selectedClient?.kanbanStage?.replace('_', ' ') || "N/A"}</p>
-                      <p className="text-[11px] font-bold text-muted-foreground">Etapa atual do fechamento</p>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-[9px] font-black text-indigo-600 hover:bg-indigo-500/10 h-7"
-                      onClick={() => navigate('/pipeline')}
-                    >
-                      IR PARA KANBAN <ChevronRight size={12} className="ml-0.5" />
-                    </Button>
-                  </div>
-                  
-                  {/* Stepper Component */}
-                  <div className="relative pt-2 pb-6 cursor-pointer hover:opacity-80 transition-all" onClick={() => navigate('/pipeline')}>
-                     <div className="absolute top-[1.15rem] left-0 right-0 h-1 bg-muted rounded-full" />
-                     <div className="relative flex justify-between">
-                        {PIPELINE_STAGES.map((step, idx) => {
-                          const currentIdx = PIPELINE_STAGES.findIndex(s => s.key === (selectedClient.kanbanStage === 'ganhou' ? 'ganhou' : selectedClient.kanbanStage === 'site_pronto' ? 'site_pronto' : 'novo'));
-                          const isActive = idx <= currentIdx;
-                          return (
-                            <div key={step.key} className="flex flex-col items-center gap-2 z-10">
-                               <div className={cn(
-                                 "w-4 h-4 rounded-full border-4 border-card transition-all",
-                                 isActive ? "bg-primary scale-125" : "bg-muted"
-                               )} />
-                               <span className={cn("text-[8px] font-black uppercase tracking-tighter", isActive ? "text-primary" : "text-muted-foreground")}>
-                                 {step.label}
-                               </span>
-                            </div>
-                          );
-                        })}
-                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Services & Done Card */}
-              <div className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
-                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                  <Receipt size={14} className="text-amber-500" /> Serviços Contratados
-                </h4>
-                <div className="space-y-2">
-                   {[
-                     { name: "Criação de Site Institucional", status: "Entregue", tab: "site" },
-                     { name: "Licença de Software (SaaS)", status: "Ativo", tab: "saas" },
-                     { name: "Hospedagem & Manutenção", status: "Ativo", tab: "hosting" }
-                   ].map((s, i) => (
-                     <button 
-                       key={i} 
-                       className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/10 hover:bg-primary/5 hover:border-primary/20 transition-all group/svc text-left"
-                       onClick={() => navigate('/servicos')}
-                     >
-                        <span className="text-[12px] font-bold text-foreground group-hover/svc:text-primary transition-colors">{s.name}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[9px] font-black">{s.status}</Badge>
-                          <ChevronRight size={12} className="text-muted-foreground group-hover/svc:text-primary" />
-                        </div>
-                     </button>
-                   ))}
-                </div>
-              </div>
-
-              {/* Monthly Payment Grid - NEW */}
-              <div className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Calendar size={14} className="text-emerald-500" /> Fluxo de Mensalidades
-                  </h4>
-                  <Badge variant="outline" className="text-[8px] font-black uppercase border-emerald-500/20 text-emerald-600">2026</Badge>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO'].map((mes, idx) => {
-                    const status = idx < 3 ? 'pago' : idx === 3 ? 'pago' : 'pendente';
-                    return (
-                      <div 
-                        key={mes} 
-                        className={cn(
-                          "flex flex-col items-center justify-center p-2 rounded-xl border transition-all",
-                          status === 'pago' ? "bg-emerald-500/5 border-emerald-500/20" : "bg-muted/30 border-border/40"
-                        )}
-                      >
-                        <span className="text-[9px] font-black mb-1">{mes}</span>
-                        <div className={cn(
-                          "w-2 h-2 rounded-full",
-                          status === 'pago' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-muted-foreground/30"
-                        )} />
-                        <span className={cn("text-[7px] font-bold mt-1 uppercase", status === 'pago' ? "text-emerald-600" : "text-muted-foreground")}>
-                          {status === 'pago' ? 'PAGO' : 'AGUARD.'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Contracts & Proposals - NEW */}
-              <div className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
-                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                  <FilePlus size={14} className="text-purple-500" /> Documentos & Propostas
-                </h4>
-                <div className="space-y-3">
-                   <div className="flex items-center justify-between p-3 rounded-xl border border-dashed border-border/60 hover:border-primary/40 transition-all cursor-pointer group/doc">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
-                          <Paperclip size={16} />
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-bold text-foreground">Anexar Novo Contrato</p>
-                          <p className="text-[9px] text-muted-foreground">PDF, DOCX até 10MB</p>
-                        </div>
-                      </div>
-                      <Plus size={16} className="text-muted-foreground group-hover/doc:text-primary" />
-                   </div>
-                   <div className="flex items-center justify-between p-3 rounded-xl border border-dashed border-border/60 hover:border-primary/40 transition-all cursor-pointer group/doc">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
-                          <FileText size={16} />
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-bold text-foreground">Vincular Proposta</p>
-                          <p className="text-[9px] text-muted-foreground">Importar do Módulo de Docs</p>
-                        </div>
-                      </div>
-                      <Plus size={16} className="text-muted-foreground group-hover/doc:text-primary" />
-                   </div>
-                </div>
-              </div>
-
-              {/* Financial Dashboard Card */}
-              <div className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
-                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                  <DollarSign size={14} className="text-primary" /> Resumo Financeiro
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                   <div className="bg-muted/20 p-3 rounded-2xl border border-border/20">
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Total Pago</p>
-                      <p className="text-lg font-black text-emerald-600">{formatBRL(selectedClient.totalPago || 0)}</p>
-                   </div>
-                   <div className="bg-muted/20 p-3 rounded-2xl border border-border/20">
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">MRR Atual</p>
-                      <p className="text-lg font-black text-primary">{formatBRL(selectedClient?.valor)}</p>
-                   </div>
-                </div>
-                <div className="pt-2 border-t border-border/40 space-y-2">
-                   <div className="flex justify-between text-[11px]">
-                      <span className="text-muted-foreground font-medium">Próximo Faturamento:</span>
-                      <span className="font-bold text-foreground">{selectedClient?.proximoVencimento || "N/A"}</span>
-                   </div>
-                   <div className="flex justify-between text-[11px]">
-                      <span className="text-muted-foreground font-medium">Método Preferencial:</span>
-                      <span className="font-bold text-foreground">Boleto Bancário (Asaas)</span>
-                   </div>
-                </div>
-              </div>
-
-              {/* Contact Card */}
-              <div className="bg-card border border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
-                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                  <Mail size={14} className="text-blue-500" /> Dados de Contato
-                </h4>
-                <div className="space-y-3">
-                   <div className="flex items-center gap-3 text-sm">
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
-                        <Mail size={16} />
-                      </div>
-                      <span className="font-bold text-foreground">{selectedClient?.email || "N/A"}</span>
-                   </div>
-                   <div className="flex items-center gap-3 text-sm">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                        <Phone size={16} />
-                      </div>
-                      <span className="font-bold text-foreground">{selectedClient?.telefone || "N/A"}</span>
-                   </div>
-                </div>
-              </div>
-
-              {/* Quick Actions Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <Button 
-                  variant="outline" 
-                  className="rounded-2xl h-14 flex flex-col items-center justify-center gap-0.5 border-primary/20 hover:bg-primary/5 group"
-                  onClick={() => selectedClient && handleAction(selectedClient, "boleto")}
-                >
-                  <Download className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
-                  <span className="text-[10px] font-black uppercase tracking-tighter">Gerar Boleto</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="rounded-2xl h-14 flex flex-col items-center justify-center gap-0.5 border-blue-500/20 hover:bg-blue-500/5 group"
-                  onClick={() => selectedClient && handleAction(selectedClient, "email")}
-                >
-                  <Send className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
-                  <span className="text-[10px] font-black uppercase tracking-tighter">Enviar Email</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-
-      {/* Cobranças Recorrentes */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-foreground flex items-center gap-2">
-            <RefreshCw size={16} className={cn("text-muted-foreground", isSyncing && "animate-spin text-primary")} />
-            Contratos e Cobranças
-            {lastSync && <span className="text-[10px] font-medium text-muted-foreground/60 ml-2">Último sync: {lastSync}</span>}
-          </h3>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="rounded-xl text-[11px] font-bold h-8 border-primary/20 hover:bg-primary/5 text-primary"
-              onClick={fetchRealData}
-              disabled={isSyncing}
-            >
-              {isSyncing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
-              Sincronizar API
-            </Button>
-            <Button variant="default" size="sm" className="rounded-xl text-[11px] font-bold h-8">
-              <Plus className="w-3.5 h-3.5 mr-1" /> Novo Contrato
-            </Button>
-          </div>
+      {/* ── Search + Filter + Actions Bar ──────────────────────── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        {/* Search */}
+        <div className="relative flex-1 w-full">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Buscar por cliente, empresa ou ID..."
+            className="w-full pl-9 pr-4 h-9 rounded-xl border border-border/40 bg-card text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all"
+          />
         </div>
-        
-        <div className="rounded-3xl border border-border/40 bg-card overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-border/30 bg-muted/20">
-                <th className="px-5 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Cliente / ID</th>
-                <th className="px-5 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Plano / Valor</th>
-                <th className="px-5 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Status</th>
-                <th className="px-5 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black text-center">Ações Rápidas</th>
-                <th className="px-5 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black text-right">Perfil</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contratos.map((c, idx) => (
-                <tr key={c.id} className="border-b border-border/20 hover:bg-muted/10 transition-all">
-                  <td className="px-5 py-4">
-                    <button 
-                      onClick={() => handleOpenProfile(c)}
-                      className="flex flex-col items-start group/name text-left hover:opacity-80 transition-all"
-                    >
-                      <span className="text-[13px] font-bold text-foreground group-hover/name:text-primary transition-colors">{c.cliente}</span>
-                      <span className="text-[10px] text-muted-foreground font-medium uppercase group-hover/name:text-primary/70 transition-colors">{c.clientId}</span>
-                    </button>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex flex-col">
-                      <span className="text-[12px] font-semibold text-foreground">{c.plano}</span>
-                      <span className="text-[11px] text-primary font-bold">{formatBRL(c.valor)}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <Badge className={cn(
-                      "text-[9px] uppercase font-black px-2 py-0.5 rounded-lg",
-                      c.status === "pago" ? "bg-emerald-500/10 text-emerald-500" :
-                      c.status === "atrasado" ? "bg-red-500/10 text-red-500" : "bg-amber-500/10 text-amber-500"
-                    )}>
-                      {c.status}
-                    </Badge>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button 
-                        onClick={() => handleAction(c, "boleto")}
-                        className="p-2 rounded-lg bg-primary/5 text-primary hover:bg-primary hover:text-white transition-all"
-                        title="Gerar Boleto"
-                        disabled={loadingAction === `${c.id}-boleto`}
-                      >
-                        {loadingAction === `${c.id}-boleto` ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                      </button>
-                      <button 
-                        onClick={() => handleAction(c, "email")}
-                        className="p-2 rounded-lg bg-blue-500/5 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
-                        title="Enviar por Email"
-                        disabled={loadingAction === `${c.id}-email`}
-                      >
-                        {loadingAction === `${c.id}-email` ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
-                      </button>
-                      <button 
-                         onClick={() => handleAction(c, "contract")}
-                        className="p-2 rounded-lg bg-purple-500/5 text-purple-500 hover:bg-purple-500 hover:text-white transition-all"
-                        title="Anexar Contrato"
-                      >
-                        <Paperclip size={14} />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="rounded-xl text-[11px] font-black hover:bg-primary/10 hover:text-primary transition-all"
-                      onClick={() => handleOpenProfile(c)}
-                    >
-                      VER TIMELINE <History size={14} className="ml-1.5" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+        {/* Filter pills */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {(["todos", "pago", "pendente", "atrasado"] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => setFilterStatus(s)}
+              className={cn(
+                "h-9 px-3 rounded-xl text-[11px] font-bold uppercase tracking-wider border transition-all",
+                filterStatus === s
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card border-border/40 text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+              )}
+            >{s}</button>
+          ))}
+        </div>
+
+        {/* Sync + New */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" className="rounded-xl text-[11px] font-bold h-9 border-primary/20 hover:bg-primary/5 text-primary" onClick={fetchRealData} disabled={isSyncing}>
+            {isSyncing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+            Sincronizar
+          </Button>
+          <Button size="sm" className="rounded-xl text-[11px] font-bold h-9">
+            <Plus className="w-3.5 h-3.5 mr-1.5" /> Novo
+          </Button>
         </div>
       </div>
 
+      {/* ── Batch Action Bar (floats when items selected) ──────── */}
+      {someSelected && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-foreground text-background border border-foreground animate-in slide-in-from-top-2 duration-200">
+          <span className="text-[12px] font-black">{selectedIds.size} selecionado{selectedIds.size > 1 ? "s" : ""}</span>
+          <div className="flex-1" />
+          <button onClick={() => { toast.info("Geração em lote em desenvolvimento"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/10 hover:bg-background/20 text-[11px] font-bold transition-all">
+            <Download size={12} /> Gerar Boletos
+          </button>
+          <button onClick={() => { toast.info("Envio em lote em desenvolvimento"); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/10 hover:bg-background/20 text-[11px] font-bold transition-all">
+            <Mail size={12} /> Enviar E-mails
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="p-1.5 rounded-lg hover:bg-background/20 transition-all">
+            <Minus size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* ── Contracts Table ─────────────────────────────────────── */}
+      <div className="rounded-2xl border border-border/40 bg-card overflow-hidden shadow-sm">
+        {/* Skeleton loading */}
+        {isSyncing && contratos.length === 0 ? (
+          <div className="divide-y divide-border/20">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse">
+                <div className="w-4 h-4 rounded bg-muted" />
+                <div className="w-10 h-10 rounded-xl bg-muted shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-muted rounded w-40" />
+                  <div className="h-2 bg-muted rounded w-24" />
+                </div>
+                <div className="h-6 w-16 bg-muted rounded-lg" />
+                <div className="h-8 w-28 bg-muted rounded-xl" />
+              </div>
+            ))}
+          </div>
+        ) : filteredContratos.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-4">
+              <FileText size={24} className="text-muted-foreground/40" />
+            </div>
+            <p className="text-sm font-bold text-foreground mb-1">
+              {searchQuery || filterStatus !== "todos" ? "Nenhum resultado encontrado" : "Nenhum contrato ainda"}
+            </p>
+            <p className="text-xs text-muted-foreground max-w-xs">
+              {searchQuery ? `Tente buscar por outro termo.` : filterStatus !== "todos" ? `Não há clientes com status "${filterStatus}".` : "Clique em Sincronizar para importar dados ou adicione um novo contrato."}
+            </p>
+            {!searchQuery && filterStatus === "todos" && (
+              <Button size="sm" className="mt-4 rounded-xl text-[11px] font-bold h-9" onClick={fetchRealData}>
+                <RefreshCw size={13} className="mr-1.5" /> Sincronizar Agora
+              </Button>
+            )}
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-border/30 bg-muted/20">
+                <th className="px-4 py-3 w-10">
+                  <button onClick={toggleAll} className="text-muted-foreground hover:text-foreground transition-colors">
+                    {allSelected ? <CheckSquare size={15} className="text-primary" /> : someSelected ? <Minus size={15} /> : <Square size={15} />}
+                  </button>
+                </th>
+                <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Cliente</th>
+                <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black hidden md:table-cell">Empresa</th>
+                <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Plano / MRR</th>
+                <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black">Status</th>
+                <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black hidden lg:table-cell">Vencimento</th>
+                <th className="px-3 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/20">
+              {filteredContratos.map((c) => {
+                const cfg = statusConfig[c.status] || statusConfig.pendente;
+                const isSelected = selectedIds.has(c.id);
+                return (
+                  <tr key={c.id} className={cn("hover:bg-muted/10 transition-all group", isSelected && "bg-primary/3 hover:bg-primary/5")}>
+                    <td className="px-4 py-3">
+                      <button onClick={() => toggleOne(c.id)} className="text-muted-foreground hover:text-primary transition-colors">
+                        {isSelected ? <CheckSquare size={15} className="text-primary" /> : <Square size={15} />}
+                      </button>
+                    </td>
+                    <td className="px-3 py-3">
+                      <button onClick={() => handleOpenProfile(c)} className="flex flex-col items-start text-left group/name">
+                        <span className="text-[13px] font-semibold text-foreground group-hover/name:text-primary transition-colors leading-tight">{c.cliente}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{c.clientId}</span>
+                      </button>
+                    </td>
+                    <td className="px-3 py-3 hidden md:table-cell">
+                      <span className="text-[12px] text-muted-foreground font-medium">{c.empresa || "—"}</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] text-muted-foreground">{c.plano || "—"}</span>
+                        <span className="text-[13px] font-bold text-foreground tabular-nums">{formatBRL(c.valor)}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className={cn("inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold border", cfg.className)}>
+                        <cfg.icon size={10} />
+                        {cfg.label}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 hidden lg:table-cell">
+                      <span className="text-[11px] text-muted-foreground font-medium">{c.proximoVencimento}</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => handleAction(c, "boleto")} className="p-2 rounded-lg hover:bg-primary/10 hover:text-primary text-muted-foreground transition-all opacity-60 group-hover:opacity-100" title="Gerar Boleto" disabled={loadingAction === `${c.id}-boleto`}>
+                          {loadingAction === `${c.id}-boleto` ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                        </button>
+                        <button onClick={() => handleAction(c, "email")} className="p-2 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 text-muted-foreground transition-all opacity-60 group-hover:opacity-100" title="Enviar por E-mail" disabled={loadingAction === `${c.id}-email`}>
+                          {loadingAction === `${c.id}-email` ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+                        </button>
+                        <button onClick={() => handleOpenProfile(c)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-all opacity-60 group-hover:opacity-100" title="Ver Perfil Completo">
+                          <History size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+
+        {/* Table footer with count */}
+        {filteredContratos.length > 0 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-border/20 bg-muted/10">
+            <span className="text-[10px] text-muted-foreground font-medium">
+              {filteredContratos.length} de {contratos.length} contrato{contratos.length !== 1 ? "s" : ""}
+              {lastSync && <span className="ml-2 opacity-60">· sync {lastSync}</span>}
+            </span>
+            {isSyncing && <Loader2 size={12} className="animate-spin text-primary" />}
+          </div>
+        )}
+      </div>
+
+      {/* ── Automation Notice ──────────────────────────────────── */}
       <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-        <AlertCircle size={18} className="text-primary shrink-0" />
+        <AlertCircle size={16} className="text-primary shrink-0" />
         <div className="space-y-0.5">
           <p className="text-[12px] font-bold text-foreground">Automação Inteligente</p>
           <p className="text-[11px] text-muted-foreground">
@@ -944,7 +541,6 @@ export default function CobrancasFiscalTab({
           </p>
         </div>
       </div>
-
       {/* Email Modal */}
       <Dialog open={showEmailModal} onOpenChange={setShowEmailModal}>
         <DialogContent className="sm:max-w-[500px] rounded-3xl p-6">
