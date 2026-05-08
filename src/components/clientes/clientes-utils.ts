@@ -42,6 +42,7 @@ export function mapLeadsToClientes(data: any[]): ClientePerfilData[] {
       valor: lead.value || lead.total_value || 0,
       dataInicio: new Date(lead.created_at).toLocaleDateString("pt-BR"),
       contract_start_date: lead.contract_start_date || lead.contractStartDate || "",
-      contract_end_date: lead.contract_end_date || lead.contractEndDate || ""
+      contract_end_date: lead.contract_end_date || lead.contractEndDate || "",
+      cpf_cnpj: lead.cpf_cnpj || ""
     }));
 }

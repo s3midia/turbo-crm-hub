@@ -60,6 +60,7 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
     const leadData: any = {
         company_name: opportunity.lead_identification,
         phone: opportunity.contact_phone,
+        email: opportunity.contact_email,
         status: opportunity.stage || null,
         niche: opportunity.niche,
         site_url: opportunity.site_url,
@@ -172,6 +173,7 @@ export const getOpportunityById = async (id: string) => {
         tasks: [],
         contract_start_date: lead.contract_start_date,
         contract_end_date: lead.contract_end_date,
+        contact_email: lead.email,
         cpf_cnpj: lead.cpf_cnpj,
         created_at: lead.created_at,
         updated_at: lead.updated_at,
@@ -234,6 +236,7 @@ export const getOpportunities = async (): Promise<Opportunity[]> => {
         tasks: [],
         contract_start_date: lead.contract_start_date,
         contract_end_date: lead.contract_end_date,
+        contact_email: lead.email,
         cpf_cnpj: lead.cpf_cnpj
     }));
 };
