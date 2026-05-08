@@ -85,3 +85,27 @@ export const formatDisplayId = (id: string | null | undefined): string => {
   // For long IDs (UUIDs), take the first 4 characters
   return `#${id.substring(0, 4).toUpperCase()}`;
 };
+
+/**
+ * Masks a string as CPF or CNPJ.
+ */
+export const maskCPFCNPJ = (value: string): string => {
+  const digits = value.replace(/\D/g, "");
+  
+  if (digits.length <= 11) {
+    // CPF: 000.000.000-00
+    return digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  } else {
+    // CNPJ: 00.000.000/0000-00
+    return digits
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2")
+      .slice(0, 18);
+  }
+};
+

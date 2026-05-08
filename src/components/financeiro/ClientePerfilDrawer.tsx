@@ -9,9 +9,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
 import { useNavigate } from "react-router-dom";
-import { formatBRL, formatDisplayId } from "@/lib/formatters";
 import { TransacaoModal } from "./LancamentosTab";
 import { LeadDocumentsTab } from "./LeadDocumentsTab";
+import { maskCPFCNPJ, formatBRL, formatDisplayId } from "@/lib/formatters";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -265,7 +266,7 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
                   />
                   <Input
                     value={editForm.cpfCnpj}
-                    onChange={e => setEditForm(f => ({ ...f, cpfCnpj: e.target.value }))}
+                    onChange={e => setEditForm(f => ({ ...f, cpfCnpj: maskCPFCNPJ(e.target.value) }))}
                     className="h-6 text-xs w-32 bg-muted/30"
                     placeholder="CPF/CNPJ"
                   />
@@ -406,7 +407,7 @@ export function ClientePerfilDrawer({ open, onClose, onSave, cliente }: Props) {
                     <label className="text-[10px] font-bold uppercase text-muted-foreground">CPF/CNPJ</label>
                     <Input 
                       value={editForm.cpfCnpj} 
-                      onChange={e => setEditForm(f => ({ ...f, cpfCnpj: e.target.value }))}
+                      onChange={e => setEditForm(f => ({ ...f, cpfCnpj: maskCPFCNPJ(e.target.value) }))}
                       className="h-9 text-xs bg-muted/20"
                       placeholder="Documento"
                     />

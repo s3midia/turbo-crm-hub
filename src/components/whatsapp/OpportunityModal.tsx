@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,8 @@ import { formatBRL, parseBRL, formatDate } from '@/lib/formatters';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { useFinance } from '@/hooks/useFinance';
 import { LeadDocumentsTab } from '@/components/financeiro/LeadDocumentsTab';
+import { maskCPFCNPJ } from '@/lib/formatters';
+
 
 const PIPELINE_STAGES = [
   { key: "novo", label: "Novo" },
@@ -104,6 +107,17 @@ export const OpportunityModal = ({
 
     const [allLeads, setAllLeads] = useState<any[]>([]);
     const [isSearchingLeads, setIsSearchingLeads] = useState(false);
+    const searchRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setIsSearchingLeads(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         const fetchLeads = async () => {
@@ -286,7 +300,8 @@ export const OpportunityModal = ({
                                         <Section title="Negócio" />
 
                                         <Field label="Empresa / Lead">
-                                            <div className="relative group">
+                                            <div className="relative group" ref={searchRef}>
+
                                                 <Input
                                                     value={formData.leadIdentification}
                                                     onChange={(e) => {
@@ -298,7 +313,7 @@ export const OpportunityModal = ({
                                                     className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 pr-8"
                                                 />
                                                 <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-zinc-400 opacity-50" />
-                                                {isSearchingLeads && formData.leadIdentification.length > 1 && (
+                                                {isSearchingLeads && (
                                                     <div className="absolute z-[100] mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden">
                                                         <div className="max-h-[200px] overflow-y-auto">
                                                             {allLeads.filter(l => (l.company_name || "").toLowerCase().includes(formData.leadIdentification.toLowerCase())).map(l => (
@@ -414,8 +429,14 @@ export const OpportunityModal = ({
                                                 <Input value={formData.contact} onChange={set('contact')} placeholder="Telefone" className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" />
                                             </Field>
                                             <Field label="CPF / CNPJ">
-                                                <Input value={formData.cpfCnpj} onChange={set('cpfCnpj')} placeholder="Documento" className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" />
+                                                <Input 
+                                                    value={formData.cpfCnpj} 
+                                                    onChange={(e) => setFormData(p => ({ ...p, cpfCnpj: maskCPFCNPJ(e.target.value) }))} 
+                                                    placeholder="Documento" 
+                                                    className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" 
+                                                />
                                             </Field>
+
                                         </div>
                                         <Field label="E-mail">
                                             <Input value={formData.email} onChange={set('email')} placeholder="Email" className="h-9 text-[12px] bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" />
