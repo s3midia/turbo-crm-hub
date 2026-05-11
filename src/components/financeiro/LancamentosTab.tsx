@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Plus, Search, Filter, FileSpreadsheet, Trash2, Check, Users, Calendar,
@@ -457,9 +457,12 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     return Array.from(months).sort((a, b) => {
       // Sort by date (reverse)
       const parse = (s: string) => {
-        const [m, y] = s.split(' de ');
+        const parts = s.split(/[\s,de]+/);
+        const m = parts[0];
+        const y = parts[parts.length - 1];
         const monthIdx = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'].indexOf(m.toLowerCase());
-        return new Date(parseInt(y), monthIdx);
+        const year = parseInt(y);
+        return new Date(isNaN(year) ? new Date().getFullYear() : year, monthIdx === -1 ? 0 : monthIdx);
       };
       return parse(b).getTime() - parse(a).getTime();
     });
