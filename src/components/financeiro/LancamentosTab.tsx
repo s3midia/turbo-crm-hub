@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   Plus, Search, Filter, FileSpreadsheet, Trash2, Check, Users, Calendar,
   RefreshCw, Tag, ArrowUpCircle, ArrowDownCircle, Edit3 as Edit3Icon, X,
-  Phone, Mail
+  Phone, Mail, Download, ChevronUp, ChevronDown, MoreHorizontal, AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
@@ -433,14 +433,22 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   
   const initialTipo = searchParams.get("tipo") as "todos" | "entrada" | "saida" || "todos";
-  const initialStatus = searchParams.get("status") as "todos" | "pago" | "pendente" | "agendado" || "todos";
+  const initialStatus = (searchParams.get("status") as "todos" | "pago" | "pendente" | "agendado" | "atrasado" | "projecao") || "todos";
 
   const [filterTipo, setFilterTipo] = useState<"todos" | "entrada" | "saida">(
     ["todos", "entrada", "saida"].includes(initialTipo) ? initialTipo : "todos"
   );
-  const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado">(
-    ["todos", "pago", "pendente", "agendado"].includes(initialStatus) ? initialStatus : "todos"
+  const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado" | "atrasado" | "projecao">(
+    ["todos", "pago", "pendente", "agendado", "atrasado", "projecao"].includes(initialStatus) ? initialStatus : "todos"
   );
+  const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({});
+  const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
+
+  const isOverdue = (t: ProjectedTransaction) => {
+    if (t.status === "pago") return false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    return new Date(t.vencimento) < today;
+  };
   
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
@@ -489,8 +497,12 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   const filtered = transactions.filter(t => {
     const matchSearch = t.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || (t.lead_nome || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchTipo = filterTipo === "todos" || t.tipo === filterTipo;
-    const matchStatus = filterStatus === "todos" || t.status === filterStatus;
-    
+    const matchStatus =
+      filterStatus === "todos" ? true :
+      filterStatus === "atrasado" ? isOverdue(t) :
+      filterStatus === "projecao" ? !!(t as ProjectedTransaction).isProjection :
+      t.status === filterStatus;
+
     const date = new Date(t.vencimento);
     const monthStr = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
     const matchMonth = filterMonth === "todos" || monthStr === filterMonth;
@@ -499,11 +511,25 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   });
 
   const totals = {
-    entradas: filtered.filter(t => t.tipo === "entrada" && t.status === "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
-    saidas: filtered.filter(t => t.tipo === "saida" && t.status === "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
-    a_receber: filtered.filter(t => t.tipo === "entrada" && t.status !== "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
-    a_pagar: filtered.filter(t => t.tipo === "saida" && t.status !== "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
+    entradas: filtered.filter(t => t.tipo === "entrada").reduce((s, t) => s + parseBRL(t.valor), 0),
+    saidas: filtered.filter(t => t.tipo === "saida").reduce((s, t) => s + parseBRL(t.valor), 0),
+    atrasados: filtered.filter(t => isOverdue(t)).length,
   };
+  const saldoPrevisto = totals.entradas - totals.saidas;
+
+  function exportCSV() {
+    const headers = ["Descrição","Categoria","Tipo","Valor","Vencimento","Status","Cliente","Recorrência"];
+    const rows = filtered.map(t => [
+      t.descricao, t.categoria, t.tipo, parseBRL(t.valor).toFixed(2),
+      t.vencimento, t.status, t.lead_nome || "", t.recorrencia
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(","));
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob(["﻿"+csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `lancamentos_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }
 
   async function handleUpsertTransaction(t: Partial<FinancialTransaction>) {
     try {
@@ -599,19 +625,36 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
         />
       )}
 
-      {/* Summary Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Receitas Pagas", value: totals.entradas, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-          { label: "Despesas Pagas", value: totals.saidas, color: "text-rose-500", bg: "bg-rose-500/10" },
-          { label: "Pendente a Receber", value: totals.a_receber, color: "text-amber-500", bg: "bg-amber-500/10" },
-          { label: "Pendente a Pagar", value: totals.a_pagar, color: "text-rose-500/60", bg: "bg-rose-500/5" },
-        ].map((s, i) => (
-          <div key={i} className={cn("p-3 rounded-2xl border border-border/40", s.bg)}>
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{s.label}</p>
-            <p className={cn("text-xl font-black mt-1", s.color)}>{formatBRL(s.value)}</p>
+      {/* Resumo consolidado */}
+      <div className="rounded-2xl border border-border/40 bg-muted/30 p-4 flex flex-wrap items-center gap-6">
+        <div>
+          <p className="text-lg font-black text-emerald-600">+ {formatBRL(totals.entradas)}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Entradas</p>
+        </div>
+        <div>
+          <p className="text-lg font-black text-rose-600">- {formatBRL(totals.saidas)}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Saídas</p>
+        </div>
+        <div>
+          <p className={cn("text-lg font-black", saldoPrevisto >= 0 ? "text-primary" : "text-rose-600")}>
+            {formatBRL(saldoPrevisto)}
+          </p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Saldo previsto</p>
+        </div>
+        {totals.atrasados > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30">
+            <AlertTriangle size={16} className="text-rose-600" />
+            <div>
+              <p className="text-sm font-black text-rose-600 leading-none">{totals.atrasados} atrasado{totals.atrasados > 1 ? "s" : ""}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-rose-600/70">Atenção</p>
+            </div>
           </div>
-        ))}
+        )}
+        <div className="ml-auto">
+          <button onClick={openNew} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+            <Plus size={14} /> Novo lançamento
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -632,22 +675,32 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
           </select>
           {(["todos", "entrada", "saida"] as const).map(t => (
             <button key={t} onClick={() => setFilterTipo(t)} className={cn(
-              "px-4 py-2 rounded-xl text-xs font-bold border transition-all",
+              "px-3 py-2 rounded-xl text-xs font-bold border transition-all",
               filterTipo === t ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border/50 text-muted-foreground hover:text-foreground"
             )}>
               {t === "todos" ? "Todos" : t === "entrada" ? "Entradas" : "Saídas"}
             </button>
           ))}
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
-            className="px-3 py-2 rounded-xl text-xs font-bold border border-border/50 bg-card text-muted-foreground focus:ring-2 focus:ring-primary/20">
-            <option value="todos">Todos Status</option>
-            <option value="pago">Pago</option>
-            <option value="pendente">Pendente</option>
-            <option value="agendado">Agendado</option>
-          </select>
-          <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
-            <Plus size={14} />
-            Nova
+          {([
+            { v: "todos", l: "Todos" },
+            { v: "pendente", l: "Pendente" },
+            { v: "atrasado", l: "Atrasado" },
+            { v: "pago", l: "Pago" },
+            { v: "projecao", l: "Projeção" },
+          ] as const).map(s => (
+            <button key={s.v} onClick={() => setFilterStatus(s.v as any)} className={cn(
+              "px-3 py-2 rounded-xl text-xs font-bold border transition-all",
+              filterStatus === s.v
+                ? s.v === "atrasado" ? "bg-rose-500 text-white border-rose-500"
+                  : s.v === "projecao" ? "bg-blue-500 text-white border-blue-500"
+                  : "bg-primary text-primary-foreground border-primary"
+                : "bg-card border-border/50 text-muted-foreground hover:text-foreground"
+            )}>
+              {s.l}
+            </button>
+          ))}
+          <button onClick={exportCSV} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border/50 bg-card text-xs font-bold text-muted-foreground hover:text-foreground transition-all">
+            <Download size={14} /> Exportar
           </button>
         </div>
       </div>
@@ -661,14 +714,32 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
             <p className="text-sm text-muted-foreground">Ajuste os filtros ou adicione uma nova transação.</p>
           </div>
         ) : (
-          Object.entries(groupedByMonth).map(([month, monthTransactions]) => (
+          Object.entries(groupedByMonth).map(([month, monthTransactions]) => {
+            const monthIn = monthTransactions.filter(t => t.tipo === "entrada").reduce((s, t) => s + parseBRL(t.valor), 0);
+            const monthOut = monthTransactions.filter(t => t.tipo === "saida").reduce((s, t) => s + parseBRL(t.valor), 0);
+            const collapsed = collapsedMonths[month];
+            const expanded = expandedMonths[month];
+            const PAGE = 5;
+            const visible = collapsed ? [] : (expanded ? monthTransactions : monthTransactions.slice(0, PAGE));
+            const hidden = monthTransactions.length - visible.length;
+            return (
             <div key={month} className="space-y-3">
               <div className="flex items-center gap-3 px-2">
                 <Calendar size={14} className="text-primary" />
-                <h3 className="text-sm font-black uppercase tracking-widest text-foreground">{month}</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest text-foreground capitalize">{month}</h3>
                 <div className="h-px flex-1 bg-border/40" />
+                {monthOut > 0 && <span className="text-xs font-black text-rose-600">- {formatBRL(monthOut)}</span>}
+                {monthIn > 0 && <span className="text-xs font-black text-emerald-600">+ {formatBRL(monthIn)}</span>}
+                <button
+                  onClick={() => setCollapsedMonths(p => ({ ...p, [month]: !p[month] }))}
+                  className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                >
+                  {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                  {collapsed ? "expandir" : "recolher"}
+                </button>
               </div>
-              
+
+              {!collapsed && (
               <div className="rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -679,17 +750,17 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {monthTransactions.map((t, idx) => {
+                    {visible.map((t, idx) => {
                       const priority = getPriority(t);
                       const isCritical = priority === 0;
                       const isWarning = priority === 1;
 
                       return (
-                        <tr 
-                          key={t.id} 
+                        <tr
+                          key={t.id}
                           className={cn(
-                            "border-b border-border/30 hover:bg-muted/20 transition-all group cursor-pointer relative", 
-                            idx === monthTransactions.length - 1 && "border-0",
+                            "border-b border-border/30 hover:bg-muted/20 transition-all group cursor-pointer relative",
+                            idx === visible.length - 1 && "border-0",
                             isCritical && "bg-rose-500/[0.03]",
                             isWarning && "bg-amber-500/[0.03]"
                           )}
@@ -766,41 +837,48 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                             </span>
                           </td>
                           <td className="px-4 py-2.5">
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center justify-end gap-1">
                               {t.isProjection ? (
-                                <button 
+                                <button
                                   onClick={(e) => { e.stopPropagation(); handleConfirmProjection(t); }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all text-[10px] font-black uppercase"
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-all text-[11px] font-bold"
                                   title="Confirmar Lançamento"
                                 >
                                   <Check size={12} /> Confirmar
                                 </button>
-                              ) : (
-                                <>
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); t.id && handleDelete(t.id); }}
-                                    className="p-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all text-muted-foreground"
-                                    title="Excluir"
+                              ) : t.status !== "pago" ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); t.id && handleMarkPaid(t.id); }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/40 transition-all text-[11px] font-bold"
+                                  title="Marcar como Pago"
+                                >
+                                  <Check size={12} /> Pagar
+                                </button>
+                              ) : null}
+                              {!t.isProjection && (
+                                <div className="relative group/menu">
+                                  <button
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="p-1.5 rounded-lg border border-border bg-card hover:bg-muted transition-all text-muted-foreground"
+                                    title="Mais ações"
                                   >
-                                    <Trash2 size={14} />
+                                    <MoreHorizontal size={14} />
                                   </button>
-                                  {t.status !== "pago" && (
-                                    <button 
-                                      onClick={(e) => { e.stopPropagation(); t.id && handleMarkPaid(t.id); }}
-                                      className="p-1.5 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 transition-all text-muted-foreground"
-                                      title="Marcar como Pago"
+                                  <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-20 hidden group-hover/menu:block min-w-[140px] overflow-hidden">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); openEdit(t); }}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-muted text-left"
                                     >
-                                      <Check size={14} />
+                                      <Edit3Icon size={12} /> Editar
                                     </button>
-                                  )}
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); openEdit(t); }}
-                                    className="p-1.5 rounded-lg hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground"
-                                    title="Editar"
-                                  >
-                                    <Edit3Icon size={14} />
-                                  </button>
-                                </>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); t.id && handleDelete(t.id); }}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-rose-500/10 text-rose-600 text-left"
+                                    >
+                                      <Trash2 size={12} /> Excluir
+                                    </button>
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </td>
@@ -809,9 +887,26 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                     })}
                   </tbody>
                 </table>
+                {hidden > 0 && (
+                  <div className="px-4 py-3 border-t border-border/40 bg-muted/20 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <span>Mostrando {visible.length} de {monthTransactions.length} lançamentos em {month.split(' ')[0]}</span>
+                    <button onClick={() => setExpandedMonths(p => ({ ...p, [month]: true }))} className="font-bold text-primary hover:underline">
+                      Ver todos
+                    </button>
+                  </div>
+                )}
+                {expanded && monthTransactions.length > PAGE && (
+                  <div className="px-4 py-2 border-t border-border/40 bg-muted/20 flex items-center justify-center text-xs">
+                    <button onClick={() => setExpandedMonths(p => ({ ...p, [month]: false }))} className="font-bold text-primary hover:underline">
+                      Recolher
+                    </button>
+                  </div>
+                )}
               </div>
+              )}
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
