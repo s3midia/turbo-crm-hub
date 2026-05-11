@@ -20,7 +20,7 @@ export const useProjections = (leadId?: string, monthsCount: number = 12) => {
         let query = supabase
           .from('leads')
           .select('*')
-          .or('status.eq.ganhou,is_client.eq.true');
+          .eq('status', 'ganhou');
         
         if (leadId) query = query.eq('id', leadId);
         

@@ -24,6 +24,7 @@ import {
     Wrench,
     ChevronDown,
     ChevronRight,
+    LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSystemSettings } from "@/hooks/useSystemSettings";

@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   DollarSign, LayoutDashboard, List, GitMerge, FileBarChart2,
   Users, TrendingUp, Building2, FileText, Settings2, Download,
-  Plus, RefreshCw
+  Plus, RefreshCw, Receipt, PiggyBank, Zap
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
