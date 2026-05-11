@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
+import { useProjections } from "@/hooks/useProjections";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -40,7 +41,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
   const [savedHistorico, setSavedHistorico] = useState<any[]>([]);
   const [selectedMonthIndex, setSelectedMonthIndex] = useState<number | null>(null);
 
-  const { transactions } = useFinance();
+  const { transactions } = useProjections();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -444,7 +445,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 <Clock size={16} />
               </div>
-              Fechamento Mensal de Valuation
+              Fechamento Mensal de Avaliação
             </h3>
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1 ml-10">Snapshots de saúde financeira histórica</p>
           </div>
@@ -783,7 +784,7 @@ export default function ValuationTab({ onTabChange }: { onTabChange?: (tab: stri
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Valuation</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Avaliação</span>
                 </div>
               </div>
             </div>

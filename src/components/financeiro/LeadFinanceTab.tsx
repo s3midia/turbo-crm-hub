@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance, FinancialTransaction } from '@/hooks/useFinance';
+import { useProjections } from '@/hooks/useProjections';
 import {
   DollarSign, Plus,
   ArrowUpCircle, ArrowDownCircle, Edit3, Trash2,
@@ -27,7 +28,7 @@ export const LeadFinanceTab = ({
   leadName,
   products = [],
 }: LeadFinanceTabProps) => {
-  const { transactions, loading, saveTransaction, deleteTransaction } = useFinance(leadId);
+  const { transactions, loading, saveTransaction, deleteTransaction } = useProjections(leadId);
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
 
@@ -214,11 +215,14 @@ export const LeadFinanceTab = ({
             <div className="divide-y divide-border/40">
               {transactions.map((t) => {
                 const isOverdue =
-                  t.status === 'pendente' && new Date(t.vencimento) < new Date();
+                  t.status === 'pendente' && new Date(t.vencimento) < new Date() && !t.isProjection;
                 return (
                   <div
-                    key={t.id}
-                    className="px-5 py-3 flex items-center gap-3 hover:bg-muted/10 transition-colors group"
+                    key={t.id || `proj-${t.vencimento}`}
+                    className={cn(
+                      "px-5 py-3 flex items-center gap-3 hover:bg-muted/10 transition-colors group relative",
+                      t.isProjection && "bg-blue-500/[0.02]"
+                    )}
                   >
                     {/* Ícone tipo */}
                     <div className={cn(
@@ -234,7 +238,12 @@ export const LeadFinanceTab = ({
 
                     {/* Descrição + data */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-foreground truncate">{t.descricao}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-black text-foreground truncate">{t.descricao}</p>
+                        {t.isProjection && (
+                          <Badge variant="secondary" className="text-[8px] font-black h-4 px-1.5 bg-blue-500/10 text-blue-600 border-blue-500/20">PROJEÇÃO</Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-muted-foreground font-bold">
                           {new Date(t.vencimento).toLocaleDateString('pt-BR')}

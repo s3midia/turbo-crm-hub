@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
+import { useProjections, ProjectedTransaction } from "@/hooks/useProjections";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -426,7 +427,7 @@ interface LancamentosTabProps {
 }
 
 export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
-  const { transactions, loading, saveTransaction, deleteTransaction } = useFinance();
+  const { transactions, loading, saveTransaction, deleteTransaction } = useProjections();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -527,6 +528,16 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     }
   }
 
+  async function handleConfirmProjection(t: ProjectedTransaction) {
+    try {
+      const { isProjection, ...cleanTransaction } = t;
+      await saveTransaction({ ...cleanTransaction, status: "pendente" });
+      toast.success("Projeção confirmada e salva!");
+    } catch (err: any) {
+      toast.error("Erro ao confirmar projeção.");
+    }
+  }
+
   async function handleDelete(id: string) {
     if (confirm("Deseja realmente excluir esta transação?")) {
       try {
@@ -538,8 +549,12 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     }
   }
 
-  function openEdit(t: FinancialTransaction) {
-    setEditingTransaction(t);
+  function openEdit(t: ProjectedTransaction) {
+    if (t.isProjection) {
+      handleConfirmProjection(t);
+      return;
+    }
+    setEditingTransaction(t as FinancialTransaction);
     setShowModal(true);
   }
 
@@ -686,6 +701,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <p className="text-[13px] font-bold text-foreground">{t.descricao}</p>
+                                  {t.isProjection && <span className="text-[8px] font-black bg-blue-500/10 text-blue-500 border border-blue-500/20 px-1.5 py-0.5 rounded uppercase tracking-widest">Projeção</span>}
                                   {isCritical && <span className="text-[8px] font-black bg-rose-500 text-white px-1 rounded animate-pulse uppercase">Atrasado</span>}
                                   {isWarning && <span className="text-[8px] font-black bg-amber-500 text-white px-1 rounded uppercase">Vence em breve</span>}
                                 </div>
@@ -751,29 +767,41 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                           </td>
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); t.id && handleDelete(t.id); }}
-                                className="p-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all text-muted-foreground"
-                                title="Excluir"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                              {t.status !== "pago" && (
+                              {t.isProjection ? (
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); t.id && handleMarkPaid(t.id); }}
-                                  className="p-1.5 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 transition-all text-muted-foreground"
-                                  title="Marcar como Pago"
+                                  onClick={(e) => { e.stopPropagation(); handleConfirmProjection(t); }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all text-[10px] font-black uppercase"
+                                  title="Confirmar Lançamento"
                                 >
-                                  <Check size={14} />
+                                  <Check size={12} /> Confirmar
                                 </button>
+                              ) : (
+                                <>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); t.id && handleDelete(t.id); }}
+                                    className="p-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all text-muted-foreground"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                  {t.status !== "pago" && (
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); t.id && handleMarkPaid(t.id); }}
+                                      className="p-1.5 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 transition-all text-muted-foreground"
+                                      title="Marcar como Pago"
+                                    >
+                                      <Check size={14} />
+                                    </button>
+                                  )}
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); openEdit(t); }}
+                                    className="p-1.5 rounded-lg hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground"
+                                    title="Editar"
+                                  >
+                                    <Edit3Icon size={14} />
+                                  </button>
+                                </>
                               )}
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); openEdit(t); }}
-                                className="p-1.5 rounded-lg hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground"
-                                title="Editar"
-                              >
-                                <Edit3Icon size={14} />
-                              </button>
                             </div>
                           </td>
                         </tr>

@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
+import { useProjections } from "@/hooks/useProjections";
 import { formatBRL } from "@/lib/formatters";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -19,7 +20,7 @@ import { calculateDashboardData, DashboardKPIs } from "./dashboard-utils";
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"];
 
 export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (tab: string) => void }) {
-  const { transactions: txs, loading: transactionsLoading, refresh } = useFinance();
+  const { transactions: txs, loading: transactionsLoading } = useProjections();
   const [extraLoading, setExtraLoading] = useState(true);
   const [extraData, setExtraData] = useState<{ employees: any[], valConfig: any }>({ employees: [], valConfig: null });
 
@@ -233,7 +234,7 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
                     </div>
                     <div>
                       <p className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">{client.name}</p>
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Share: {((client.total / data.receita_realizada) * 100).toFixed(1)}%</p>
+                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Participação: {((client.total / data.receita_realizada) * 100).toFixed(1)}%</p>
                     </div>
                   </div>
                   <span className="text-[11px] font-black text-zinc-900 dark:text-zinc-100">{formatBRL(client.total)}</span>

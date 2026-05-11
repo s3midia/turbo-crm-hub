@@ -50,7 +50,7 @@ const NAV_SECTIONS = [
     {
         label: "Vendas & Leads",
         items: [
-            { label: "Funil Kanban", icon: Columns3, to: "/pipeline" },
+            { label: "Funil", icon: LayoutGrid, to: "/crm" },
             { label: "Clientes", icon: Users, to: "/clientes" },
             { label: "Agenda", icon: Calendar, to: "/agenda" },
             { label: "Atendimentos", icon: MessageSquare, to: "/atendimentos" },

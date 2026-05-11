@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatBRL, parseBRL } from "@/lib/formatters";
 import { useFinance, FinancialTransaction } from "@/hooks/useFinance";
+import { useProjections } from "@/hooks/useProjections";
 
 function pct(v: number, t: number) { return t === 0 ? "0%" : `${((v / t) * 100).toFixed(1)}%`; }
 
@@ -94,7 +95,8 @@ interface RelatoriosTabProps {
 }
 
 export default function RelatoriosTab({ onTabChange }: RelatoriosTabProps) {
-  const { transactions, loading, refresh } = useFinance();
+  const { transactions, loading } = useProjections();
+  const { refresh } = useFinance();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const periodos = useMemo(() => buildPeriodos(), []);
