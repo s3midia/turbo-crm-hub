@@ -458,6 +458,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   });
   const clearSelection = () => setSelectedIds(new Set());
   const [openMenu, setOpenMenu] = useState<"periodo" | "status" | null>(null);
+  const [openRowMenu, setOpenRowMenu] = useState<string | null>(null);
 
   const isOverdue = (t: ProjectedTransaction) => {
     if (t.status === "pago") return false;
@@ -1116,29 +1117,37 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                                   <Check size={12} /> Pagar
                                 </button>
                               ) : null}
-                              {!t.isProjection && (
-                                <div className="relative group/menu">
+                              {!t.isProjection && t.id && (
+                                <div className="relative">
                                   <button
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="p-1.5 rounded-lg border border-border bg-card hover:bg-muted transition-all text-muted-foreground"
+                                    onClick={(e) => { e.stopPropagation(); setOpenRowMenu(openRowMenu === t.id ? null : t.id!); }}
+                                    className={cn(
+                                      "p-1.5 rounded-lg border border-border bg-card hover:bg-muted transition-all text-muted-foreground",
+                                      openRowMenu === t.id && "bg-muted"
+                                    )}
                                     title="Mais ações"
                                   >
                                     <MoreHorizontal size={14} />
                                   </button>
-                                  <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-20 hidden group-hover/menu:block min-w-[140px] overflow-hidden">
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); openEdit(t); }}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-muted text-left"
-                                    >
-                                      <Edit3Icon size={12} /> Editar
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); t.id && handleDelete(t.id); }}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-rose-500/10 text-rose-600 text-left"
-                                    >
-                                      <Trash2 size={12} /> Excluir
-                                    </button>
-                                  </div>
+                                  {openRowMenu === t.id && (
+                                    <>
+                                      <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); }} />
+                                      <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-xl z-50 min-w-[140px] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); openEdit(t); }}
+                                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-muted text-left"
+                                        >
+                                          <Edit3Icon size={12} /> Editar
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); handleDelete(t.id!); }}
+                                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-rose-500/10 text-rose-600 text-left"
+                                        >
+                                          <Trash2 size={12} /> Excluir
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               )}
                             </div>
