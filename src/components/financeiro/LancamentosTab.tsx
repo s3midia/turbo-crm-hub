@@ -457,6 +457,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     return next;
   });
   const clearSelection = () => setSelectedIds(new Set());
+  const [openMenu, setOpenMenu] = useState<"periodo" | "status" | null>(null);
 
   const isOverdue = (t: ProjectedTransaction) => {
     if (t.status === "pago") return false;
@@ -733,67 +734,199 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input type="text" placeholder="Buscar por descrição ou cliente..."
-            className="w-full pl-10 pr-4 py-2 bg-card border border-border/50 rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-            value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="flex items-center rounded-xl border border-border/50 bg-card p-0.5">
-            {([
-              { v: "todos", l: "Tudo" },
-              { v: "mes", l: "Este mês" },
-              { v: "30d", l: "30 dias" },
-            ] as const).map(p => (
-              <button key={p.v} onClick={() => setPeriodPreset(p.v as any)} className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                periodPreset === p.v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+      {/* Filtros inteligentes */}
+      {(() => {
+        const statusCounts = {
+          todos: transactions.length,
+          pendente: transactions.filter(t => t.status === "pendente" && !isOverdue(t)).length,
+          atrasado: transactions.filter(t => isOverdue(t)).length,
+          pago: transactions.filter(t => t.status === "pago").length,
+          projecao: transactions.filter(t => (t as ProjectedTransaction).isProjection).length,
+        };
+        const periodoLabel =
+          periodPreset === "mes" ? "Este mês" :
+          periodPreset === "30d" ? "Próximos 30 dias" :
+          filterMonth !== "todos" ? filterMonth : "Todo período";
+        const statusLabel =
+          filterStatus === "todos" ? "Todos status" :
+          filterStatus === "atrasado" ? "Atrasados" :
+          filterStatus === "projecao" ? "Projeções" :
+          filterStatus === "pago" ? "Pagos" :
+          filterStatus === "pendente" ? "Pendentes" : "Agendados";
+        const hasActiveFilters = searchTerm || filterTipo !== "todos" || filterStatus !== "todos" || filterMonth !== "todos" || periodPreset !== "todos";
+        const clearAll = () => {
+          setSearchTerm(""); setFilterTipo("todos"); setFilterStatus("todos");
+          setFilterMonth("todos"); setPeriodPreset("todos");
+        };
+        const statusOpts = [
+          { v: "todos", l: "Todos", dot: "bg-muted-foreground" },
+          { v: "pendente", l: "Pendente", dot: "bg-amber-500" },
+          { v: "atrasado", l: "Atrasado", dot: "bg-rose-500" },
+          { v: "pago", l: "Pago", dot: "bg-emerald-500" },
+          { v: "projecao", l: "Projeção", dot: "bg-blue-500" },
+        ] as const;
+        return (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Busca */}
+            <div className="flex-1 min-w-[240px] relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input type="text" placeholder="Buscar por descrição ou cliente..."
+                className="w-full pl-10 pr-9 py-2.5 bg-card border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted">
+                  <X size={14} className="text-muted-foreground" />
+                </button>
+              )}
+            </div>
+
+            {/* Tipo segmented */}
+            <div className="flex items-center rounded-xl border border-border/50 bg-card p-0.5">
+              {([
+                { v: "todos", l: "Todos" },
+                { v: "entrada", l: "Entradas" },
+                { v: "saida", l: "Saídas" },
+              ] as const).map(t => (
+                <button key={t.v} onClick={() => setFilterTipo(t.v as any)} className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  filterTipo === t.v
+                    ? t.v === "entrada" ? "bg-emerald-500 text-white"
+                      : t.v === "saida" ? "bg-rose-500 text-white"
+                      : "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}>
+                  {t.l}
+                </button>
+              ))}
+            </div>
+
+            {/* Dropdown Período */}
+            <div className="relative">
+              <button onClick={() => setOpenMenu(openMenu === "periodo" ? null : "periodo")} className={cn(
+                "flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all",
+                periodPreset !== "todos" || filterMonth !== "todos"
+                  ? "bg-primary/10 text-primary border-primary/40"
+                  : "bg-card border-border/50 text-muted-foreground hover:text-foreground"
               )}>
-                {p.l}
+                <Calendar size={14} />
+                <span className="capitalize">{periodoLabel}</span>
+                <ChevronDown size={12} className={cn("transition-transform", openMenu === "periodo" && "rotate-180")} />
               </button>
-            ))}
+              {openMenu === "periodo" && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(null)} />
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-xl min-w-[220px] py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <p className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Atalhos</p>
+                    {([
+                      { v: "todos", l: "Todo período" },
+                      { v: "mes", l: "Este mês" },
+                      { v: "30d", l: "Próximos 30 dias" },
+                    ] as const).map(p => (
+                      <button key={p.v} onClick={() => { setPeriodPreset(p.v as any); setFilterMonth("todos"); setOpenMenu(null); }}
+                        className={cn("w-full px-3 py-2 text-left text-xs font-bold flex items-center justify-between hover:bg-muted transition-colors",
+                          periodPreset === p.v && filterMonth === "todos" && "bg-primary/10 text-primary"
+                        )}>
+                        {p.l}
+                        {periodPreset === p.v && filterMonth === "todos" && <Check size={12} />}
+                      </button>
+                    ))}
+                    {availableMonths.length > 0 && (
+                      <>
+                        <div className="my-1 border-t border-border/40" />
+                        <p className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Mês específico</p>
+                        <div className="max-h-48 overflow-y-auto">
+                          {availableMonths.map(m => (
+                            <button key={m} onClick={() => { setFilterMonth(m); setPeriodPreset("todos"); setOpenMenu(null); }}
+                              className={cn("w-full px-3 py-2 text-left text-xs font-bold flex items-center justify-between hover:bg-muted transition-colors capitalize",
+                                filterMonth === m && "bg-primary/10 text-primary"
+                              )}>
+                              {m}
+                              {filterMonth === m && <Check size={12} />}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Dropdown Status */}
+            <div className="relative">
+              <button onClick={() => setOpenMenu(openMenu === "status" ? null : "status")} className={cn(
+                "flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all",
+                filterStatus !== "todos"
+                  ? filterStatus === "atrasado" ? "bg-rose-500/10 text-rose-600 border-rose-500/40"
+                    : filterStatus === "projecao" ? "bg-blue-500/10 text-blue-600 border-blue-500/40"
+                    : "bg-primary/10 text-primary border-primary/40"
+                  : "bg-card border-border/50 text-muted-foreground hover:text-foreground"
+              )}>
+                <Filter size={14} />
+                <span>{statusLabel}</span>
+                <ChevronDown size={12} className={cn("transition-transform", openMenu === "status" && "rotate-180")} />
+              </button>
+              {openMenu === "status" && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(null)} />
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-xl min-w-[200px] py-1 animate-in fade-in slide-in-from-top-2 duration-150">
+                    {statusOpts.map(s => (
+                      <button key={s.v} onClick={() => { setFilterStatus(s.v as any); setOpenMenu(null); }}
+                        className={cn("w-full px-3 py-2 text-left text-xs font-bold flex items-center gap-2 hover:bg-muted transition-colors",
+                          filterStatus === s.v && "bg-primary/10 text-primary"
+                        )}>
+                        <span className={cn("w-2 h-2 rounded-full", s.dot)} />
+                        <span className="flex-1">{s.l}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground tabular-nums">{statusCounts[s.v]}</span>
+                        {filterStatus === s.v && <Check size={12} />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Exportar (ícone) */}
+            <button onClick={exportCSV} title="Exportar CSV"
+              className="p-2.5 rounded-xl border border-border/50 bg-card text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
+              <Download size={14} />
+            </button>
           </div>
-          <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
-            className="px-3 py-2 rounded-xl text-xs font-bold border border-border/50 bg-card text-muted-foreground focus:ring-2 focus:ring-primary/20 capitalize">
-            <option value="todos">Todos os Meses</option>
-            {availableMonths.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-          {(["todos", "entrada", "saida"] as const).map(t => (
-            <button key={t} onClick={() => setFilterTipo(t)} className={cn(
-              "px-3 py-2 rounded-xl text-xs font-bold border transition-all",
-              filterTipo === t ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border/50 text-muted-foreground hover:text-foreground"
-            )}>
-              {t === "todos" ? "Todos" : t === "entrada" ? "Entradas" : "Saídas"}
-            </button>
-          ))}
-          {([
-            { v: "todos", l: "Todos" },
-            { v: "pendente", l: "Pendente" },
-            { v: "atrasado", l: "Atrasado" },
-            { v: "pago", l: "Pago" },
-            { v: "projecao", l: "Projeção" },
-          ] as const).map(s => (
-            <button key={s.v} onClick={() => setFilterStatus(s.v as any)} className={cn(
-              "px-3 py-2 rounded-xl text-xs font-bold border transition-all",
-              filterStatus === s.v
-                ? s.v === "atrasado" ? "bg-rose-500 text-white border-rose-500"
-                  : s.v === "projecao" ? "bg-blue-500 text-white border-blue-500"
-                  : "bg-primary text-primary-foreground border-primary"
-                : "bg-card border-border/50 text-muted-foreground hover:text-foreground"
-            )}>
-              {s.l}
-            </button>
-          ))}
-          <button onClick={exportCSV} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border/50 bg-card text-xs font-bold text-muted-foreground hover:text-foreground transition-all">
-            <Download size={14} /> Exportar
-          </button>
+
+          {/* Chips de filtros ativos */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-1.5 px-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-1">Filtros:</span>
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-[11px] font-bold hover:bg-muted/70">
+                  "{searchTerm}" <X size={10} />
+                </button>
+              )}
+              {filterTipo !== "todos" && (
+                <button onClick={() => setFilterTipo("todos")} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-[11px] font-bold hover:bg-muted/70">
+                  {filterTipo === "entrada" ? "Entradas" : "Saídas"} <X size={10} />
+                </button>
+              )}
+              {(periodPreset !== "todos" || filterMonth !== "todos") && (
+                <button onClick={() => { setPeriodPreset("todos"); setFilterMonth("todos"); }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-[11px] font-bold hover:bg-muted/70 capitalize">
+                  {periodoLabel} <X size={10} />
+                </button>
+              )}
+              {filterStatus !== "todos" && (
+                <button onClick={() => setFilterStatus("todos")} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-[11px] font-bold hover:bg-muted/70">
+                  {statusLabel} <X size={10} />
+                </button>
+              )}
+              <button onClick={clearAll} className="ml-1 text-[11px] font-bold text-primary hover:underline">
+                Limpar tudo
+              </button>
+            </div>
+          )}
         </div>
-      </div>
+        );
+      })()}
 
       {/* Grouped Table */}
       <div className="space-y-8">
