@@ -1148,21 +1148,22 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                     })}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-muted/30 border-t-2 border-border/60">
-                      <td className="px-3 py-3"></td>
-                      <td className="px-4 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black" colSpan={3}>
-                        Subtotal do mês
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col">
-                          <span className="text-[12px] font-black text-emerald-600">+ {formatBRL(monthIn)}</span>
-                          <span className="text-[12px] font-black text-rose-600">- {formatBRL(monthOut)}</span>
-                          <span className={cn("text-[13px] font-black mt-0.5", (monthIn - monthOut) >= 0 ? "text-primary" : "text-rose-600")}>
-                            = {formatBRL(monthIn - monthOut)}
+                    <tr className="bg-muted/20 border-t border-border/50">
+                      <td colSpan={8} className="px-4 py-2">
+                        <div className="flex items-center justify-end gap-4 text-[11px]">
+                          <span className="font-black uppercase tracking-widest text-muted-foreground/70">Subtotal</span>
+                          <span className="font-black text-emerald-600 tabular-nums">+{formatBRL(monthIn)}</span>
+                          <span className="text-border">·</span>
+                          <span className="font-black text-rose-600 tabular-nums">−{formatBRL(monthOut)}</span>
+                          <span className="text-border">·</span>
+                          <span className={cn(
+                            "font-black tabular-nums px-2 py-0.5 rounded-md",
+                            (monthIn - monthOut) >= 0 ? "text-emerald-700 bg-emerald-500/10" : "text-rose-700 bg-rose-500/10"
+                          )}>
+                            {(monthIn - monthOut) >= 0 ? "+" : ""}{formatBRL(monthIn - monthOut)}
                           </span>
                         </div>
                       </td>
-                      <td colSpan={3}></td>
                     </tr>
                   </tfoot>
                 </table>
