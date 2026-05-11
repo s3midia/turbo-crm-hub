@@ -444,6 +444,27 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | undefined>();
 
+  const [filterMonth, setFilterMonth] = useState<string>("todos");
+
+  // Get unique months for filter
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    transactions.forEach(t => {
+      const date = new Date(t.vencimento);
+      const monthStr = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+      months.add(monthStr);
+    });
+    return Array.from(months).sort((a, b) => {
+      // Sort by date (reverse)
+      const parse = (s: string) => {
+        const [m, y] = s.split(' de ');
+        const monthIdx = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'].indexOf(m.toLowerCase());
+        return new Date(parseInt(y), monthIdx);
+      };
+      return parse(b).getTime() - parse(a).getTime();
+    });
+  }, [transactions]);
+
   // Sync filters with URL
   useEffect(() => {
     setSearchParams(prev => {
@@ -453,23 +474,31 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
       
       if (filterStatus !== "todos") newParams.set("status", filterStatus);
       else newParams.delete("status");
+
+      if (filterMonth !== "todos") newParams.set("mes", filterMonth);
+      else newParams.delete("mes");
       
       return newParams;
     }, { replace: true });
-  }, [filterTipo, filterStatus, setSearchParams]);
+  }, [filterTipo, filterStatus, filterMonth, setSearchParams]);
 
   const filtered = transactions.filter(t => {
     const matchSearch = t.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || (t.lead_nome || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchTipo = filterTipo === "todos" || t.tipo === filterTipo;
     const matchStatus = filterStatus === "todos" || t.status === filterStatus;
-    return matchSearch && matchTipo && matchStatus;
+    
+    const date = new Date(t.vencimento);
+    const monthStr = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    const matchMonth = filterMonth === "todos" || monthStr === filterMonth;
+
+    return matchSearch && matchTipo && matchStatus && matchMonth;
   });
 
   const totals = {
-    entradas: transactions.filter(t => t.tipo === "entrada" && t.status === "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
-    saidas: transactions.filter(t => t.tipo === "saida" && t.status === "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
-    a_receber: transactions.filter(t => t.tipo === "entrada" && t.status !== "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
-    a_pagar: transactions.filter(t => t.tipo === "saida" && t.status !== "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
+    entradas: filtered.filter(t => t.tipo === "entrada" && t.status === "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
+    saidas: filtered.filter(t => t.tipo === "saida" && t.status === "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
+    a_receber: filtered.filter(t => t.tipo === "entrada" && t.status !== "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
+    a_pagar: filtered.filter(t => t.tipo === "saida" && t.status !== "pago").reduce((s, t) => s + parseBRL(t.valor), 0),
   };
 
   async function handleUpsertTransaction(t: Partial<FinancialTransaction>) {
@@ -575,7 +604,14 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
             className="w-full pl-10 pr-4 py-2 bg-card border border-border/50 rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+            className="px-3 py-2 rounded-xl text-xs font-bold border border-border/50 bg-card text-muted-foreground focus:ring-2 focus:ring-primary/20 capitalize">
+            <option value="todos">Todos os Meses</option>
+            {availableMonths.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
           {(["todos", "entrada", "saida"] as const).map(t => (
             <button key={t} onClick={() => setFilterTipo(t)} className={cn(
               "px-4 py-2 rounded-xl text-xs font-bold border transition-all",
