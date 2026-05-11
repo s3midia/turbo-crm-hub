@@ -516,6 +516,32 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     setShowModal(true);
   }
 
+  const getPriority = (t: FinancialTransaction) => {
+    if (t.status === "pago") return 100;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const vDate = new Date(t.vencimento);
+    if (vDate < today) return 0; // Vencida
+    const diff = Math.ceil((vDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff <= 5) return 1; // Próximo
+    return 10; // Normal
+  };
+
+  const sorted = [...filtered].sort((a, b) => {
+    const pA = getPriority(a);
+    const pB = getPriority(b);
+    if (pA !== pB) return pA - pB;
+    return new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime();
+  });
+
+  const groupedByMonth = sorted.reduce((acc, t) => {
+    const date = new Date(t.vencimento);
+    const month = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    if (!acc[month]) acc[month] = [];
+    acc[month].push(t);
+    return acc;
+  }, {} as Record<string, FinancialTransaction[]>);
+
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
       {showModal && (
@@ -572,125 +598,153 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-muted/30 border-b border-border/40">
-              {["Transação", "Categoria", "Recorrência", "Valor", "Vencimento", "Status", "Ações"].map(h => (
-                <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((t, idx) => (
-              <tr 
-                key={t.id} 
-                className={cn(
-                  "border-b border-border/30 hover:bg-muted/20 transition-all group cursor-pointer", 
-                  idx === filtered.length - 1 && "border-0"
-                )}
-                onClick={() => openEdit(t)}
-              >
-                <td className="px-4 py-2.5">
-                  <div className="flex items-start gap-2">
-                    <div className={cn("mt-1.5 w-2 h-2 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500" : "bg-rose-500")} />
-                    <div>
-                      <p className="text-[13px] font-bold text-foreground">{t.descricao}</p>
-                      {t.lead_nome && (
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onOpenProfile) onOpenProfile({ id: t.lead_id, cliente: t.lead_nome });
-                          }}
-                          className="text-[10px] text-primary hover:underline font-medium mt-0.5 flex items-center gap-1"
-                        >
-                          <Users size={10} />
-                          {t.lead_nome} {t.lead_id && <span className="opacity-50 text-[8px] font-mono">({formatDisplayId(t.lead_id)})</span>}
-                        </button>
-                      )}
-                      {t.document_url && (
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(t.document_url, "_blank");
-                          }}
-                          className="text-[10px] text-emerald-600 hover:underline font-bold mt-1 flex items-center gap-1"
-                        >
-                          <FileSpreadsheet size={10} />
-                          Comprovante anexado
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-2.5">
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-secondary/50 border border-border/40 text-muted-foreground flex items-center gap-1 w-fit">
-                    <Tag size={10} /> {t.categoria}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5">
-                  <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 w-fit", recorrenciaColor[t.recorrencia])}>
-                    <RefreshCw size={9} /> {recorrenciaLabel[t.recorrencia]}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5">
-                  <span className={cn("text-[14px] font-black", t.tipo === "entrada" ? "text-emerald-500" : "text-rose-500")}>
-                    {t.tipo === "entrada" ? "+" : "-"} {formatBRL(t.valor)}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
-                    <Calendar size={12} /> {t.vencimento}
-                  </div>
-                </td>
-                <td className="px-4 py-2.5">
-                  <span className={cn("text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit border",
-                    t.status === "pago" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                      t.status === "pendente" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
-                        "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                  )}>
-                    <div className={cn("w-1.5 h-1.5 rounded-full", t.status === "pago" ? "bg-emerald-500" : t.status === "pendente" ? "bg-amber-500 animate-pulse" : "bg-blue-500")} />
-                    {t.status === "pago" ? "Liquidado" : t.status === "pendente" ? "Pendente" : "Agendado"}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); t.id && handleDelete(t.id); }}
-                      className="p-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all text-muted-foreground"
-                      title="Excluir"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    {t.status !== "pago" && (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); t.id && handleMarkPaid(t.id); }}
-                        className="p-1.5 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 transition-all text-muted-foreground"
-                        title="Marcar como Pago"
-                      >
-                        <Check size={14} />
-                      </button>
-                    )}
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); openEdit(t); }}
-                      className="p-1.5 rounded-lg hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground"
-                      title="Editar"
-                    >
-                      <Edit3Icon size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && (
-          <div className="p-12 text-center flex flex-col items-center gap-3">
+      {/* Grouped Table */}
+      <div className="space-y-8">
+        {Object.entries(groupedByMonth).length === 0 ? (
+          <div className="rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm p-12 text-center flex flex-col items-center gap-3">
             <Search size={40} className="text-muted-foreground/30" />
             <p className="font-bold text-foreground">Nenhuma transação encontrada</p>
             <p className="text-sm text-muted-foreground">Ajuste os filtros ou adicione uma nova transação.</p>
           </div>
+        ) : (
+          Object.entries(groupedByMonth).map(([month, monthTransactions]) => (
+            <div key={month} className="space-y-3">
+              <div className="flex items-center gap-3 px-2">
+                <Calendar size={14} className="text-primary" />
+                <h3 className="text-sm font-black uppercase tracking-widest text-foreground">{month}</h3>
+                <div className="h-px flex-1 bg-border/40" />
+              </div>
+              
+              <div className="rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm overflow-hidden shadow-sm">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-muted/30 border-b border-border/40">
+                      {["Transação", "Categoria", "Recorrência", "Valor", "Vencimento", "Status", "Ações"].map(h => (
+                        <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthTransactions.map((t, idx) => {
+                      const priority = getPriority(t);
+                      const isCritical = priority === 0;
+                      const isWarning = priority === 1;
+
+                      return (
+                        <tr 
+                          key={t.id} 
+                          className={cn(
+                            "border-b border-border/30 hover:bg-muted/20 transition-all group cursor-pointer relative", 
+                            idx === monthTransactions.length - 1 && "border-0",
+                            isCritical && "bg-rose-500/[0.03]",
+                            isWarning && "bg-amber-500/[0.03]"
+                          )}
+                          onClick={() => openEdit(t)}
+                        >
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-start gap-2">
+                              <div className={cn("mt-1.5 w-2 h-2 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500" : "bg-rose-500")} />
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-[13px] font-bold text-foreground">{t.descricao}</p>
+                                  {isCritical && <span className="text-[8px] font-black bg-rose-500 text-white px-1 rounded animate-pulse uppercase">Atrasado</span>}
+                                  {isWarning && <span className="text-[8px] font-black bg-amber-500 text-white px-1 rounded uppercase">Vence em breve</span>}
+                                </div>
+                                {t.lead_nome && (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (onOpenProfile) onOpenProfile({ id: t.lead_id, cliente: t.lead_nome });
+                                    }}
+                                    className="text-[10px] text-primary hover:underline font-medium mt-0.5 flex items-center gap-1"
+                                  >
+                                    <Users size={10} />
+                                    {t.lead_nome} {t.lead_id && <span className="opacity-50 text-[8px] font-mono">({formatDisplayId(t.lead_id)})</span>}
+                                  </button>
+                                )}
+                                {t.document_url && (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(t.document_url, "_blank");
+                                    }}
+                                    className="text-[10px] text-emerald-600 hover:underline font-bold mt-1 flex items-center gap-1"
+                                  >
+                                    <FileSpreadsheet size={10} />
+                                    Comprovante anexado
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-secondary/50 border border-border/40 text-muted-foreground flex items-center gap-1 w-fit">
+                              <Tag size={10} /> {t.categoria}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 w-fit", recorrenciaColor[t.recorrencia])}>
+                              <RefreshCw size={9} /> {recorrenciaLabel[t.recorrencia]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span className={cn("text-[14px] font-black", t.tipo === "entrada" ? "text-emerald-500" : "text-rose-500")}>
+                              {t.tipo === "entrada" ? "+" : "-"} {formatBRL(t.valor)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <div className={cn(
+                              "flex items-center gap-1.5 text-[11px] font-semibold",
+                              isCritical ? "text-rose-500" : isWarning ? "text-amber-500" : "text-muted-foreground"
+                            )}>
+                              <Calendar size={12} /> {t.vencimento}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span className={cn("text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit border",
+                              t.status === "pago" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                                t.status === "pendente" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                                  "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                            )}>
+                              <div className={cn("w-1.5 h-1.5 rounded-full", t.status === "pago" ? "bg-emerald-500" : t.status === "pendente" ? "bg-amber-500 animate-pulse" : "bg-blue-500")} />
+                              {t.status === "pago" ? "Liquidado" : t.status === "pendente" ? "Pendente" : "Agendado"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); t.id && handleDelete(t.id); }}
+                                className="p-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all text-muted-foreground"
+                                title="Excluir"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                              {t.status !== "pago" && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); t.id && handleMarkPaid(t.id); }}
+                                  className="p-1.5 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 transition-all text-muted-foreground"
+                                  title="Marcar como Pago"
+                                >
+                                  <Check size={14} />
+                                </button>
+                              )}
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); openEdit(t); }}
+                                className="p-1.5 rounded-lg hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground"
+                                title="Editar"
+                              >
+                                <Edit3Icon size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>

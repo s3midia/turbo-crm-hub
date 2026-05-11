@@ -99,17 +99,42 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
     if (opportunity.id) {
         const { error: updateError } = await supabase.from('leads').update(leadData).eq('id', opportunity.id);
         if (updateError) throw updateError;
+        
         try {
-            const { data, error } = await supabase
-                .from('opportunities')
-                .upsert({ id: opportunity.id, ...opportunityData })
-                .select()
-                .single();
-            if (error && error.code !== 'PGRST205') console.error("Erro ao dar upsert em oportunidade:", error);
-            return data || { id: opportunity.id, ...opportunityData };
-        } catch (e) {
-            return { id: opportunity.id, ...opportunityData };
+            await supabase.from('opportunities').upsert({ id: opportunity.id, ...opportunityData });
+        } catch (e) {}
+
+        // Autocriação de lançamento financeiro se virar 'ganhou'
+        if (opportunity.stage === 'ganhou' && opportunity.total_value > 0) {
+            try {
+                const { data: existing } = await supabase
+                    .from('financial_transactions')
+                    .select('id')
+                    .eq('lead_id', opportunity.id)
+                    .limit(1);
+
+                if (!existing || existing.length === 0) {
+                    await supabase.from('financial_transactions').insert([{
+                        user_id: user.id,
+                        descricao: `Contrato: ${opportunity.lead_identification}`,
+                        tipo: 'entrada',
+                        valor: opportunity.total_value,
+                        data_lancamento: new Date().toISOString().split('T')[0],
+                        vencimento: opportunity.contract_start_date || new Date().toISOString().split('T')[0],
+                        lead_nome: opportunity.lead_identification,
+                        lead_id: opportunity.id,
+                        status: 'pendente',
+                        categoria: 'Software',
+                        recorrencia: 'mensal',
+                        classificacao: 'recorrente'
+                    }]);
+                }
+            } catch (e) {
+                console.error("Erro ao criar lançamento automático:", e);
+            }
         }
+        
+        return { id: opportunity.id, ...opportunityData };
     } else {
         const { data: newLead, error: leadError } = await supabase
             .from('leads')
@@ -119,12 +144,29 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         if (leadError) throw leadError;
         
         try {
-            const { error: oppError } = await supabase.from('opportunities').insert([{ id: newLead.id, ...opportunityData }]);
-            if (oppError && oppError.code !== 'PGRST205') {
-                console.error("Erro ao inserir oportunidade:", oppError);
+            await supabase.from('opportunities').insert([{ id: newLead.id, ...opportunityData }]);
+        } catch (e) {}
+
+        // Autocriação de lançamento financeiro se for criado como 'ganhou'
+        if (opportunity.stage === 'ganhou' && opportunity.total_value > 0) {
+            try {
+                await supabase.from('financial_transactions').insert([{
+                    user_id: user.id,
+                    descricao: `Contrato: ${opportunity.lead_identification}`,
+                    tipo: 'entrada',
+                    valor: opportunity.total_value,
+                    data_lancamento: new Date().toISOString().split('T')[0],
+                    vencimento: opportunity.contract_start_date || new Date().toISOString().split('T')[0],
+                    lead_nome: opportunity.lead_identification,
+                    lead_id: newLead.id,
+                    status: 'pendente',
+                    categoria: 'Software',
+                    recorrencia: 'mensal',
+                    classificacao: 'recorrente'
+                }]);
+            } catch (e) {
+                console.error("Erro ao criar lançamento automático:", e);
             }
-        } catch (e) {
-            console.warn("Table opportunities likely does not exist.");
         }
         
         return newLead;
