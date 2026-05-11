@@ -105,7 +105,7 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         } catch (e) {}
 
         // Autocriação de lançamento financeiro se virar 'ganhou'
-        if (opportunity.stage === 'ganhou' && opportunity.total_value > 0) {
+        if (opportunity.stage === 'ganhou') {
             try {
                 const { data: existing } = await supabase
                     .from('financial_transactions')
@@ -148,7 +148,7 @@ export const saveOpportunity = async (opportunity: Opportunity) => {
         } catch (e) {}
 
         // Autocriação de lançamento financeiro se for criado como 'ganhou'
-        if (opportunity.stage === 'ganhou' && opportunity.total_value > 0) {
+        if (opportunity.stage === 'ganhou') {
             try {
                 await supabase.from('financial_transactions').insert([{
                     user_id: user.id,
