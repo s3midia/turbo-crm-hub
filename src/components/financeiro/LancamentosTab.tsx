@@ -443,6 +443,20 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   );
   const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({});
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
+  const [periodPreset, setPeriodPreset] = useState<"todos" | "mes" | "30d">("todos");
+  const [sortKey, setSortKey] = useState<"vencimento" | "valor" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSort = (k: "vencimento" | "valor") => {
+    if (sortKey === k) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(k); setSortDir("asc"); }
+  };
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const clearSelection = () => setSelectedIds(new Set());
 
   const isOverdue = (t: ProjectedTransaction) => {
     if (t.status === "pago") return false;
@@ -507,7 +521,19 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     const monthStr = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
     const matchMonth = filterMonth === "todos" || monthStr === filterMonth;
 
-    return matchSearch && matchTipo && matchStatus && matchMonth;
+    let matchPeriod = true;
+    if (periodPreset !== "todos") {
+      const today = new Date(); today.setHours(0,0,0,0);
+      if (periodPreset === "mes") {
+        const now = new Date();
+        matchPeriod = date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+      } else if (periodPreset === "30d") {
+        const in30 = new Date(today); in30.setDate(in30.getDate() + 30);
+        matchPeriod = date >= today && date <= in30;
+      }
+    }
+
+    return matchSearch && matchTipo && matchStatus && matchMonth && matchPeriod;
   });
 
   const totals = {
@@ -601,11 +627,42 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   };
 
   const sorted = [...filtered].sort((a, b) => {
+    if (sortKey === "valor") {
+      const d = parseBRL(a.valor) - parseBRL(b.valor);
+      return sortDir === "asc" ? d : -d;
+    }
+    if (sortKey === "vencimento") {
+      const d = new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime();
+      return sortDir === "asc" ? d : -d;
+    }
     const pA = getPriority(a);
     const pB = getPriority(b);
     if (pA !== pB) return pA - pB;
     return new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime();
   });
+
+  async function bulkMarkPaid() {
+    const ids = Array.from(selectedIds);
+    let ok = 0;
+    for (const id of ids) {
+      const t = transactions.find(x => x.id === id);
+      if (t && t.status !== "pago" && !(t as ProjectedTransaction).isProjection) {
+        try { await saveTransaction({ ...t, status: "pago" }); ok++; } catch {}
+      }
+    }
+    toast.success(`${ok} lançamento(s) marcados como pagos`);
+    clearSelection();
+  }
+  async function bulkDelete() {
+    if (!confirm(`Excluir ${selectedIds.size} lançamento(s)?`)) return;
+    const ids = Array.from(selectedIds);
+    let ok = 0;
+    for (const id of ids) {
+      try { await deleteTransaction(id); ok++; } catch {}
+    }
+    toast.success(`${ok} lançamento(s) excluídos`);
+    clearSelection();
+  }
 
   const groupedByMonth = sorted.reduce((acc, t) => {
     const date = new Date(t.vencimento);
@@ -625,8 +682,9 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
         />
       )}
 
-      {/* Resumo consolidado */}
-      <div className="rounded-2xl border border-border/40 bg-muted/30 p-4 flex flex-wrap items-center gap-6">
+      {/* Resumo consolidado (sticky) */}
+      <div className="sticky top-0 z-30 -mx-1 px-1 py-1 backdrop-blur-md">
+      <div className="rounded-2xl border border-border/40 bg-muted/60 p-4 flex flex-wrap items-center gap-6 shadow-sm">
         <div>
           <p className="text-lg font-black text-emerald-600">+ {formatBRL(totals.entradas)}</p>
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Entradas</p>
@@ -656,6 +714,24 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
           </button>
         </div>
       </div>
+      </div>
+
+      {/* Barra de seleção em lote */}
+      {selectedIds.size > 0 && (
+        <div className="rounded-2xl border border-primary/40 bg-primary/5 px-4 py-3 flex items-center gap-3 animate-in slide-in-from-top-2 duration-200">
+          <span className="text-sm font-black text-primary">{selectedIds.size} selecionado{selectedIds.size > 1 ? "s" : ""}</span>
+          <div className="h-4 w-px bg-border" />
+          <button onClick={bulkMarkPaid} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-all">
+            <Check size={12} /> Marcar como pagos
+          </button>
+          <button onClick={bulkDelete} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500 text-white text-xs font-bold hover:bg-rose-600 transition-all">
+            <Trash2 size={12} /> Excluir
+          </button>
+          <button onClick={clearSelection} className="ml-auto text-xs font-bold text-muted-foreground hover:text-foreground">
+            Limpar seleção
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-3">
@@ -666,6 +742,20 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
             value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
         <div className="flex flex-wrap gap-2">
+          <div className="flex items-center rounded-xl border border-border/50 bg-card p-0.5">
+            {([
+              { v: "todos", l: "Tudo" },
+              { v: "mes", l: "Este mês" },
+              { v: "30d", l: "30 dias" },
+            ] as const).map(p => (
+              <button key={p.v} onClick={() => setPeriodPreset(p.v as any)} className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                periodPreset === p.v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              )}>
+                {p.l}
+              </button>
+            ))}
+          </div>
           <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
             className="px-3 py-2 rounded-xl text-xs font-bold border border-border/50 bg-card text-muted-foreground focus:ring-2 focus:ring-primary/20 capitalize">
             <option value="todos">Todos os Meses</option>
@@ -744,9 +834,36 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-muted/30 border-b border-border/40">
-                      {["Transação", "Categoria", "Recorrência", "Valor", "Vencimento", "Status", "Ações"].map(h => (
-                        <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">{h}</th>
-                      ))}
+                      <th className="px-3 py-3 w-8">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                          checked={visible.length > 0 && visible.every(t => t.id && selectedIds.has(t.id))}
+                          onChange={(e) => {
+                            setSelectedIds(prev => {
+                              const next = new Set(prev);
+                              if (e.target.checked) visible.forEach(t => t.id && !(t as ProjectedTransaction).isProjection && next.add(t.id));
+                              else visible.forEach(t => t.id && next.delete(t.id));
+                              return next;
+                            });
+                          }}
+                        />
+                      </th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">Transação</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">Categoria</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">Recorrência</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">
+                        <button onClick={() => toggleSort("valor")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                          Valor {sortKey === "valor" && (sortDir === "asc" ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">
+                        <button onClick={() => toggleSort("vencimento")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                          Vencimento {sortKey === "vencimento" && (sortDir === "asc" ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">Status</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -761,11 +878,22 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                           className={cn(
                             "border-b border-border/30 hover:bg-muted/20 transition-all group cursor-pointer relative",
                             idx === visible.length - 1 && "border-0",
-                            isCritical && "bg-rose-500/[0.03]",
-                            isWarning && "bg-amber-500/[0.03]"
+                            isCritical && "bg-rose-500/[0.04] border-l-4 border-l-rose-500",
+                            isWarning && "bg-amber-500/[0.04] border-l-4 border-l-amber-500",
+                            t.id && selectedIds.has(t.id) && "bg-primary/5"
                           )}
                           onClick={() => openEdit(t)}
                         >
+                          <td className="px-3 py-2.5 w-8" onClick={(e) => e.stopPropagation()}>
+                            {!t.isProjection && t.id && (
+                              <input
+                                type="checkbox"
+                                className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                                checked={selectedIds.has(t.id)}
+                                onChange={() => toggleSelect(t.id!)}
+                              />
+                            )}
+                          </td>
                           <td className="px-4 py-2.5">
                             <div className="flex items-start gap-2">
                               <div className={cn("mt-1.5 w-2 h-2 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500" : "bg-rose-500")} />
@@ -886,6 +1014,24 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                       );
                     })}
                   </tbody>
+                  <tfoot>
+                    <tr className="bg-muted/30 border-t-2 border-border/60">
+                      <td className="px-3 py-3"></td>
+                      <td className="px-4 py-3 text-[10px] uppercase tracking-widest text-muted-foreground font-black" colSpan={3}>
+                        Subtotal do mês
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="text-[12px] font-black text-emerald-600">+ {formatBRL(monthIn)}</span>
+                          <span className="text-[12px] font-black text-rose-600">- {formatBRL(monthOut)}</span>
+                          <span className={cn("text-[13px] font-black mt-0.5", (monthIn - monthOut) >= 0 ? "text-primary" : "text-rose-600")}>
+                            = {formatBRL(monthIn - monthOut)}
+                          </span>
+                        </div>
+                      </td>
+                      <td colSpan={3}></td>
+                    </tr>
+                  </tfoot>
                 </table>
                 {hidden > 0 && (
                   <div className="px-4 py-3 border-t border-border/40 bg-muted/20 flex items-center justify-center gap-2 text-xs text-muted-foreground">
