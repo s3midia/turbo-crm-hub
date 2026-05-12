@@ -627,22 +627,68 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     if (!t.vencimento) return;
     const cutoffDate = t.vencimento;
 
-    // Delete real transactions from cutoffDate onwards that match this recurrence group
-    const toDelete = transactions.filter(tx =>
-      !tx.isProjection &&
-      tx.descricao === t.descricao &&
-      tx.categoria === t.categoria &&
-      tx.vencimento >= cutoffDate
-    );
-    let ok = 0;
-    for (const tx of toDelete) {
-      try { await deleteTransaction(tx.id!); ok++; } catch {}
+    // CASO 1: Transação real (não projeção) — deletar do banco a partir da data de corte
+    if (!t.isProjection) {
+      const toDelete = transactions.filter(tx =>
+        !tx.isProjection &&
+        tx.descricao === t.descricao &&
+        tx.categoria === t.categoria &&
+        tx.vencimento >= cutoffDate
+      );
+      let ok = 0;
+      for (const tx of toDelete) {
+        try { await deleteTransaction(tx.id!); ok++; } catch {}
+      }
+      toast.success(`${ok} lançamento(s) excluído(s) — meses anteriores mantidos.`);
+      return;
     }
-    if (ok > 0) {
-      toast.success(`${ok} lançamento(s) excluído(s) (atual e futuros)`);
-    } else {
-      toast.info('Nenhum lançamento real encontrado para excluir. Projeções futuras não serão mais geradas.');
+
+    // CASO 2: Projeção de despesa recorrente (tem originalId = base no banco)
+    // Deletar o registro base + quaisquer registros reais a partir do corte
+    if (t.isProjection && t.originalId) {
+      // Deletar registros reais do grupo a partir do corte
+      const toDelete = transactions.filter(tx =>
+        !tx.isProjection &&
+        tx.descricao === t.descricao &&
+        tx.categoria === t.categoria &&
+        tx.vencimento >= cutoffDate
+      );
+      let ok = 0;
+      for (const tx of toDelete) {
+        try { await deleteTransaction(tx.id!); ok++; } catch {}
+      }
+      // Também deletar o registro base (o mais recente que gera as projeções futuras)
+      try {
+        await deleteTransaction(t.originalId);
+        ok++;
+      } catch {}
+      toast.success(`Recorrência cancelada — ${ok} lançamento(s) removido(s). Meses anteriores mantidos.`);
+      return;
     }
+
+    // CASO 3: Projeção de receita de contrato (gerada a partir do lead, sem originalId)
+    // Atualizar o contract_end_date do lead para o mês anterior ao corte
+    if (t.isProjection && t.lead_id) {
+      try {
+        // Define o fim do contrato como o dia anterior ao mês de corte
+        const cutoff = new Date(cutoffDate);
+        cutoff.setDate(cutoff.getDate() - 1);
+        const newEndDate = cutoff.toISOString().split('T')[0];
+
+        const { error } = await supabase
+          .from('leads')
+          .update({ contract_end_date: newEndDate })
+          .eq('id', t.lead_id);
+
+        if (error) throw error;
+        toast.success(`Contrato encerrado em ${newEndDate}. Projeções a partir de ${cutoffDate} não serão mais geradas.`);
+      } catch (err: any) {
+        toast.error('Erro ao atualizar data de encerramento do contrato: ' + (err.message || ''));
+      }
+      return;
+    }
+
+    toast.error('Não foi possível determinar o tipo de lançamento para cancelar.');
   }
 
   async function handleDelete(id: string) {
