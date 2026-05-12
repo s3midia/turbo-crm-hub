@@ -3,7 +3,6 @@ import {
   Search, Instagram, CheckCircle2, Loader2, X,
   ImageIcon, AlertCircle, Plus, Upload, Link as LinkIcon,
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface InstagramPost {
   url: string;
@@ -24,18 +23,21 @@ async function fetchViaEdgeFunction(
   username: string,
   onStatus: (s: string) => void,
 ): Promise<InstagramPost[]> {
-  onStatus('Buscando posts (cache + scraper)...');
-  const { data, error } = await supabase.functions.invoke('get-instagram-photos', {
-    body: { username },
+  onStatus('Buscando posts...');
+  const res = await fetch('/api/instagram', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+    signal: AbortSignal.timeout(95_000),
   });
 
-  if (error) throw new Error(error.message || 'Falha ao invocar edge function');
-  if (data?.error) throw new Error(data.error);
+  const data = await res.json();
+  if (!res.ok || data?.error) throw new Error(data?.error || `Erro ${res.status}`);
+
   const photos: any[] = data?.photos ?? [];
   if (photos.length === 0) throw new Error('Perfil não encontrado ou sem posts públicos.');
 
-  onStatus(data?.cached ? 'Carregado do cache.' : 'Processando posts...');
-
+  onStatus('Processando posts...');
   return photos.slice(0, 9).map((p: any) => ({
     url: p.url || p.thumbnail || '',
     thumbnail: p.thumbnail || p.url || '',
