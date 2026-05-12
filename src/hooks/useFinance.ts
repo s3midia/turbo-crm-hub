@@ -97,11 +97,14 @@ export const useFinance = (leadId?: string) => {
     return () => { supabase.removeChannel(channel); };
   }, [leadId]);
 
-  const saveTransaction = async (transaction: Partial<FinancialTransaction>) => {
+  const saveTransaction = async (transaction: Partial<FinancialTransaction> & { isProjection?: boolean }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado");
 
-    const data = { ...transaction, user_id: user.id };
+    // Strip frontend-only fields that don't exist in the DB schema
+    const { isProjection, ...cleanTransaction } = transaction as any;
+    const data = { ...cleanTransaction, user_id: user.id };
+
     if (data.id) {
       const { error } = await supabase.from('financial_transactions').update(data).eq('id', data.id);
       if (error) throw error;

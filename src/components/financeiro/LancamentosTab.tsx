@@ -606,7 +606,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   }>({ open: false, transaction: null });
 
   function openDeleteDialog(t: ProjectedTransaction) {
-    const isRecurring = t.recorrencia && t.recorrencia !== "unica" && !t.isProjection;
+    const isRecurring = t.recorrencia && t.recorrencia !== "unica";
     if (isRecurring) {
       setDeleteDialog({ open: true, transaction: t });
     } else {
@@ -624,8 +624,10 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
 
   async function handleDeleteThisAndFuture(t: ProjectedTransaction) {
     setDeleteDialog({ open: false, transaction: null });
-    if (!t.id || !t.vencimento) return;
+    if (!t.vencimento) return;
     const cutoffDate = t.vencimento;
+
+    // Delete real transactions from cutoffDate onwards that match this recurrence group
     const toDelete = transactions.filter(tx =>
       !tx.isProjection &&
       tx.descricao === t.descricao &&
@@ -636,7 +638,11 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     for (const tx of toDelete) {
       try { await deleteTransaction(tx.id!); ok++; } catch {}
     }
-    toast.success(`${ok} lançamento(s) excluído(s)`);
+    if (ok > 0) {
+      toast.success(`${ok} lançamento(s) excluído(s) (atual e futuros)`);
+    } else {
+      toast.info('Nenhum lançamento real encontrado para excluir. Projeções futuras não serão mais geradas.');
+    }
   }
 
   async function handleDelete(id: string) {
@@ -1147,9 +1153,9 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                                           <Trash2 size={12} /> Excluir
                                         </button>
                                       )}
-                                      {t.isProjection && t.originalId && (
+                                      {t.isProjection && (
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); handleDelete(t.originalId!); }}
+                                          onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); openDeleteDialog(t); }}
                                           className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-rose-500/10 text-rose-600 text-left"
                                         >
                                           <Trash2 size={12} /> Cancelar recorrência
@@ -1226,22 +1232,25 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
               <p className="text-[10px] text-muted-foreground mt-0.5">Recorrência: {recorrenciaLabel[deleteDialog.transaction.recorrencia ?? "unica"]} · Venc: {deleteDialog.transaction.vencimento}</p>
             </div>
             <div className="space-y-2">
-              <button
-                onClick={() => {
-                  const t = deleteDialog.transaction!;
-                  setDeleteDialog({ open: false, transaction: null });
-                  handleDeleteSingle(t.id!);
-                }}
-                className="w-full flex items-start gap-3 p-3 rounded-2xl border border-border hover:bg-muted transition-all text-left"
-              >
-                <div className="mt-0.5 p-1 rounded-lg bg-amber-500/10 text-amber-600 shrink-0">
-                  <Trash2 size={12} />
-                </div>
-                <div>
-                  <p className="text-[12px] font-bold">Excluir apenas esta</p>
-                  <p className="text-[10px] text-muted-foreground">Somente o lançamento de {deleteDialog.transaction.vencimento} será removido</p>
-                </div>
-              </button>
+              {/* Only show "Excluir apenas esta" for real transactions with an id */}
+              {!deleteDialog.transaction.isProjection && deleteDialog.transaction.id && (
+                <button
+                  onClick={() => {
+                    const t = deleteDialog.transaction!;
+                    setDeleteDialog({ open: false, transaction: null });
+                    handleDeleteSingle(t.id!);
+                  }}
+                  className="w-full flex items-start gap-3 p-3 rounded-2xl border border-border hover:bg-muted transition-all text-left"
+                >
+                  <div className="mt-0.5 p-1 rounded-lg bg-amber-500/10 text-amber-600 shrink-0">
+                    <Trash2 size={12} />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold">Excluir apenas esta</p>
+                    <p className="text-[10px] text-muted-foreground">Somente o lançamento de {deleteDialog.transaction.vencimento} será removido</p>
+                  </div>
+                </button>
+              )}
               <button
                 onClick={() => handleDeleteThisAndFuture(deleteDialog.transaction!)}
                 className="w-full flex items-start gap-3 p-3 rounded-2xl border border-rose-500/30 hover:bg-rose-500/5 transition-all text-left"
