@@ -441,7 +441,9 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   const [filterStatus, setFilterStatus] = useState<"todos" | "pago" | "pendente" | "agendado" | "atrasado" | "projecao">(
     ["todos", "pago", "pendente", "agendado", "atrasado", "projecao"].includes(initialStatus) ? initialStatus : "todos"
   );
+  const currentMonthKey = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
   const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({});
+  const [collapseInitialized, setCollapseInitialized] = useState(false);
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
   const [periodPreset, setPeriodPreset] = useState<"todos" | "mes" | "30d">("todos");
   const [sortKey, setSortKey] = useState<"vencimento" | "valor" | null>(null);
@@ -492,6 +494,18 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
       return parse(b).getTime() - parse(a).getTime();
     });
   }, [transactions]);
+
+  // Inicializa colapso: só o mês atual aberto
+  useEffect(() => {
+    if (collapseInitialized || transactions.length === 0) return;
+    const initial: Record<string, boolean> = {};
+    transactions.forEach(t => {
+      const m = new Date(t.vencimento).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+      if (m !== currentMonthKey) initial[m] = true;
+    });
+    setCollapsedMonths(initial);
+    setCollapseInitialized(true);
+  }, [transactions, collapseInitialized, currentMonthKey]);
 
   // Sync filters with URL
   useEffect(() => {
