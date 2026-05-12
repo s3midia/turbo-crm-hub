@@ -17,6 +17,7 @@ import { orchestrateSiteGeneration, type OrchestrationResult } from '@/lib/skill
 import { SiteEditor } from '@/components/site-builder/SiteEditor';
 import { LogoUploader, type LogoColors } from '@/components/site-builder/LogoUploader';
 import { InstagramFetcher, type InstagramPost } from '@/components/site-builder/InstagramFetcher';
+import { CreateSiteWizard } from '@/components/site-builder/CreateSiteWizard';
 import type { ClientData, FilledSlots } from '@/lib/templates/types';
 
 const CATEGORIES = [
@@ -54,7 +55,7 @@ interface LeadFromSearch {
     selected: boolean;
 }
 
-type PageView = 'generator' | 'editor';
+type PageView = 'generator' | 'editor' | 'wizard';
 
 export default function GeneratorPage() {
     const { toast } = useToast();
@@ -257,6 +258,25 @@ export default function GeneratorPage() {
     const templateDef = getTemplate(selectedTemplate);
     const hasSkills = !!templateDef;
 
+    // ── WIZARD VIEW ────────────────────────────────────────────────
+    if (pageView === 'wizard') {
+        return (
+            <CreateSiteWizard
+                template={selectedTemplate}
+                onCancel={() => setPageView('generator')}
+                onGenerated={(result, clientData) => {
+                    setFormData(f => ({ ...f, ...clientData }));
+                    setEditorResult(result);
+                    setPageView('editor');
+                    toast({
+                        title: 'Site gerado!',
+                        description: `${result.stats.totalCalls} skills · ${result.stats.timeMs}ms`,
+                    });
+                }}
+            />
+        );
+    }
+
     // ── EDITOR VIEW ────────────────────────────────────────────────
     if (pageView === 'editor' && editorResult && templateDef) {
         return (
@@ -328,6 +348,13 @@ export default function GeneratorPage() {
                             <h1 className="text-3xl font-bold text-wa-text-main">Gerador de Landing Pages</h1>
                             <p className="text-wa-text-muted mt-1">Crie sites profissionais em segundos para qualquer nicho.</p>
                         </div>
+                        <div className="flex items-center gap-3">
+                            <Button
+                                onClick={() => setPageView('wizard')}
+                                className="h-11 px-5 gap-2 font-bold shadow-lg shadow-primary/20"
+                            >
+                                <Sparkles className="h-4 w-4" /> Criar Site
+                            </Button>
                         <div className="flex bg-wa-surface p-1 rounded-xl border border-wa-border">
                             <button
                                 onClick={() => setActiveTab('manual')}
@@ -341,6 +368,7 @@ export default function GeneratorPage() {
                             >
                                 Lote
                             </button>
+                        </div>
                         </div>
                     </div>
 

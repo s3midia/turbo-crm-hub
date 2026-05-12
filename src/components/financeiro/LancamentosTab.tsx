@@ -606,6 +606,46 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     }
   }
 
+  // Dialog de exclusão recorrente
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    transaction: ProjectedTransaction | null;
+  }>({ open: false, transaction: null });
+
+  function openDeleteDialog(t: ProjectedTransaction) {
+    const isRecurring = t.recorrencia && t.recorrencia !== "unica" && !t.isProjection;
+    if (isRecurring) {
+      setDeleteDialog({ open: true, transaction: t });
+    } else {
+      handleDeleteSingle(t.id!);
+    }
+  }
+
+  async function handleDeleteSingle(id: string) {
+    if (!confirm("Deseja realmente excluir esta transação?")) return;
+    try {
+      await deleteTransaction(id);
+      toast.success("Transação excluída!");
+    } catch { toast.error("Erro ao excluir transação."); }
+  }
+
+  async function handleDeleteThisAndFuture(t: ProjectedTransaction) {
+    setDeleteDialog({ open: false, transaction: null });
+    if (!t.id || !t.vencimento) return;
+    const cutoffDate = t.vencimento;
+    const toDelete = transactions.filter(tx =>
+      !tx.isProjection &&
+      tx.descricao === t.descricao &&
+      tx.categoria === t.categoria &&
+      tx.vencimento >= cutoffDate
+    );
+    let ok = 0;
+    for (const tx of toDelete) {
+      try { await deleteTransaction(tx.id!); ok++; } catch {}
+    }
+    toast.success(`${ok} lançamento(s) excluído(s)`);
+  }
+
   async function handleDelete(id: string) {
     if (confirm("Deseja realmente excluir esta transação?")) {
       try {
@@ -618,10 +658,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   }
 
   function openEdit(t: ProjectedTransaction) {
-    if (t.isProjection) {
-      handleConfirmProjection(t);
-      return;
-    }
+    if (t.isProjection) return; // Projeções não abrem modal ao clicar na linha
     setEditingTransaction(t as FinancialTransaction);
     setShowModal(true);
   }
@@ -1120,56 +1157,58 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                           </td>
                           <td className="px-4 py-2.5">
                             <div className="flex items-center justify-end gap-1">
-                              {t.isProjection ? (
+                              {!t.isProjection && t.status !== "pago" && t.id && (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleConfirmProjection(t); }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-all text-[11px] font-bold"
-                                  title="Confirmar Lançamento"
-                                >
-                                  <Check size={12} /> Confirmar
-                                </button>
-                              ) : t.status !== "pago" ? (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); t.id && handleMarkPaid(t.id); }}
+                                  onClick={(e) => { e.stopPropagation(); handleMarkPaid(t.id!); }}
                                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/40 transition-all text-[11px] font-bold"
                                   title="Marcar como Pago"
                                 >
                                   <Check size={12} /> Pagar
                                 </button>
-                              ) : null}
-                              {!t.isProjection && t.id && (
-                                <div className="relative">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setOpenRowMenu(openRowMenu === t.id ? null : t.id!); }}
-                                    className={cn(
-                                      "p-1.5 rounded-lg border border-border bg-card hover:bg-muted transition-all text-muted-foreground",
-                                      openRowMenu === t.id && "bg-muted"
-                                    )}
-                                    title="Mais ações"
-                                  >
-                                    <MoreHorizontal size={14} />
-                                  </button>
-                                  {openRowMenu === t.id && (
-                                    <>
-                                      <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); }} />
-                                      <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-xl z-50 min-w-[140px] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
+                              )}
+                              <div className="relative">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setOpenRowMenu(openRowMenu === (t.id ?? t.vencimento + t.descricao) ? null : (t.id ?? t.vencimento + t.descricao)); }}
+                                  className={cn(
+                                    "p-1.5 rounded-lg border border-border bg-card hover:bg-muted transition-all text-muted-foreground",
+                                    openRowMenu === (t.id ?? t.vencimento + t.descricao) && "bg-muted"
+                                  )}
+                                  title="Mais ações"
+                                >
+                                  <MoreHorizontal size={14} />
+                                </button>
+                                {openRowMenu === (t.id ?? t.vencimento + t.descricao) && (
+                                  <>
+                                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); }} />
+                                    <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-xl z-50 min-w-[160px] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
+                                      {!t.isProjection && (
                                         <button
                                           onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); openEdit(t); }}
                                           className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-muted text-left"
                                         >
                                           <Edit3Icon size={12} /> Editar
                                         </button>
+                                      )}
+                                      {t.isProjection && (
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); handleDelete(t.id!); }}
+                                          onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); handleConfirmProjection(t); }}
+                                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-primary/10 text-primary text-left"
+                                        >
+                                          <Check size={12} /> Confirmar
+                                        </button>
+                                      )}
+                                      {!t.isProjection && t.id && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); openDeleteDialog(t); }}
                                           className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-rose-500/10 text-rose-600 text-left"
                                         >
                                           <Trash2 size={12} /> Excluir
                                         </button>
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              )}
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -1218,6 +1257,63 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
           })
         )}
       </div>
+
+      {/* Dialog de exclusão de recorrência */}
+      {deleteDialog.open && deleteDialog.transaction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-card border border-border rounded-3xl shadow-2xl p-6 mx-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-600">
+                <Trash2 size={18} />
+              </div>
+              <div>
+                <h2 className="text-base font-black">Excluir Lançamento Recorrente</h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Como deseja excluir?</p>
+              </div>
+            </div>
+            <div className="bg-muted/40 rounded-2xl p-3 mb-5">
+              <p className="text-[12px] font-bold text-foreground">{deleteDialog.transaction.descricao}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Recorrência: {recorrenciaLabel[deleteDialog.transaction.recorrencia ?? "unica"]} · Venc: {deleteDialog.transaction.vencimento}</p>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  const t = deleteDialog.transaction!;
+                  setDeleteDialog({ open: false, transaction: null });
+                  handleDeleteSingle(t.id!);
+                }}
+                className="w-full flex items-start gap-3 p-3 rounded-2xl border border-border hover:bg-muted transition-all text-left"
+              >
+                <div className="mt-0.5 p-1 rounded-lg bg-amber-500/10 text-amber-600 shrink-0">
+                  <Trash2 size={12} />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold">Excluir apenas esta</p>
+                  <p className="text-[10px] text-muted-foreground">Somente o lançamento de {deleteDialog.transaction.vencimento} será removido</p>
+                </div>
+              </button>
+              <button
+                onClick={() => handleDeleteThisAndFuture(deleteDialog.transaction!)}
+                className="w-full flex items-start gap-3 p-3 rounded-2xl border border-rose-500/30 hover:bg-rose-500/5 transition-all text-left"
+              >
+                <div className="mt-0.5 p-1 rounded-lg bg-rose-500/10 text-rose-600 shrink-0">
+                  <Trash2 size={12} />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold text-rose-600">Excluir esta e as posteriores</p>
+                  <p className="text-[10px] text-muted-foreground">Todos os lançamentos a partir de {deleteDialog.transaction.vencimento} serão removidos</p>
+                </div>
+              </button>
+            </div>
+            <button
+              onClick={() => setDeleteDialog({ open: false, transaction: null })}
+              className="w-full mt-4 py-2.5 rounded-2xl border border-border text-sm font-bold hover:bg-muted transition-all"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

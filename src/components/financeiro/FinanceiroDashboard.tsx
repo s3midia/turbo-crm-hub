@@ -3,7 +3,7 @@ import {
   TrendingUp, TrendingDown, Scale, Clock, Percent, Building2,
   AlertTriangle, CheckCircle2, AlertCircle, ArrowUpRight, ArrowDownRight,
   Target, Flame, ChevronRight, PieChart as PieIcon, LineChart as LineIcon,
-  Users, Wallet, Briefcase, Zap, Info, RefreshCw, BarChart3
+  Users, Wallet, Briefcase, Zap, Info, RefreshCw, BarChart3, Filter, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,14 +15,37 @@ import {
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
 } from 'recharts';
 
+import { parseBRL } from '@/lib/formatters';
 import { calculateDashboardData, DashboardKPIs } from "./dashboard-utils";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"];
 
 export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (tab: string) => void }) {
-  const { transactions: txs, loading: transactionsLoading } = useProjections();
+  const { transactions: allTxs, loading: transactionsLoading } = useProjections();
   const [extraLoading, setExtraLoading] = useState(true);
   const [extraData, setExtraData] = useState<{ employees: any[], valConfig: any }>({ employees: [], valConfig: null });
+  
+  // Filtros do Dashboard
+  const [dashFilterTipo, setDashFilterTipo] = useState<"todos" | "entrada" | "saida">("todos");
+  const [dashFilterStatus, setDashFilterStatus] = useState<"todos" | "pago" | "agendado" | "atrasado">("todos");
+
+  const isOverdue = (t: any) => {
+    if (t.status === "pago") return false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    return t.vencimento && new Date(t.vencimento) < today;
+  };
+
+  const txs = useMemo(() => {
+    return allTxs.filter(t => {
+      const matchTipo = dashFilterTipo === "todos" || t.tipo === dashFilterTipo;
+      const matchStatus =
+        dashFilterStatus === "todos" ? true :
+        dashFilterStatus === "atrasado" ? isOverdue(t) :
+        dashFilterStatus === "agendado" ? t.status === "agendado" || (t.status === "pendente" && !isOverdue(t)) :
+        t.status === dashFilterStatus;
+      return matchTipo && matchStatus;
+    });
+  }, [allTxs, dashFilterTipo, dashFilterStatus]);
 
   useEffect(() => {
     async function fetchExtra() {
@@ -73,6 +96,54 @@ export default function FinanceiroDashboard({ onTabChange }: { onTabChange?: (ta
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700 font-jakarta">
+
+      {/* --- FILTRO SUPERIOR DO DASHBOARD --- */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[24px] px-5 py-3 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1.5">
+          <Filter size={13} className="text-zinc-400" />
+          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Filtrar Painel</span>
+        </div>
+        <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
+        {/* Tipo */}
+        <div className="flex items-center gap-1 p-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+          {(["todos", "entrada", "saida"] as const).map(v => (
+            <button key={v} onClick={() => setDashFilterTipo(v)}
+              className={cn("px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                dashFilterTipo === v
+                  ? v === "entrada" ? "bg-emerald-500 text-white shadow" : v === "saida" ? "bg-rose-500 text-white shadow" : "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow"
+                  : "text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+              )}>
+              {v === "todos" ? "Todos" : v === "entrada" ? "Receitas" : "Despesas"}
+            </button>
+          ))}
+        </div>
+        <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
+        {/* Status */}
+        <div className="flex items-center gap-1 p-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+          {([
+            { v: "todos", l: "Todos Status", dot: "bg-zinc-400" },
+            { v: "pago", l: "Pagos", dot: "bg-emerald-500" },
+            { v: "agendado", l: "Agendados", dot: "bg-blue-500" },
+            { v: "atrasado", l: "Atrasados", dot: "bg-rose-500" },
+          ] as const).map(s => (
+            <button key={s.v} onClick={() => setDashFilterStatus(s.v)}
+              className={cn("flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                dashFilterStatus === s.v
+                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow"
+                  : "text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+              )}>
+              <span className={cn("w-1.5 h-1.5 rounded-full", s.dot)} />
+              {s.l}
+            </button>
+          ))}
+        </div>
+        {(dashFilterTipo !== "todos" || dashFilterStatus !== "todos") && (
+          <button onClick={() => { setDashFilterTipo("todos"); setDashFilterStatus("todos"); }}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-[10px] font-black text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-all">
+            <X size={10} /> Limpar
+          </button>
+        )}
+      </div>
 
       {/* --- KPI GRID (Minimalist Slim Design) --- */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[32px] overflow-hidden shadow-sm">

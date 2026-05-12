@@ -1,6 +1,6 @@
 import React from 'react';
 import { Phone } from 'lucide-react';
-import { EditableText } from '../InlineEditor';
+import { EditableText, EditableRichText } from '../InlineEditor';
 
 interface Props {
   data: Record<string, any>;
@@ -31,22 +31,25 @@ export function HeroSection({ data, colors, theme, fonts, editMode = false, onSl
             <img src={data.logo_url} alt="Logo" className="h-16 object-contain mb-2" />
           )}
 
-          <EditableText
+          <EditableRichText
             as="h1"
             value={data.headline || 'Título Principal'}
             editMode={editMode}
-            onSave={v => onSlotChange?.('headline', v)}
-            className={`text-4xl md:text-5xl font-bold leading-tight ${textColor}`}
+            brandColors={colors}
+            rootColor={hasBg || isDark ? '#ffffff' : '#111827'}
+            onSave={(html) => onSlotChange?.('headline', html)}
+            className={`text-4xl md:text-5xl font-bold leading-tight`}
             style={{ fontFamily: fonts.heading }}
           />
 
-          <EditableText
+          <EditableRichText
             as="p"
             value={data.subheadline || 'Subtítulo da empresa'}
-            multiline
             editMode={editMode}
-            onSave={v => onSlotChange?.('subheadline', v)}
-            className={`text-lg md:text-xl max-w-xl ${hasBg ? 'text-white/90' : (isDark ? 'text-gray-300' : 'text-gray-600')}`}
+            brandColors={colors}
+            rootColor={hasBg ? 'rgba(255,255,255,0.9)' : (isDark ? '#d1d5db' : '#4b5563')}
+            onSave={(html) => onSlotChange?.('subheadline', html)}
+            className={`text-lg md:text-xl max-w-xl`}
           />
 
           <a

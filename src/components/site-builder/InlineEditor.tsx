@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, X } from 'lucide-react';
+import { EditParagraphModal } from './EditParagraphModal';
 
 interface Props {
   value: string;
@@ -115,5 +116,81 @@ export function EditableText({
         Editar
       </span>
     </Tag>
+  );
+}
+
+/**
+ * Editor de texto rico: ao clicar no modo edit, abre a modal "Editar Parágrafo"
+ * que permite formatação (B/I/Link/Alinhamento) e edição de TODAS as cores
+ * presentes no texto (uma por span detectado).
+ *
+ * value: HTML string (pode conter <span style="color:#..."> para múltiplas cores)
+ */
+interface EditableRichTextProps {
+  value: string;
+  editMode: boolean;
+  brandColors: { primary: string; secondary: string };
+  onSave: (html: string, rootColor: string, rootBg: string) => void;
+  onDelete?: () => void;
+  className?: string;
+  style?: React.CSSProperties;
+  as?: keyof JSX.IntrinsicElements;
+  rootColor?: string;
+  rootBgColor?: string;
+}
+
+export function EditableRichText({
+  value,
+  editMode,
+  brandColors,
+  onSave,
+  onDelete,
+  className = '',
+  style,
+  as: Tag = 'p',
+  rootColor = '#000000',
+  rootBgColor,
+}: EditableRichTextProps) {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  if (!editMode) {
+    return (
+      <Tag
+        className={className}
+        style={{ color: rootColor, backgroundColor: rootBgColor, ...style }}
+        dangerouslySetInnerHTML={{ __html: value }}
+      />
+    );
+  }
+
+  return (
+    <>
+      <Tag
+        className={`${className} cursor-pointer relative group outline-none`}
+        style={{ color: rootColor, backgroundColor: rootBgColor, ...style }}
+        onClick={e => { e.stopPropagation(); setModalOpen(true); }}
+        title="Clique para editar"
+      >
+        <span dangerouslySetInnerHTML={{ __html: value }} />
+        <span className="absolute -top-1 -right-1 -bottom-1 -left-1 rounded border-2 border-dashed border-blue-400 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
+        <span className="absolute -top-5 left-0 bg-yellow-400 text-gray-900 text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-10">
+          ✏️ Editar texto
+        </span>
+      </Tag>
+      <EditParagraphModal
+        open={modalOpen}
+        initialHtml={value}
+        rootColor={rootColor}
+        rootBgColor={rootBgColor}
+        brandColors={brandColors}
+        elementTag={typeof Tag === 'string' ? Tag : 'p'}
+        onClose={() => setModalOpen(false)}
+        onSave={(html, root, bg) => {
+          onSave(html, root, bg);
+          setModalOpen(false);
+        }}
+        onDelete={onDelete}
+      />
+    </>
   );
 }
