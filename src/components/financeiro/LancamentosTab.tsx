@@ -957,14 +957,18 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
             return (
             <div key={month} className="space-y-3">
               <div className="flex items-center gap-3 px-2">
-                <Calendar size={14} className="text-primary" />
+                <Calendar size={14} className="text-muted-foreground" />
                 <h3 className="text-sm font-black uppercase tracking-widest text-foreground capitalize">{month}</h3>
                 <div className="h-px flex-1 bg-border/40" />
-                {monthOut > 0 && <span className="text-xs font-black text-rose-600">- {formatBRL(monthOut)}</span>}
-                {monthIn > 0 && <span className="text-xs font-black text-emerald-600">+ {formatBRL(monthIn)}</span>}
+                <span className={cn(
+                  "text-xs font-bold tabular-nums px-2 py-0.5 rounded-md",
+                  (monthIn - monthOut) >= 0 ? "text-emerald-700 bg-emerald-500/10" : "text-rose-700 bg-rose-500/10"
+                )}>
+                  {(monthIn - monthOut) >= 0 ? "+" : "−"}{formatBRL(Math.abs(monthIn - monthOut))}
+                </span>
                 <button
                   onClick={() => setCollapsedMonths(p => ({ ...p, [month]: !p[month] }))}
-                  className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                  className="flex items-center gap-1 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                   {collapsed ? "expandir" : "recolher"}
@@ -1020,8 +1024,8 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                           className={cn(
                             "border-b border-border/30 hover:bg-muted/20 transition-all group cursor-pointer relative",
                             idx === visible.length - 1 && "border-0",
-                            isCritical && "bg-rose-500/[0.04] border-l-4 border-l-rose-500",
-                            isWarning && "bg-amber-500/[0.04] border-l-4 border-l-amber-500",
+                            isCritical && "border-l-2 border-l-rose-400",
+                            isWarning && "border-l-2 border-l-amber-400",
                             t.id && selectedIds.has(t.id) && "bg-primary/5"
                           )}
                           onClick={() => openEdit(t)}
@@ -1037,73 +1041,67 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                             )}
                           </td>
                           <td className="px-4 py-2.5">
-                            <div className="flex items-start gap-2">
-                              <div className={cn("mt-1.5 w-2 h-2 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500" : "bg-rose-500")} />
-                              <div>
-                                <div className="flex items-center gap-2">
+                            <div className="flex items-start gap-2.5">
+                              <div className={cn("mt-1.5 w-1.5 h-1.5 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500/70" : "bg-muted-foreground/40")} />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
                                   <p className="text-[13px] font-bold text-foreground">{t.descricao}</p>
-                                  {t.isProjection && <span className="text-[8px] font-black bg-blue-500/10 text-blue-500 border border-blue-500/20 px-1.5 py-0.5 rounded uppercase tracking-widest">Projeção</span>}
-                                  {isCritical && <span className="text-[8px] font-black bg-rose-500 text-white px-1 rounded animate-pulse uppercase">Atrasado</span>}
-                                  {isWarning && <span className="text-[8px] font-black bg-amber-500 text-white px-1 rounded uppercase">Vence em breve</span>}
+                                  {t.isProjection && <span className="text-[9px] font-bold text-muted-foreground border border-border/60 px-1.5 py-0.5 rounded uppercase tracking-wider">Projeção</span>}
+                                  {isCritical && <span className="text-[9px] font-bold text-rose-700 bg-rose-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider">Atrasado</span>}
+                                  {isWarning && <span className="text-[9px] font-bold text-amber-700 bg-amber-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider">Vence em breve</span>}
                                 </div>
-                                {t.lead_nome && (
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (onOpenProfile) onOpenProfile({ id: t.lead_id, cliente: t.lead_nome });
-                                    }}
-                                    className="text-[10px] text-primary hover:underline font-medium mt-0.5 flex items-center gap-1"
+                                {t.lead_nome && t.lead_nome !== "N/A" ? (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); if (onOpenProfile) onOpenProfile({ id: t.lead_id, cliente: t.lead_nome }); }}
+                                    className="text-[11px] text-muted-foreground hover:text-primary font-medium mt-0.5 flex items-center gap-1 transition-colors"
                                   >
-                                    <Users size={10} />
-                                    {t.lead_nome} {t.lead_id && <span className="opacity-50 text-[8px] font-mono">({formatDisplayId(t.lead_id)})</span>}
+                                    <Users size={10} className="opacity-60" />
+                                    {t.lead_nome}
                                   </button>
-                                )}
+                                ) : t.lead_nome === "N/A" ? (
+                                  <span className="text-[11px] text-muted-foreground/50 font-medium mt-0.5 flex items-center gap-1">
+                                    <Users size={10} className="opacity-50" /> N/A
+                                  </span>
+                                ) : null}
                                 {t.document_url && (
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      window.open(t.document_url, "_blank");
-                                    }}
-                                    className="text-[10px] text-emerald-600 hover:underline font-bold mt-1 flex items-center gap-1"
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); window.open(t.document_url, "_blank"); }}
+                                    className="text-[10px] text-muted-foreground hover:text-foreground font-medium mt-1 flex items-center gap-1 transition-colors"
                                   >
-                                    <FileSpreadsheet size={10} />
-                                    Comprovante anexado
+                                    <FileSpreadsheet size={10} /> Comprovante
                                   </button>
                                 )}
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-2.5">
-                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-secondary/50 border border-border/40 text-muted-foreground flex items-center gap-1 w-fit">
-                              <Tag size={10} /> {t.categoria}
+                            <span className="text-[11px] font-medium text-muted-foreground">
+                              {t.categoria}
                             </span>
                           </td>
                           <td className="px-4 py-2.5">
-                            <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 w-fit", recorrenciaColor[t.recorrencia])}>
-                              <RefreshCw size={9} /> {recorrenciaLabel[t.recorrencia]}
+                            <span className="text-[11px] font-medium text-muted-foreground">
+                              {recorrenciaLabel[t.recorrencia]}
                             </span>
                           </td>
                           <td className="px-4 py-2.5">
-                            <span className={cn("text-[14px] font-black", t.tipo === "entrada" ? "text-emerald-500" : "text-rose-500")}>
-                              {t.tipo === "entrada" ? "+" : "-"} {formatBRL(t.valor)}
+                            <span className="text-[13px] font-bold text-foreground tabular-nums">
+                              {t.tipo === "entrada" ? "+" : "−"}{formatBRL(t.valor)}
                             </span>
                           </td>
                           <td className="px-4 py-2.5">
-                            <div className={cn(
-                              "flex items-center gap-1.5 text-[11px] font-semibold",
-                              isCritical ? "text-rose-500" : isWarning ? "text-amber-500" : "text-muted-foreground"
+                            <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
+                              {t.vencimento}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span className={cn(
+                              "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md w-fit inline-block",
+                              t.status === "pago" ? "text-emerald-700 bg-emerald-500/10" :
+                                t.status === "pendente" ? "text-amber-700 bg-amber-500/10" :
+                                  "text-muted-foreground bg-muted"
                             )}>
-                              <Calendar size={12} /> {t.vencimento}
-                            </div>
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <span className={cn("text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit border",
-                              t.status === "pago" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                                t.status === "pendente" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
-                                  "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                            )}>
-                              <div className={cn("w-1.5 h-1.5 rounded-full", t.status === "pago" ? "bg-emerald-500" : t.status === "pendente" ? "bg-amber-500 animate-pulse" : "bg-blue-500")} />
-                              {t.status === "pago" ? "Liquidado" : t.status === "pendente" ? "Pendente" : "Agendado"}
+                              {t.status === "pago" ? "Pago" : t.status === "pendente" ? "Pendente" : "Agendado"}
                             </span>
                           </td>
                           <td className="px-4 py-2.5">
