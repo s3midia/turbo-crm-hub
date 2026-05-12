@@ -657,9 +657,33 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     }
   }
 
-  function openEdit(t: ProjectedTransaction) {
-    if (t.isProjection) return; // Projeções não abrem modal ao clicar na linha
-    setEditingTransaction(t as FinancialTransaction);
+  async function handleMarkPaidOrConfirm(t: ProjectedTransaction) {
+    if (t.isProjection) {
+      // Projeção: confirma como transação real e já marca como paga
+      try {
+        const { isProjection, ...clean } = t;
+        await saveTransaction({ ...clean, status: "pago" });
+        toast.success("Lançamento confirmado e marcado como pago!");
+      } catch { toast.error("Erro ao confirmar lançamento."); }
+    } else {
+      const found = transactions.find(x => x.id === t.id);
+      if (found) {
+        try {
+          await saveTransaction({ ...found, status: "pago" });
+          toast.success("Transação marcada como paga!");
+        } catch (err: any) { toast.error(err.message || "Erro ao atualizar status."); }
+      }
+    }
+  }
+
+  function openEditOrConfirm(t: ProjectedTransaction) {
+    if (t.isProjection) {
+      // Confirma a projeção e abre o modal para edição
+      const { isProjection, ...clean } = t;
+      setEditingTransaction({ ...clean, status: "pendente" } as FinancialTransaction);
+    } else {
+      setEditingTransaction(t as FinancialTransaction);
+    }
     setShowModal(true);
   }
 
@@ -1027,7 +1051,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
               </div>
 
               {!collapsed && (
-              <div className="rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm overflow-hidden shadow-sm">
+              <div className="rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm overflow-visible shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-muted/30 border-b border-border/40">
@@ -1079,7 +1103,7 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                             isWarning && "border-l-2 border-l-amber-400",
                             t.id && selectedIds.has(t.id) && "bg-primary/5"
                           )}
-                          onClick={() => openEdit(t)}
+                          onClick={() => openEditOrConfirm(t)}
                         >
                           <td className="px-3 py-2.5 w-8" onClick={(e) => e.stopPropagation()}>
                             {!t.isProjection && t.id && (
@@ -1157,13 +1181,13 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                           </td>
                           <td className="px-4 py-2.5">
                             <div className="flex items-center justify-end gap-1">
-                              {!t.isProjection && t.status !== "pago" && t.id && (
+                              {t.status !== "pago" && (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleMarkPaid(t.id!); }}
+                                  onClick={(e) => { e.stopPropagation(); handleMarkPaidOrConfirm(t); }}
                                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/40 transition-all text-[11px] font-bold"
-                                  title="Marcar como Pago"
+                                  title={t.isProjection ? "Confirmar e Pagar" : "Marcar como Pago"}
                                 >
-                                  <Check size={12} /> Pagar
+                                  <Check size={12} /> {t.isProjection ? "Pagar" : "Pagar"}
                                 </button>
                               )}
                               <div className="relative">
@@ -1180,29 +1204,27 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                                 {openRowMenu === (t.id ?? t.vencimento + t.descricao) && (
                                   <>
                                     <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); }} />
-                                    <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-xl z-50 min-w-[160px] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
-                                      {!t.isProjection && (
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); openEdit(t); }}
-                                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-muted text-left"
-                                        >
-                                          <Edit3Icon size={12} /> Editar
-                                        </button>
-                                      )}
-                                      {t.isProjection && (
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); handleConfirmProjection(t); }}
-                                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-primary/10 text-primary text-left"
-                                        >
-                                          <Check size={12} /> Confirmar
-                                        </button>
-                                      )}
+                                    <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-xl z-[9999] min-w-[170px] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); openEditOrConfirm(t); }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-muted text-left"
+                                      >
+                                        <Edit3Icon size={12} /> {t.isProjection ? "Editar / Confirmar" : "Editar"}
+                                      </button>
                                       {!t.isProjection && t.id && (
                                         <button
                                           onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); openDeleteDialog(t); }}
                                           className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-rose-500/10 text-rose-600 text-left"
                                         >
                                           <Trash2 size={12} /> Excluir
+                                        </button>
+                                      )}
+                                      {t.isProjection && t.originalId && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setOpenRowMenu(null); handleDelete(t.originalId!); }}
+                                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold hover:bg-rose-500/10 text-rose-600 text-left"
+                                        >
+                                          <Trash2 size={12} /> Cancelar recorrência
                                         </button>
                                       )}
                                     </div>
