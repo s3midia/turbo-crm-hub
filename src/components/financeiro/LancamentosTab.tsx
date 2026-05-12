@@ -686,36 +686,44 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
 
       {/* Resumo consolidado (sticky) */}
       <div className="sticky top-0 z-30 -mx-1 px-1 py-1 backdrop-blur-md">
-      <div className="rounded-2xl border border-border/40 bg-muted/60 p-4 flex flex-wrap items-center gap-6 shadow-sm">
-        <div>
-          <p className="text-lg font-black text-emerald-600">+ {formatBRL(totals.entradas)}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Entradas</p>
-        </div>
-        <div>
-          <p className="text-lg font-black text-rose-600">- {formatBRL(totals.saidas)}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Saídas</p>
-        </div>
-        <div>
-          <p className={cn("text-lg font-black", saldoPrevisto >= 0 ? "text-primary" : "text-rose-600")}>
-            {formatBRL(saldoPrevisto)}
-          </p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Saldo previsto</p>
-        </div>
-        {totals.atrasados > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30">
-            <AlertTriangle size={16} className="text-rose-600" />
-            <div>
-              <p className="text-sm font-black text-rose-600 leading-none">{totals.atrasados} atrasado{totals.atrasados > 1 ? "s" : ""}</p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-rose-600/70">Atenção</p>
-            </div>
+        <div className="rounded-2xl border border-border/40 bg-card/80 px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-2 shadow-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Entradas</span>
+            <span className="text-sm font-black text-emerald-600 tabular-nums">{formatBRL(totals.entradas)}</span>
           </div>
-        )}
-        <div className="ml-auto">
-          <button onClick={openNew} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+          <div className="h-4 w-px bg-border/60" />
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Saídas</span>
+            <span className="text-sm font-black text-rose-600 tabular-nums">{formatBRL(totals.saidas)}</span>
+          </div>
+          <div className="h-4 w-px bg-border/60" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Saldo</span>
+            <span className={cn(
+              "text-sm font-black tabular-nums px-2 py-0.5 rounded-md",
+              saldoPrevisto >= 0 ? "text-emerald-700 bg-emerald-500/10" : "text-rose-700 bg-rose-500/10"
+            )}>
+              {saldoPrevisto >= 0 ? "+" : ""}{formatBRL(saldoPrevisto)}
+            </span>
+          </div>
+          {totals.atrasados > 0 && (
+            <button
+              onClick={() => setFilterStatus("atrasado")}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-500/10 hover:bg-rose-500/20 transition-colors"
+              title="Filtrar atrasados"
+            >
+              <AlertTriangle size={12} className="text-rose-600" />
+              <span className="text-[11px] font-black text-rose-600 tabular-nums">
+                {totals.atrasados} atrasado{totals.atrasados > 1 ? "s" : ""}
+              </span>
+            </button>
+          )}
+          <button onClick={openNew} className="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all">
             <Plus size={14} /> Novo lançamento
           </button>
         </div>
-      </div>
       </div>
 
       {/* Barra de seleção em lote */}
