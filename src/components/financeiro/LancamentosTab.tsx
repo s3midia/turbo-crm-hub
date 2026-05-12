@@ -448,17 +448,10 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
   const [periodPreset, setPeriodPreset] = useState<"todos" | "mes" | "30d">("todos");
   const [sortKey, setSortKey] = useState<"vencimento" | "valor" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const toggleSort = (k: "vencimento" | "valor") => {
     if (sortKey === k) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortKey(k); setSortDir("asc"); }
   };
-  const toggleSelect = (id: string) => setSelectedIds(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
-  const clearSelection = () => setSelectedIds(new Set());
   const [openMenu, setOpenMenu] = useState<"periodo" | "status" | null>(null);
   const [openRowMenu, setOpenRowMenu] = useState<string | null>(null);
 
@@ -718,28 +711,6 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
     return new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime();
   });
 
-  async function bulkMarkPaid() {
-    const ids = Array.from(selectedIds);
-    let ok = 0;
-    for (const id of ids) {
-      const t = transactions.find(x => x.id === id);
-      if (t && t.status !== "pago" && !(t as ProjectedTransaction).isProjection) {
-        try { await saveTransaction({ ...t, status: "pago" }); ok++; } catch {}
-      }
-    }
-    toast.success(`${ok} lançamento(s) marcados como pagos`);
-    clearSelection();
-  }
-  async function bulkDelete() {
-    if (!confirm(`Excluir ${selectedIds.size} lançamento(s)?`)) return;
-    const ids = Array.from(selectedIds);
-    let ok = 0;
-    for (const id of ids) {
-      try { await deleteTransaction(id); ok++; } catch {}
-    }
-    toast.success(`${ok} lançamento(s) excluídos`);
-    clearSelection();
-  }
 
   const groupedByMonth = sorted.reduce((acc, t) => {
     const date = new Date(t.vencimento);
@@ -800,23 +771,6 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
           </button>
         </div>
       </div>
-
-      {/* Barra de seleção em lote */}
-      {selectedIds.size > 0 && (
-        <div className="rounded-2xl border border-primary/40 bg-primary/5 px-4 py-3 flex items-center gap-3 animate-in slide-in-from-top-2 duration-200">
-          <span className="text-sm font-black text-primary">{selectedIds.size} selecionado{selectedIds.size > 1 ? "s" : ""}</span>
-          <div className="h-4 w-px bg-border" />
-          <button onClick={bulkMarkPaid} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-all">
-            <Check size={12} /> Marcar como pagos
-          </button>
-          <button onClick={bulkDelete} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500 text-white text-xs font-bold hover:bg-rose-600 transition-all">
-            <Trash2 size={12} /> Excluir
-          </button>
-          <button onClick={clearSelection} className="ml-auto text-xs font-bold text-muted-foreground hover:text-foreground">
-            Limpar seleção
-          </button>
-        </div>
-      )}
 
       {/* Filtros inteligentes */}
       {(() => {
@@ -1055,21 +1009,6 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-muted/30 border-b border-border/40">
-                      <th className="px-3 py-3 w-8">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
-                          checked={visible.length > 0 && visible.every(t => t.id && selectedIds.has(t.id))}
-                          onChange={(e) => {
-                            setSelectedIds(prev => {
-                              const next = new Set(prev);
-                              if (e.target.checked) visible.forEach(t => t.id && !(t as ProjectedTransaction).isProjection && next.add(t.id));
-                              else visible.forEach(t => t.id && next.delete(t.id));
-                              return next;
-                            });
-                          }}
-                        />
-                      </th>
                       <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">Transação</th>
                       <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">Categoria</th>
                       <th className="px-4 py-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-black">Recorrência</th>
@@ -1101,20 +1040,9 @@ export default function LancamentosTab({ onOpenProfile }: LancamentosTabProps) {
                             idx === visible.length - 1 && "border-0",
                             isCritical && "border-l-2 border-l-rose-400",
                             isWarning && "border-l-2 border-l-amber-400",
-                            t.id && selectedIds.has(t.id) && "bg-primary/5"
                           )}
                           onClick={() => openEditOrConfirm(t)}
                         >
-                          <td className="px-3 py-2.5 w-8" onClick={(e) => e.stopPropagation()}>
-                            {!t.isProjection && t.id && (
-                              <input
-                                type="checkbox"
-                                className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
-                                checked={selectedIds.has(t.id)}
-                                onChange={() => toggleSelect(t.id!)}
-                              />
-                            )}
-                          </td>
                           <td className="px-4 py-2.5">
                             <div className="flex items-start gap-2.5">
                               <div className={cn("mt-1.5 w-1.5 h-1.5 rounded-full shrink-0", t.tipo === "entrada" ? "bg-emerald-500/70" : "bg-muted-foreground/40")} />
