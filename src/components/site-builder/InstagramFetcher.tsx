@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
 import {
   Search, Instagram, CheckCircle2, Loader2, X,
-  ImageIcon, AlertCircle, Plus, SkipForward, Key,
-  ExternalLink, Upload, Link as LinkIcon,
+  ImageIcon, AlertCircle, Plus, Upload, Link as LinkIcon,
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface InstagramPost {
   url: string;
@@ -20,35 +20,28 @@ interface Props {
   onPostsChange: (posts: InstagramPost[]) => void;
 }
 
-const APIFY_KEY = (import.meta as any).env?.VITE_APIFY_API_KEY || '';
-const HAS_VALID_KEY = APIFY_KEY && !APIFY_KEY.includes('xxxxx') && APIFY_KEY.length > 20;
-
-async function fetchViaApify(username: string, onStatus: (s: string) => void): Promise<InstagramPost[]> {
-  onStatus('Iniciando scraper...');
-  const endpoint =
-    `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items` +
-    `?token=${APIFY_KEY}&memory=256&timeout=120`;
-
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ usernames: [username], resultsLimit: 9 }),
-    signal: AbortSignal.timeout(130_000),
+async function fetchViaEdgeFunction(
+  username: string,
+  onStatus: (s: string) => void,
+): Promise<InstagramPost[]> {
+  onStatus('Buscando posts (cache + scraper)...');
+  const { data, error } = await supabase.functions.invoke('get-instagram-photos', {
+    body: { username },
   });
 
-  if (res.status === 401) throw new Error('Chave Apify inválida. Verifique VITE_APIFY_API_KEY no .env');
-  if (!res.ok) throw new Error(`Erro Apify ${res.status}`);
+  if (error) throw new Error(error.message || 'Falha ao invocar edge function');
+  if (data?.error) throw new Error(data.error);
+  const photos: any[] = data?.photos ?? [];
+  if (photos.length === 0) throw new Error('Perfil não encontrado ou sem posts públicos.');
 
-  onStatus('Processando posts...');
-  const items: any[] = await res.json();
-  if (!Array.isArray(items) || items.length === 0) throw new Error('Perfil não encontrado ou sem posts públicos.');
+  onStatus(data?.cached ? 'Carregado do cache.' : 'Processando posts...');
 
-  return items.slice(0, 9).map(item => ({
-    url: item.displayUrl || item.imageUrl || '',
-    thumbnail: item.displayUrl || item.imageUrl || '',
-    caption: (item.caption || '').slice(0, 80),
+  return photos.slice(0, 9).map((p: any) => ({
+    url: p.url || p.thumbnail || '',
+    thumbnail: p.thumbnail || p.url || '',
+    caption: (p.caption || '').slice(0, 80),
     selected: true,
-    postUrl: item.url || (item.shortCode ? `https://instagram.com/p/${item.shortCode}` : ''),
+    postUrl: p.postUrl || '',
   }));
 }
 
@@ -109,7 +102,7 @@ export function InstagramFetcher({ posts, handle, onHandleChange, onPostsChange 
     setError('');
     setStatus('');
     try {
-      const fetched = await fetchViaApify(username, setStatus);
+      const fetched = await fetchViaEdgeFunction(username, setStatus);
       onPostsChange([...posts, ...fetched]);
       setStatus('');
     } catch (e: any) {
@@ -214,8 +207,7 @@ export function InstagramFetcher({ posts, handle, onHandleChange, onPostsChange 
       {/* ── Aba: Instagram ── */}
       {addTab === 'instagram' && (
         <div className="space-y-3">
-          {HAS_VALID_KEY ? (
-            <>
+          <>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-wa-text-muted" />
@@ -253,33 +245,6 @@ export function InstagramFetcher({ posts, handle, onHandleChange, onPostsChange 
                 </div>
               )}
             </>
-          ) : (
-            <div className="rounded-xl border border-blue-300/50 bg-blue-50/60 dark:bg-blue-900/10 p-4 space-y-2">
-              <div className="flex items-start gap-2.5">
-                <Key className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Configure a chave Apify para usar o Instagram</p>
-                  <p className="text-xs text-blue-600 mt-0.5 leading-relaxed">
-                    Adicione no arquivo <code className="bg-blue-100 px-1 rounded">.env</code>:
-                  </p>
-                  <code className="block text-xs mt-1.5 p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-800 font-mono">
-                    VITE_APIFY_API_KEY=apify_api_SuaChaveReal
-                  </code>
-                  <a
-                    href="https://console.apify.com/account/integrations"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1.5"
-                  >
-                    Criar conta gratuita no Apify <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              </div>
-              <p className="text-xs text-blue-500 pt-1 border-t border-blue-200/50">
-                Enquanto isso, use as abas <strong>Arquivo</strong> ou <strong>URL</strong> para adicionar fotos.
-              </p>
-            </div>
-          )}
         </div>
       )}
 
